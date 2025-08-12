@@ -317,7 +317,7 @@
         <span id="arenaName">—</span>
       </div>
       <div style="display:flex; gap:10px; justify-content:center;">
-        <button id="btnStart" class="btn primary">Iniciar Partida</button>
+        <button id="btnStartOverlay" class="btn primary">Iniciar Partida</button>
         <button id="btnMenu" class="btn ghost">Fechar</button>
       </div>
     </div>
@@ -338,21 +338,7 @@
     <div style="margin-top:16px; color:#ffb4b4;">Este jogo precisa de JavaScript habilitado.</div>
   </noscript>
 
-  <!-- Seu jogo JS -->
-  <script defer src="game.js"></script>
-
-  <!-- Boot seguro: só inicia se ainda não iniciou -->
-  <script defer>
-    window.addEventListener('DOMContentLoaded', () => {
-      try {
-        if (window.game && typeof game.init === 'function' && !game.__booted) {
-          game.__booted = true;
-          game.init();
-        }
-      } catch (err) {
-        console.error('Falha ao iniciar o jogo:', err);
-      }
-    });
-  </script>
+  <!-- Entrada principal em módulos ES -->
+  <script type="module" src="../src/main.js"></script>
 </body>
 </html>
