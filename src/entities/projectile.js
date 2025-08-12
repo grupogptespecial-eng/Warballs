@@ -25,6 +25,7 @@ export class Projectile {
     this.trail = [];
     this.bounces = 0;
     this.penetration = false;
+    this.canHurtAllies = true;
   }
 
   stepMove(dt) {
@@ -45,6 +46,8 @@ export class Projectile {
     // Interações com unidades
     for (const u of units) {
       if (!u.alive) continue;
+      if (u === this.owner) continue;
+      if (this.owner && u.team && this.owner.team && u.team === this.owner.team && !this.canHurtAllies) continue;
 
       // Monge: deflect reativo
       if (u.className === 'monge') {
@@ -99,18 +102,13 @@ export class Projectile {
         }
       }
 
-      // Dano do projétil (com HEX do bruxo)
-      let dmgToApply = this.dmg;
-      if (this.owner && this.owner.className === 'bruxo' && u.hex && u.hex.owner === this.owner) {
-        dmgToApply *= CFG.bruxo.hex.dmgMult;
-      }
       const d = new V(u.pos.x - this.pos.x, u.pos.y - this.pos.y).len();
       if (d < u.bodyR + this.rad) {
-        const dealt = u.hit(dmgToApply, this.dir.clone().mul(this.knock), this.owner);
+        const dealt = u.hit(this.dmg, this.dir.clone().mul(this.knock), this.owner);
         if (dealt > 0) {
           game.onDamage(dealt);
           if (this.owner) this.owner.gainXPOffense(dealt);
-          if (this.owner && this.owner.className === 'bruxo') {
+          if (this.owner && this.owner.className === 'bruxo' && u.hex && u.hex.owner === this.owner) {
             const heal = dealt * CFG.bruxo.link.leechPct;
             this.owner.hp = clamp(this.owner.hp + heal, 0, this.owner.hpMax);
             game.spawnParticle(new Particle(this.owner.pos.clone(), V.fromAng(randAng(), rrand(40,120)), .25, CFG.bruxo.hex.color));
@@ -132,14 +130,14 @@ export class Projectile {
     // Familiar (projetis podem atingi-lo)
     for (const s of game.summons) {
       if (!s.alive || s.kind !== 'familiar') continue;
-      if (this.owner && s.team && this.owner.team && s.team === this.owner.team) continue;
+      if (this.owner && s.team && this.owner.team && s.team === this.owner.team && !this.canHurtAllies) continue;
 
       const d = new V(s.pos.x - this.pos.x, s.pos.y - this.pos.y).len();
       if (d < s.bodyR + this.rad) {
         const dealt = s.hit(this.dmg, this.dir.clone().mul(this.knock), this.owner);
         if (dealt > 0) {
           if (this.owner) this.owner.gainXPOffense?.(dealt);
-          if (this.owner && this.owner.className === 'bruxo') {
+          if (this.owner && this.owner.className === 'bruxo' && s.hex && s.hex.owner === this.owner) {
             const heal = dealt * CFG.bruxo.link.leechPct;
             this.owner.hp = clamp(this.owner.hp + heal, 0, this.owner.hpMax);
           }

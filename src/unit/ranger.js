@@ -11,7 +11,8 @@ import { game } from '../core/game.js';
 export function rangerStats(level) {
   const L = Math.max(1, Math.min(level | 0, CFG.level.max));
   const cd = CFG.ranged.cooldown * (1 - 0.06 * Math.min(10, L - 1) / 10);
-  const dmgBase = 10 + Math.floor((L - 1) * 1.2);
+  // dano base aumentado em 50%
+  const dmgBase = (10 + Math.floor((L - 1) * 1.2)) * 1.5;
   const numArrows = (L >= 12) ? 2 : 1;
   const spread = 0.18;
   const speed = CFG.ranger.arrow.baseSpeed + CFG.ranger.arrow.speedPerLevel * (L - 1);
@@ -63,7 +64,8 @@ export function castPerfectShot() {
       speed: stats.speed * speedMul,
       dmg:   stats.dmgBase * passive * dmgMult,
       penetration: true,
-      visual: 'perfect'
+      visual: 'perfect',
+      canHurtAllies: false
     };
     const arr = new Arrow(this, origin.clone(), dir, spec);
     game.spawnProjectile(arr);

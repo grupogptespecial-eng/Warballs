@@ -16,6 +16,7 @@ export class Arrow extends Projectile {
     this.penetration = !!spec.penetration;
     this.vel = dir.clone().mul(this.speed);
     this.visual = spec.visual || null;
+    this.canHurtAllies = spec.canHurtAllies !== false;
   }
 
   stepMove(dt) {

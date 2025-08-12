@@ -296,6 +296,9 @@ export class Unit {
     }
     let amountMod = amount;
     let impulseMod = impulse;
+    if (this.hex && this.hex.t > 0) {
+      amountMod *= CFG.bruxo.hex.dmgMult;
+    }
     if (this.className === 'barbaro' && this.urroT > 0) {
       amountMod *= CFG.barbaro.roar.dmgReduce;
       impulseMod = new V(0, 0);

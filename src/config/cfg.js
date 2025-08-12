@@ -83,7 +83,8 @@ export const CFG = {
     hpBase: 120, hpPerLevel: 8,
     stillVel: 30, stillTime: 0.5, passiveDmgMult: 1.5,
     arrow: { baseSpeed: 700, speedPerLevel: 15, gravity: 180, drag: 0.12, life: 3.0, radius: 5, color: '#96f2a2' },
-    perfectShot: { cd: 5.0, dmgMult: 1.5 },
+    // Perfect Shot: dano reduzido em 60%
+    perfectShot: { cd: 5.0, dmgMult: 0.6 },
     forestCall: { cd: 12.0, duration: 6.0, minions: { base: 1, lvl2: 8, lvl3: 14 }, dmgBase: 10, dmgPerLevelPct: 0.05 }
   },
 
@@ -106,7 +107,8 @@ export const CFG = {
   // Configuração da classe Monge
   monge: {
     hpBase: 120, hpPerLevel: 4,
-    dmgMult: 1.5,
+    // aumento de 30% no dano base
+    dmgMult: 1.95,
     vMinBonusPerLevel: 8,  vMaxBonusPerLevel: 14,
     vMinBonusCap: 160,      vMaxBonusCap: 360,
     baseBodyDamageL1: 8, bodyDamagePerLvl: 0.6,
@@ -129,7 +131,8 @@ export const CFG = {
   // Configuração da classe Clérigo
   clerigo: {
     hpBase: 150, hpPerLevel: 10,
-    tipBase: 14,
+    // dano base reduzido em 20%
+    tipBase: 11.2,
     knockBase: 340,
 
     sacredFlame: {
@@ -142,7 +145,8 @@ export const CFG = {
 
     beam: {
       cd: 18.0, dur: 1.6, range: 900, width: 26,
-      dpsBase: 60, dpsPerLevel: 4.5, push: 900, tick: 0.06,
+      // dano do Sunbeam aumentado em 70%
+      dpsBase: 102, dpsPerLevel: 7.65, push: 900, tick: 0.06,
       color: '#ffe28a', edge: '#f59e0b'
     },
 
