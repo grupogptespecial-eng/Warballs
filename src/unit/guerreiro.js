@@ -4,6 +4,7 @@ import { V } from '../math/vec.js';
 import { CFG } from '../config/cfg.js';
 import { SpearProjectile } from '../entities/spear.js';
 import { Particle } from '../entities/particle.js';
+import { distPointToSegment } from '../utils/geometry.js';
 import { randAng, rrand } from '../utils/rand.js';
 import { game } from '../core/game.js';
 
@@ -24,6 +25,7 @@ function startMelee(u, target) {
   u.gw.state = 'MELEE_STARTUP';
   u.gw.meleeT = 0;
   u.gw.meleeTarget = target;
+   u.gw.meleeHit = false;
   registerSwap(u, 'MELEE');
   const ang = Math.atan2(target.pos.y - u.pos.y, target.pos.x - u.pos.x);
   let diff = Math.atan2(Math.sin(ang - u.angle), Math.cos(ang - u.angle));
@@ -42,6 +44,37 @@ function tickMelee(u, dt) {
     u.gw.state = 'IDLE';
     const mult = u.gw.stanceActive ? (1 - CFG.guerreiro.stance.atkRateBonus) : 1;
     u.gw.meleeCD = S.meleeCooldown * mult;
+  }
+
+  if (u.gw.state === 'MELEE_ACTIVE' && !u.gw.meleeHit) {
+    const base = u.pos.clone();
+    const tip = u.tip();
+    for (const other of game.units) {
+      if (!other.alive || other === u) continue;
+      if (u.team && other.team && u.team === other.team) continue;
+      const d = distPointToSegment(other.pos, base, tip);
+      if (d < other.bodyR + u.weaponTipR) {
+        let dmg = CFG.guerreiro.damage.meleeBase;
+        const proj = ((other.pos.x - base.x) * Math.cos(u.angle) + (other.pos.y - base.y) * Math.sin(u.angle));
+        if (proj > u.weaponLen * 0.8) dmg *= CFG.guerreiro.spear.tipBonus;
+        if (u.gw.disciplineReady) {
+          dmg *= 1 + CFG.guerreiro.discipline.nextHitBonus;
+          u.gw.disciplineReady = false;
+        }
+        const dealt = other.hit(dmg, V.fromAng(u.angle, 220), u);
+        if (dealt > 0) u.gainXPOffense(dealt);
+        for (let i = 0; i < CFG.vfx.particlesOnHit; i++) {
+          game.spawnParticle(new Particle(
+            other.pos.clone(),
+            V.fromAng(randAng(), rrand(50, 220)),
+            rrand(.2, .6),
+            '#e5e7eb'
+          ));
+        }
+        u.gw.meleeHit = true;
+        break;
+      }
+    }
   }
 }
 
@@ -78,6 +111,7 @@ export function updateGuerreiro(dt) {
 
   if (gw.meleeCD > 0) gw.meleeCD -= dt;
   if (gw.throwCD > 0) gw.throwCD -= dt;
+  if (gw.aimT > 0) gw.aimT -= dt;
   if (gw.parryCD > 0) gw.parryCD -= dt;
   if (gw.disciplineReady && game.time > gw.disciplineExpire) gw.disciplineReady = false;
 
@@ -128,8 +162,18 @@ export function updateGuerreiro(dt) {
 
   if (target && best <= meleeRange && gw.meleeCD <= 0) {
     startMelee(this, target);
-  } else if (target && best >= minThrow && best <= maxThrow && gw.throwCD <= 0) {
-    startThrow(this, target);
+  } else if (target && best >= minThrow && best <= maxThrow) {
+    if (gw.throwCD <= 0) {
+      if (gw.aimT <= 0) gw.aimT = CFG.guerreiro.throw.cooldown * CFG.guerreiro.throw.miraCondPercent;
+      if (gw.aimT > 0 && this.enemyInLineOfSight()) {
+        startThrow(this, target);
+        gw.aimT = 0;
+      } else {
+        if (gw.aimT <= 0) {
+          startThrow(this, target);
+        }
+      }
+    }
   }
 }
 

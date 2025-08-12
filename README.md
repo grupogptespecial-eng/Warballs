@@ -80,6 +80,16 @@ Itens atuais:
 - **Bruxo** – runa orbital
 - **Guerreiro** – ombreira metálica
 
+## Guerreiro – Lança v2
+
+O Guerreiro alterna entre estocadas de média distância e arremessos curtos de
+lança. A arma possui geometria segmentada (ponta letal e cabo sólido) e o
+projétil retorna automaticamente após um tempo de voo máximo. Alternar entre um
+ataque corpo‑a‑corpo e um arremesso dentro do tempo de `discipline.swapWindow`
+ativa **Disciplina Marcial**, concedendo bônus de dano no próximo acerto. A
+classe conta ainda com Postura de Guerra, Parry avançado e outras manobras
+táticas descritas em `CFG.guerreiro`.
+
 ## Desenvolvimento
 
 Instale as dependências (se houver) e execute os testes sintáticos:

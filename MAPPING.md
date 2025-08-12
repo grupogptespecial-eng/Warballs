@@ -104,9 +104,9 @@ símbolos e o destino correspondente em arquivos separados.
 | `rangerStats`, `rangerSpeedMult`, `fire` (arco), `castPerfectShot`, `castForestCall` | `src/unit/ranger.js` (1-220) |
 | `cleric*` helpers, `clericStartBeam`, `clericBeamTick`, `castPrayer`, `clericPassiveTick` | `src/unit/clerigo.js` (1-220) |
 | `castHex`, `castFamiliar`, `bruxo` passivas | `src/unit/bruxo.js` (1-200) |
-| `guerreiro` spear, `parry`, `war`, `discipline` | `src/unit/guerreiro.js` (1-220) |
+| `updateGuerreiro`, `guerreiroParryAgainst`, FSM de spear/discipline | `src/unit/guerreiro.js` (1-220) |
 | `class V` | `src/math/vec.js` (1-80) |
-| `Particle`, `Effect`, `Projectile`, `Arrow`, `SpearProjectile`, `Summon`, `Familiar` | `src/entities/{particle.js,effect.js,projectile.js,arrow.js,spear.js,summon.js,familiar.js}` (1-160 cada) |
+| `Particle`, `Effect`, `Projectile`, `Arrow`, `SpearProjectile` (retorno segmentado), `Summon`, `Familiar` | `src/entities/{particle.js,effect.js,projectile.js,arrow.js,spear.js,summon.js,familiar.js}` (1-160 cada) |
 | `class Unit` (funcionalidade genérica) | `src/unit/unit.js` (1-400) |
 | Objeto `game`, loop de atualização/render | `src/core/{game.js,loop.js,arena.js}` (1-400) |
 | Renderização de pré-visualização e canvas principal | `src/render/{preview.js,drawHelpers.js}`, `public/index.html` |
