@@ -22,7 +22,7 @@ export const CLASSES = {
   clerigo:   { label: 'Clérigo',   color: '#93c5fd', hasRanged: false, weaponLen: 36, tipRadius: 12, omega: 3.6 },
   ranger:    { label: 'Ranger',    color: '#34d399', hasRanged: true,  cooldownMiraPercent: 0.25, weaponLen: 36, tipRadius: 8,  omega: 3.6 },
   bruxo:     { label: 'Bruxo',     color: '#a78bfa', hasRanged: true,  cooldownMiraPercent: 0.10, weaponLen: 20, tipRadius: 6,  omega: 3.4 },
-  guerreiro: { label: 'Guerreiro', color: '#f59e0b', hasRanged: true,  cooldownMiraPercent: 0.15, weaponLen: 38, tipRadius: 10, omega: 3.6 }
+  guerreiro: { label: 'Guerreiro', color: '#f59e0b', hasRanged: false, weaponLen: 38, tipRadius: 10, omega: 3.6 }
 };
 
 // Objeto de configuração principal contendo parâmetros de gameplay
@@ -182,27 +182,80 @@ export const CFG = {
 
   // Configuração da classe Guerreiro
   guerreiro: {
-    hpBase: 150, hpPerLevel: 10, tipBase: 15,
+    hpBase: 150,
+    hpPerLevel: 10,
 
-    // Lança arremessada
     spear: {
-      speed: 860, life: 1.2, rad: 6, dmgBase: 12, knock: 260,
-      color: '#e5e7eb',
-      cdTotal: 1.4,
-      disarmedFrac: 0.45
+      shaftLenFactor: 1.65,
+      shaftThickness: 0.12,
+      tipBonus: 1.25,
+      meleeStartup: 0.085,
+      meleeActive: 0.065,
+      meleeRecover: 0.12,
+      meleeCooldown: 0.18,
+      aimSnapDeg: 18,
+      maxAngVel: 720
     },
 
-    // Troca de modo
-    switch: { meleeR: 180 },
+    throw: {
+      enabled: true,
+      minRange: 2.2,
+      maxRange: 5.8,
+      speed: 9.5,
+      flightMaxTime: 0.6,
+      onHitStop: 0.06,
+      cooldown: 0.55,
+      returnMode: 'auto',
+      friendlyFire: false,
+      miraCondPercent: 0.2,
+      precisionErrDeg: 8,
+      precisionErrPerLevel: -0.4,
+      rangePerLevel: 0.08
+    },
 
-    // Passiva: bônus no próximo golpe após alternar distância
-    discipline: { bonus: 1.25 },
+    discipline: {
+      swapWindow: 0.9,
+      nextHitBonus: 0.2,
+      bonusDurationMax: 3.0
+    },
 
-    // Habilidade 1: Parry
-    parry: { cd: 5.0, tangent: 520, radial: 240, lockT: 0.22 },
+    maneuvers: {
+      parry: {
+        ttiWindow: 0.10,
+        disarmDuration: 0.45,
+        counterStartup: 0.05,
+        tangent: 520,
+        radial: 240,
+        lockT: 0.22
+      },
+      advance: {
+        vulnerableFOVDeg: 35,
+        dashSpeed: 8.0,
+        dashDuration: 0.12,
+        angAccel: 1800,
+        connectAngleDeg: 10,
+        cooldown: 0.5
+      },
+      dodge: {
+        ttiProjectile: 0.35,
+        sidestepDist: 0.6,
+        cooldown: 1.1
+      }
+    },
 
-    // Habilidade 2: Postura de Guerra
-    war: { detectR: 220, omegaMul: 1.35, knockResistPct: 0.35 }
+    stance: {
+      threatRadius: 3.6,
+      atkRateBonus: 0.15,
+      knockbackRedBase: 0.2,
+      knockbackRedPer100HP: 0.2,
+      knockbackRedMax: 0.6,
+      exitGrace: 0.35
+    },
+
+    damage: {
+      meleeBase: 14,
+      throwBase: 11
+    }
   },
 
   // Sistema de níveis e experiência

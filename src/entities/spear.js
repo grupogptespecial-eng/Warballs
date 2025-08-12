@@ -7,16 +7,17 @@ import { Projectile } from './projectile.js';
 export class SpearProjectile extends Projectile {
   constructor(owner, pos, dir) {
     super(owner, pos, dir);
+    const T = CFG.guerreiro.throw;
     const S = CFG.guerreiro.spear;
-    this.speed = S.speed;
-    this.life = S.life;
-    this.rad = S.rad;
-    this.dmg = S.dmgBase * (owner ? owner.dmgMult() : 1);
-    this.knock = S.knock;
-    this.color = S.color;
+    this.speed = T.speed * CFG.body.radius;
+    this.life = T.flightMaxTime;
+    this.rad = S.shaftThickness * CFG.body.radius;
+    this.dmg = CFG.guerreiro.damage.throwBase * (owner ? owner.dmgMult() : 1);
+    this.knock = 260;
+    this.color = '#e5e7eb';
 
     if (owner && owner.gw && owner.gw.disciplineReady) {
-      this.dmg *= CFG.guerreiro.discipline.bonus;
+      this.dmg *= 1 + CFG.guerreiro.discipline.nextHitBonus;
       owner.gw.disciplineReady = false;
     }
 

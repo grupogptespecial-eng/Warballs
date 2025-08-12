@@ -70,7 +70,6 @@ import {
 } from './bruxo.js';
 
 import {
-  fire as guerreiroFire,
   updateGuerreiro,
   guerreiroParryAgainst
 } from './guerreiro.js';
@@ -205,20 +204,27 @@ export class Unit {
       this.hexTarget = null;
       this.hexT = 0;
 
-    } else if (this.className === 'guerreiro') {
-      this.baseHP = CFG.guerreiro.hpBase;
-      this.hpMax = this.baseHP;
-      this.hp = this.hpMax;
-      this.gw = {
-        mode: 'ranged',
-        lastMode: 'ranged',
-        disciplineReady: false,
-        parryCD: 0,
-        disarmedT: 0,
-        stanceActive: false,
-        baseOmega: this.omega
-      };
-    }
+      } else if (this.className === 'guerreiro') {
+        this.baseHP = CFG.guerreiro.hpBase;
+        this.hpMax = this.baseHP;
+        this.hp = this.hpMax;
+        const S = CFG.guerreiro.spear;
+        this.weaponLen = S.shaftLenFactor * CFG.body.radius;
+        this.weaponTipR = S.shaftThickness * CFG.body.radius;
+        this.gw = {
+          state: 'IDLE',
+          meleeCD: 0,
+          throwCD: 0,
+          parryCD: 0,
+          lastAttackType: null,
+          lastAttackTime: 0,
+          disciplineReady: false,
+          disciplineExpire: 0,
+          stanceActive: false,
+          stanceGrace: 0,
+          baseOmega: this.omega
+        };
+      }
   }
 
   xpCost() { return CFG.xp.cost(this.level); }
@@ -337,8 +343,8 @@ export class Unit {
         const B = CFG.bruxo.blast;
         r = B.speed * B.life;
       } else if (this.className === 'guerreiro') {
-        const S = CFG.guerreiro.spear;
-        r = S.speed * S.life;
+        const T = CFG.guerreiro.throw;
+        r = (T.speed * CFG.body.radius) * T.flightMaxTime;
       } else {
         r = CFG.ranged.speed * CFG.ranged.life;
       }
@@ -623,7 +629,7 @@ export class Unit {
     {
       const d1 = new V(other.pos.x - t1.x, other.pos.y - t1.y).len();
       const warriorThisMeleeBlocked =
-        (this.className === 'guerreiro' && this.gw && (this.gw.mode !== 'melee' || this.gw.disarmedT > 0));
+        (this.className === 'guerreiro' && this.gw && this.gw.state !== 'MELEE_ACTIVE');
       if (this.className !== 'ranger' && this.className !== 'monge'
           && !warriorThisMeleeBlocked
           && d1 < other.bodyR + this.weaponTipR
@@ -634,12 +640,12 @@ export class Unit {
         if (this.className === 'barbaro')        tipBase = barbTip(this.level);
         else if (this.className === 'paladino')  tipBase = CFG.paladino.tipBase;
         else if (this.className === 'clerigo')   tipBase = clericTip(this.level);
-        else if (this.className === 'guerreiro') tipBase = CFG.guerreiro.tipBase;
+        else if (this.className === 'guerreiro') tipBase = CFG.guerreiro.damage.meleeBase;
         else                                     tipBase = CFG.engage.tipDamageBase;
         let dmg = tipBase * this.dmgMult();
         if (this.className === 'barbaro') dmg = barbApplyPassiveDamage(this, dmg);
         if (this.className === 'guerreiro' && this.gw && this.gw.disciplineReady) {
-          dmg *= CFG.guerreiro.discipline.bonus;
+          dmg *= 1 + CFG.guerreiro.discipline.nextHitBonus;
           this.gw.disciplineReady = false;
         }
         let knockMag =
@@ -672,7 +678,7 @@ export class Unit {
     {
       const d2 = new V(this.pos.x - t2.x, this.pos.y - t2.y).len();
       const warriorOtherMeleeBlocked =
-        (other.className === 'guerreiro' && other.gw && (other.gw.mode !== 'melee' || other.gw.disarmedT > 0));
+        (other.className === 'guerreiro' && other.gw && other.gw.state !== 'MELEE_ACTIVE');
       if (other.className !== 'ranger' && other.className !== 'monge'
           && !warriorOtherMeleeBlocked
           && d2 < this.bodyR + other.weaponTipR
@@ -683,12 +689,12 @@ export class Unit {
         if (other.className === 'barbaro')        tipBase = barbTip(other.level);
         else if (other.className === 'paladino')  tipBase = CFG.paladino.tipBase;
         else if (other.className === 'clerigo')   tipBase = clericTip(other.level);
-        else if (other.className === 'guerreiro') tipBase = CFG.guerreiro.tipBase;
+        else if (other.className === 'guerreiro') tipBase = CFG.guerreiro.damage.meleeBase;
         else                                      tipBase = CFG.engage.tipDamageBase;
         let dmg = tipBase * other.dmgMult();
         if (other.className === 'barbaro') dmg = barbApplyPassiveDamage(other, dmg);
         if (other.className === 'guerreiro' && other.gw && other.gw.disciplineReady) {
-          dmg *= CFG.guerreiro.discipline.bonus;
+          dmg *= 1 + CFG.guerreiro.discipline.nextHitBonus;
           other.gw.disciplineReady = false;
         }
         let knockMag =
@@ -768,7 +774,6 @@ export class Unit {
   fire() {
     if (this.className === 'ranger') return rangerFire.call(this);
     if (this.className === 'bruxo') return bruxoFire.call(this);
-    if (this.className === 'guerreiro') return guerreiroFire.call(this);
     const dir = new V(Math.cos(this.angle), Math.sin(this.angle));
     const p = this.tip().add(dir.clone().mul(this.weaponTipR + 2));
     game.spawnProjectile(new Projectile(this, p, dir));
@@ -1207,7 +1212,7 @@ export class Unit {
       ctx.rect(this.bodyR + w * 0.85, -h / 2, w * 0.05, h);
       ctx.fill();
     } else if (this.className === 'guerreiro') {
-      if (this.gw && this.gw.disarmedT > 0) {
+      if (this.gw && this.gw.state === 'THROW_FLIGHT') {
         const ax = this.bodyR, ay = 0;
         ctx.strokeStyle = shade(this.color, -0.25);
         ctx.lineWidth = 3;
