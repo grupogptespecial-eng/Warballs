@@ -35,6 +35,24 @@ Na seção **Partida** é possível escolher entre duas arenas:
   delay/duração para que a arena encolha ou cresça suavemente durante a
   partida.
 
+## Crates
+
+O jogo possui um sistema de **crates** configuráveis que pode gerar três
+tipos de bônus:
+
+- **Vida** – quadrado verde que cura ao ser coletado;
+- **Experiência** – hexágono azul que concede XP;
+- **Híbrido** – octógono meio verde/meio azul que oferece ambos.
+
+Os parâmetros ficam em `CFG.crates`, onde é possível habilitar cada tipo e
+ajustar taxa média de spawn (`avgPer100s`), tamanho (`sizePx`) e recompensa
+(`healAmount`/`xpAmount`). Há limites globais de distância/quantidade,
+além do tempo de vida padrão (`lifetime`).
+
+Em arenas do tipo Battle Royale, crates fora dos limites atuais seguem a
+política `brCratePolicyOnShrink`, que pode ser `despawn`, `pushInwards` ou
+`disableOutside` (cinza e inativo por alguns segundos).
+
 ## Mecânica de mira
 
 Unidades com ataques à distância possuem uma espera oculta após o fim do

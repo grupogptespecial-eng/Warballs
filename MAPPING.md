@@ -110,6 +110,7 @@ símbolos e o destino correspondente em arquivos separados.
 | `class Unit` (funcionalidade genérica) | `src/unit/unit.js` (1-400) |
 | Objeto `game`, loop de atualização/render | `src/core/{game.js,loop.js,arena.js}` (1-400) |
 | Renderização de pré-visualização e canvas principal | `src/render/{preview.js,drawHelpers.js}`, `public/index.html` |
+| `CrateSystem` | `src/core/crateSystem.js` (1-200) |
 
 ### Novos recursos
 
@@ -120,3 +121,5 @@ serão listados aqui conforme adicionados.*
   controlando a espera de mira usada em `src/unit/unit.js`.
 - `enemyInLineOfSight()` — método em `src/unit/unit.js` que verifica
   se há inimigo na linha de visão durante a janela de mira.
+- `CrateSystem` — módulo em `src/core/crateSystem.js` que gerencia
+  spawns de crates configuráveis e aplica políticas de shrink da arena.

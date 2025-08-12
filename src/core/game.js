@@ -7,6 +7,7 @@ import { V } from '../math/vec.js';
 import { randAng, rrand } from '../utils/rand.js';
 import { Particle } from '../entities/particle.js';
 import { Effect } from '../entities/effect.js';
+import { CrateSystem } from './crateSystem.js';
 
 export const canvas = document.getElementById('game');
 export const g = canvas ? canvas.getContext('2d') : null;
@@ -29,6 +30,13 @@ export const game = {
     if (typeof window !== 'undefined') {
       window.addEventListener('resize', () => this.resize());
     }
+    CrateSystem.init({
+      getArenaBounds: () => this.bounds,
+      queryUnits: () => this.units,
+      rng: Math.random,
+      now: () => (typeof performance !== 'undefined' ? performance.now() / 1000 : Date.now() / 1000)
+    });
+    CrateSystem.setConfig(CFG.crates);
   },
 
   resize() {
@@ -89,6 +97,9 @@ export const game = {
       }
     }
 
+    CrateSystem.update(dt);
+    for (const u of this.units) CrateSystem.tryPickup(u);
+
     for (const s of this.summons) s.update(dt, arena, this.units);
     for (const p of this.projectiles) p.update(dt, arena, this.units, this.summons);
     for (const e of this.effects) e.update?.(dt);
@@ -105,6 +116,7 @@ export const game = {
     if (!g) return;
     drawBackground(canvas.width, canvas.height);
     drawArenaRect(this.bounds);
+    CrateSystem.render(g);
     for (const e of this.effects) e.draw?.(g);
     for (const part of this.particles) part.draw(g);
     for (const s of this.summons) s.draw(g);

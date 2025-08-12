@@ -32,7 +32,33 @@ export const CrateSystem = {
     if (this.config.enableHybridCrates) this.maybeSpawn('HYBRID', this.config.hybrid, dt, bounds);
 
     const now = this.deps.now();
-    this.crates = this.crates.filter(c => now - c.spawnTime < c.lifetime);
+    for (const c of this.crates) {
+      // lifetime
+      if (now - c.spawnTime >= c.lifetime) c.remove = true;
+
+      // battle royale shrink policy
+      if (!this.insideBounds(c.pos, c.size, bounds)) {
+        const policy = this.config.brCratePolicyOnShrink;
+        if (policy === 'despawn') {
+          c.remove = true;
+        } else if (policy === 'pushInwards') {
+          c.pos.x = clamp(c.pos.x, bounds.x + c.size / 2, bounds.x + bounds.w - c.size / 2);
+          c.pos.y = clamp(c.pos.y, bounds.y + c.size / 2, bounds.y + bounds.h - c.size / 2);
+        } else if (policy === 'disableOutside') {
+          if (c.state !== 'DISABLED') {
+            c.state = 'DISABLED';
+            c.disableTimer = 5;
+          }
+        }
+      }
+
+      if (c.state === 'DISABLED') {
+        c.disableTimer -= dt;
+        if (c.disableTimer <= 0) c.remove = true;
+      }
+    }
+
+    this.crates = this.crates.filter(c => !c.remove);
   },
 
   count(kind) {
@@ -54,7 +80,8 @@ export const CrateSystem = {
         healAmount: cfg.healAmount || 0,
         xpAmount: cfg.xpAmount || 0,
         spawnTime: this.deps.now(),
-        lifetime: this.config.lifetime
+        lifetime: this.config.lifetime,
+        state: 'ACTIVE'
       });
     }
   },
@@ -85,6 +112,7 @@ export const CrateSystem = {
   tryPickup(unit) {
     let picked = false;
     this.crates = this.crates.filter(c => {
+      if (c.state !== 'ACTIVE') return true;
       if (this.collideUnit(c, unit)) {
         if (c.healAmount) {
           unit.hp = clamp(unit.hp + c.healAmount, 0, unit.hpMax);
@@ -114,7 +142,10 @@ export const CrateSystem = {
       ctx.shadowColor = 'rgba(0,0,0,0.3)';
       ctx.shadowBlur = 2;
 
-      if (c.kind === 'HEALTH') {
+      if (c.state === 'DISABLED') {
+        ctx.fillStyle = '#7f8c8d';
+        this.drawPolygon(ctx, 4, c.size / 2);
+      } else if (c.kind === 'HEALTH') {
         ctx.fillStyle = '#2ECC71';
         this.drawPolygon(ctx, 4, c.size / 2);
       } else if (c.kind === 'XP') {
@@ -144,4 +175,13 @@ export const CrateSystem = {
     }
     ctx.closePath();
   }
+};
+
+CrateSystem.insideBounds = function (pos, size, b) {
+  return (
+    pos.x - size / 2 >= b.x &&
+    pos.x + size / 2 <= b.x + b.w &&
+    pos.y - size / 2 >= b.y &&
+    pos.y + size / 2 <= b.y + b.h
+  );
 };
