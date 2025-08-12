@@ -1,9 +1,10 @@
-import { CFG } from '../config/cfg.js';
+import { CFG, CLASSES } from '../config/cfg.js';
 import { V } from '../math/vec.js';
 import { clamp, shade } from '../utils/misc.js';
 import { randAng, rrand } from '../utils/rand.js';
 import { drawRoundedRect } from '../utils/geometry.js';
 import { Particle } from '../entities/particle.js';
+import { Effect } from '../entities/effect.js';
 import { Projectile } from '../entities/projectile.js';
 import { game } from '../core/game.js';
 
@@ -87,7 +88,7 @@ export function nearestEnemyOf(self) {
 }
 
 export class Unit {
-  constructor(id, pos, color, hasRanged) {
+  constructor(id, pos, color) {
     this.id = id;
     this.pos = pos.clone();
     this.vel = V.fromAng(randAng(), CFG.physics.initImpulse);
@@ -107,7 +108,7 @@ export class Unit {
     this.omega = CFG.weapon.omega * (Math.random() < 0.5 ? -1 : 1);
     this.angle = randAng();
 
-    this.hasRanged = !!hasRanged;
+    this.hasRanged = false;
     this.cd = 0;
     this.a1cd = CFG.ranger.perfectShot.cd;
     this.a2cd = CFG.ranger.forestCall.cd;
@@ -145,6 +146,7 @@ export class Unit {
 
   // === Inicialização e progressão ===
   applyClassDefaults() {
+    this.hasRanged = !!CLASSES[this.className]?.hasRanged;
     if (this.className === 'ranger') {
       this.baseHP = CFG.ranger.hpBase;
       this.hpMax = this.baseHP;
@@ -469,6 +471,7 @@ export class Unit {
         if (nearby >= 1 || (this.hp / this.hpMax) < 0.5) {
           this.palShieldT = CFG.paladino.shield.dur;
           this.palShieldCD = st.shieldCD;
+          game.spawnEffect(new Effect(this.pos.clone(), this.bodyR + 12, 0.3, '#fff8c2'));
         }
       }
       if (this.palHealCD > 0) this.palHealCD -= dt;
@@ -813,6 +816,19 @@ export class Unit {
       ctx.restore();
     }
 
+    if (this.className === 'clerigo' && this.beamT > 0) {
+      const t = this.tip();
+      const len = CFG.clerigo.beam.range;
+      ctx.save();
+      ctx.strokeStyle = CFG.clerigo.beam.color;
+      ctx.lineWidth = CFG.clerigo.beam.width;
+      ctx.beginPath();
+      ctx.moveTo(t.x, t.y);
+      ctx.lineTo(t.x + Math.cos(this.angle) * len, t.y + Math.sin(this.angle) * len);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     if (this.hex && this.hex.t > 0) {
       const t = (performance.now() / 1000);
       const r = this.bodyR + 8;
@@ -908,6 +924,18 @@ export class Unit {
       ctx.beginPath();
       ctx.arc(tx, ty, this.weaponTipR + 2, 0, Math.PI * 2);
       ctx.fillStyle = '#b6bcc8';
+      ctx.fill();
+    } else if (this.className === 'bruxo') {
+      const w = this.weaponLen;
+      const h = this.weaponLen * 1.2;
+      ctx.fillStyle = weaponCol;
+      ctx.beginPath();
+      ctx.rect(this.bodyR, -h / 2, w, h);
+      ctx.fill();
+      ctx.fillStyle = shade(base, -0.35);
+      ctx.beginPath();
+      ctx.rect(this.bodyR + w * 0.1, -h / 2, w * 0.05, h);
+      ctx.rect(this.bodyR + w * 0.85, -h / 2, w * 0.05, h);
       ctx.fill();
     } else if (this.className === 'guerreiro') {
       if (this.gw && this.gw.disarmedT > 0) {

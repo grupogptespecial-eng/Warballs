@@ -19,7 +19,7 @@ function gatherUnits() {
       game.bounds.x + Math.random() * game.bounds.w,
       game.bounds.y + Math.random() * game.bounds.h
     );
-    const u = new Unit(id++, pos, color, true);
+    const u = new Unit(id++, pos, color);
     u.team = team;
     u.className = cls;
     u.level = lvl;

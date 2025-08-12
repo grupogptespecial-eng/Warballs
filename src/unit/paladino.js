@@ -4,6 +4,7 @@ import { CFG } from '../config/cfg.js';
 import { V } from '../math/vec.js';
 import { clamp } from '../utils/misc.js';
 import { Particle } from '../entities/particle.js';
+import { Effect } from '../entities/effect.js';
 import { game } from '../core/game.js';
 
 export function palStats(level) {
@@ -53,6 +54,7 @@ export function castPalHeal() {
       CFG.paladino.heal.color
     ));
   }
+  game.spawnEffect(new Effect(this.pos.clone(), this.bodyR + 40, 0.5, CFG.paladino.heal.color));
 }
 
 export function trySacredStrike(hitPos, baseDealt) {
