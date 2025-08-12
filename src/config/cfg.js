@@ -221,6 +221,21 @@ export const CFG = {
     tipDamageBase: 14
   },
 
+  // Configuração do sistema de crates (power‑ups de vida/XP)
+  crates: {
+    enableHealthCrates: false,
+    enableXpCrates: false,
+    enableHybridCrates: true,
+    health: { avgPer100s: 12, sizePx: 18, healAmount: 12 },
+    xp:     { avgPer100s: 12, sizePx: 18, xpAmount: 8 },
+    hybrid: { avgPer100s: 12, sizePx: 18, healAmount: 8, xpAmount: 6 },
+    maxConcurrentPerType: 6,
+    lifetime: 35,
+    minDistanceFromUnits: 28,
+    minDistanceBetweenCrates: 24,
+    brCratePolicyOnShrink: 'despawn'
+  },
+
   // Efeitos visuais globais
   vfx: { shadow: 18, bloom: 0.25, particlesOnHit: 10, reflectSpark: 6 }
 };
