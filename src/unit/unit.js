@@ -323,11 +323,27 @@ export class Unit {
     );
   }
 
-  enemyInLineOfSight(range = CFG.ranged.speed * CFG.ranged.life) {
+  enemyInLineOfSight(range) {
+    let r = range;
+    if (r == null) {
+      if (this.className === 'ranger') {
+        const A = CFG.ranger.arrow;
+        const speed = A.baseSpeed + A.speedPerLevel * (this.level - 1);
+        r = speed * A.life;
+      } else if (this.className === 'bruxo') {
+        const B = CFG.bruxo.blast;
+        r = B.speed * B.life;
+      } else if (this.className === 'guerreiro') {
+        const S = CFG.guerreiro.spear;
+        r = S.speed * S.life;
+      } else {
+        r = CFG.ranged.speed * CFG.ranged.life;
+      }
+    }
     const tip = this.tip();
     const end = new V(
-      tip.x + Math.cos(this.angle) * range,
-      tip.y + Math.sin(this.angle) * range
+      tip.x + Math.cos(this.angle) * r,
+      tip.y + Math.sin(this.angle) * r
     );
     for (const u of game.units) {
       if (!u.alive || u === this) continue;

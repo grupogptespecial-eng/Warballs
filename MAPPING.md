@@ -118,3 +118,5 @@ serão listados aqui conforme adicionados.*
 
 - `cooldownMiraPercent` — parâmetro por classe em `src/config/cfg.js`
   controlando a espera de mira usada em `src/unit/unit.js`.
+- `enemyInLineOfSight()` — método em `src/unit/unit.js` que verifica
+  se há inimigo na linha de visão durante a janela de mira.
