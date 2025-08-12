@@ -2,7 +2,7 @@ import { CFG, CLASSES } from '../config/cfg.js';
 import { V } from '../math/vec.js';
 import { clamp, shade } from '../utils/misc.js';
 import { randAng, rrand } from '../utils/rand.js';
-import { drawRoundedRect } from '../utils/geometry.js';
+import { drawRoundedRect, distPointToSegment } from '../utils/geometry.js';
 import { Particle } from '../entities/particle.js';
 import { Effect } from '../entities/effect.js';
 import { Projectile } from '../entities/projectile.js';
@@ -109,7 +109,10 @@ export class Unit {
     this.angle = randAng();
 
     this.hasRanged = false;
-    this.cd = 0;
+    this.cooldownMiraPercent = 0;
+    this.cdAim = 0;
+    this.lastShotCD = CFG.ranged.cooldown;
+    this.cd = this.lastShotCD;
     this.a1cd = CFG.ranger.perfectShot.cd;
     this.a2cd = CFG.ranger.forestCall.cd;
 
@@ -147,6 +150,7 @@ export class Unit {
   // === Inicialização e progressão ===
   applyClassDefaults() {
     this.hasRanged = !!CLASSES[this.className]?.hasRanged;
+    this.cooldownMiraPercent = CLASSES[this.className]?.cooldownMiraPercent || 0;
     if (this.className === 'ranger') {
       this.baseHP = CFG.ranger.hpBase;
       this.hpMax = this.baseHP;
@@ -319,6 +323,21 @@ export class Unit {
     );
   }
 
+  enemyInLineOfSight(range = CFG.ranged.speed * CFG.ranged.life) {
+    const tip = this.tip();
+    const end = new V(
+      tip.x + Math.cos(this.angle) * range,
+      tip.y + Math.sin(this.angle) * range
+    );
+    for (const u of game.units) {
+      if (!u.alive || u === this) continue;
+      if (this.team && u.team && this.team === u.team) continue;
+      const d = distPointToSegment(u.pos, tip, end);
+      if (d < u.bodyR) return true;
+    }
+    return false;
+  }
+
   ensureSpeed() {
     if (this.className === 'monge') {
       const vMin = game.getVMin() + monkVMinBonus(this.level);
@@ -435,11 +454,33 @@ export class Unit {
 
     // Habilidades e recargas
     if (this.hasRanged) {
-      this.cd -= dt;
-      if (this.cd <= 0) {
-        const next = this.fire();
-        const rageCdMul = 1;
-        this.cd = (next != null ? next : CFG.ranged.cooldown) * rageCdMul;
+      if (this.cd > 0) {
+        this.cd -= dt;
+        if (this.cd <= 0) {
+          this.cd = 0;
+          this.cdAim = this.lastShotCD * this.cooldownMiraPercent;
+        }
+      } else {
+        if (this.cdAim > 0) {
+          this.cdAim -= dt;
+          if (this.enemyInLineOfSight()) {
+            const next = this.fire();
+            this.lastShotCD = next != null ? next : CFG.ranged.cooldown;
+            this.cd = this.lastShotCD;
+            this.cdAim = 0;
+          } else if (this.cdAim <= 0) {
+            const next = this.fire();
+            this.lastShotCD = next != null ? next : CFG.ranged.cooldown;
+            this.cd = this.lastShotCD;
+          }
+        } else {
+          this.cdAim = this.lastShotCD * this.cooldownMiraPercent;
+          if (this.cdAim <= 0) {
+            const next = this.fire();
+            this.lastShotCD = next != null ? next : CFG.ranged.cooldown;
+            this.cd = this.lastShotCD;
+          }
+        }
       }
     }
     if (this.className === 'ranger') {

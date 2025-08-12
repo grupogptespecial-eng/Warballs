@@ -35,6 +35,14 @@ Na seção **Partida** é possível escolher entre duas arenas:
   delay/duração para que a arena encolha ou cresça suavemente durante a
   partida.
 
+## Mecânica de mira
+
+Unidades com ataques à distância possuem uma espera oculta após o fim do
+cooldown normal. Durante esse período a arma só dispara se houver inimigo na
+linha de visão; caso contrário o tiro é efetuado quando a espera termina. O
+tempo extra é definido por classe em `src/config/cfg.js` através do campo
+`cooldownMiraPercent`.
+
 ## Desenvolvimento
 
 Instale as dependências (se houver) e execute os testes sintáticos:

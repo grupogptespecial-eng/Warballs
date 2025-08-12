@@ -14,9 +14,9 @@ export const CLASSES = {
   paladino:  { label: 'Paladino',  color: '#fde047', hasRanged: false, weaponLen: 36, tipRadius: 10, omega: 3.6 },
   monge:     { label: 'Monge',     color: '#60a5fa', hasRanged: false, weaponLen: 0,  tipRadius: 0,  omega: 0.0 },
   clerigo:   { label: 'Clérigo',   color: '#93c5fd', hasRanged: false, weaponLen: 36, tipRadius: 12, omega: 3.6 },
-  ranger:    { label: 'Ranger',    color: '#34d399', hasRanged: true,  weaponLen: 36, tipRadius: 8,  omega: 3.6 },
-  bruxo:     { label: 'Bruxo',     color: '#a78bfa', hasRanged: true,  weaponLen: 20, tipRadius: 6,  omega: 3.4 },
-  guerreiro: { label: 'Guerreiro', color: '#f59e0b', hasRanged: true,  weaponLen: 38, tipRadius: 10, omega: 3.6 }
+  ranger:    { label: 'Ranger',    color: '#34d399', hasRanged: true,  cooldownMiraPercent: 0.25, weaponLen: 36, tipRadius: 8,  omega: 3.6 },
+  bruxo:     { label: 'Bruxo',     color: '#a78bfa', hasRanged: true,  cooldownMiraPercent: 0.10, weaponLen: 20, tipRadius: 6,  omega: 3.4 },
+  guerreiro: { label: 'Guerreiro', color: '#f59e0b', hasRanged: true,  cooldownMiraPercent: 0.15, weaponLen: 38, tipRadius: 10, omega: 3.6 }
 };
 
 // Objeto de configuração principal contendo parâmetros de gameplay

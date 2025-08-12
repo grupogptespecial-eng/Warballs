@@ -111,3 +111,10 @@ símbolos e o destino correspondente em arquivos separados.
 | Objeto `game`, loop de atualização/render | `src/core/{game.js,loop.js,arena.js}` (1-400) |
 | Renderização de pré-visualização e canvas principal | `src/render/{preview.js,drawHelpers.js}`, `public/index.html` |
 
+### Novos recursos
+
+*Este projeto continua a ser expandido. Novos símbolos e mecânicas
+serão listados aqui conforme adicionados.*
+
+- `cooldownMiraPercent` — parâmetro por classe em `src/config/cfg.js`
+  controlando a espera de mira usada em `src/unit/unit.js`.
