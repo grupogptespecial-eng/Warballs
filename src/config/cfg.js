@@ -2,10 +2,16 @@
 
 // Definição das equipes disponíveis
 export const TEAM = {
-  Y: { name: 'Amarelo', color: '#f1fa8c' },
-  R: { name: 'Vermelho', color: '#ff6b6b' },
-  G: { name: 'Verde',    color: '#50fa7b' },
-  B: { name: 'Azul',     color: '#8be9fd' }
+  Y: { name: 'Amarelo', color: '#f1fa8c', emoji: '🟡' },
+  R: { name: 'Vermelho', color: '#ff6b6b', emoji: '🔴' },
+  G: { name: 'Verde',    color: '#50fa7b', emoji: '🟢' },
+  B: { name: 'Azul',     color: '#8be9fd', emoji: '🔵' },
+  W: { name: 'Branco',   color: '#ffffff', emoji: '⚪' },
+  M: { name: 'Marrom',   color: '#a0522d', emoji: '🟤' },
+  P: { name: 'Rosa',     color: '#ff9a9e', emoji: '🌸' },
+  V: { name: 'Roxo',     color: '#c084fc', emoji: '🟣' },
+  O: { name: 'Laranja',  color: '#fb923c', emoji: '🟠' },
+  C: { name: 'Cinza',    color: '#9ca3af', emoji: '⚫' }
 };
 
 // Atributos base de cada classe de unidade

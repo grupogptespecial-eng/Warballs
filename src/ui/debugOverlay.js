@@ -149,13 +149,11 @@ export function getClassOptionsHTML() {
   return optionClassHTMLFallback();
 }
 
-// Times
+// Times (gerados dinamicamente a partir de TEAM)
 export function optionTeamHTML() {
-  return `
-    <option value="Y">🟡 Amarelo</option>
-    <option value="R">🔴 Vermelho</option>
-    <option value="G">🟢 Verde</option>
-    <option value="B">🔵 Azul</option>`;
+  return Object.entries(TEAM)
+    .map(([key, t]) => `<option value="${key}">${t.emoji || ''} ${t.name}</option>`)
+    .join('');
 }
 
 // Adiciona um bloco de unidade à lista
