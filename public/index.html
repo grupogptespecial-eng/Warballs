@@ -275,13 +275,41 @@
           </select>
         </div>
 
-        <div id="brConfig" style="display:none">
+        <div id="cfgStandard">
           <div class="row">
-            <div class="label">Fechamento</div>
-            <input id="brTime" type="number" class="select" min="5" max="180" step="5" value="25" aria-label="Tempo para fechar (s)" />
+            <div class="label">Largura</div>
+            <input id="arenaWidth" type="number" class="select" min="100" value="1000" />
           </div>
-          <div class="small muted" style="margin-top:6px">
-            Battle Royale: o retângulo da arena encolhe ao longo do tempo.
+          <div class="row">
+            <div class="label">Altura</div>
+            <input id="arenaHeight" type="number" class="select" min="100" value="700" />
+          </div>
+        </div>
+
+        <div id="cfgBR" style="display:none">
+          <div class="row">
+            <div class="label">Largura Ini</div>
+            <input id="arenaWidthStart" type="number" class="select" value="1200" />
+          </div>
+          <div class="row">
+            <div class="label">Altura Ini</div>
+            <input id="arenaHeightStart" type="number" class="select" value="800" />
+          </div>
+          <div class="row">
+            <div class="label">Largura Final</div>
+            <input id="arenaWidthEnd" type="number" class="select" value="600" />
+          </div>
+          <div class="row">
+            <div class="label">Altura Final</div>
+            <input id="arenaHeightEnd" type="number" class="select" value="400" />
+          </div>
+          <div class="row">
+            <div class="label">Delay</div>
+            <input id="shrinkDelay" type="number" step="0.1" class="select" value="5" />
+          </div>
+          <div class="row">
+            <div class="label">Duração</div>
+            <input id="shrinkDuration" type="number" step="0.1" class="select" value="20" />
           </div>
         </div>
       </section>
@@ -303,7 +331,7 @@
         <div class="small muted">
           • Adicione pelo menos 2 unidades para iniciar.<br/>
           • Selecione classe, equipe e nível em cada linha.<br/>
-          • O modo Battle Royale encolhe a arena em <em>Fechamento</em> (segundos).
+          • O modo Battle Royale encolhe ou expande a arena entre valores inicial e final.
         </div>
       </section>
     </aside>

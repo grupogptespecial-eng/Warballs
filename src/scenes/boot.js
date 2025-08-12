@@ -5,6 +5,7 @@ import { unitListEl, btnAddUnit, arenaNameEl } from '../utils/misc.js';
 import { Unit } from '../unit/unit.js';
 import { TEAM, CFG } from '../config/cfg.js';
 import { V } from '../math/vec.js';
+import { drawPreview } from '../render/preview.js';
 
 function gatherUnits() {
   const rows = unitListEl ? unitListEl.querySelectorAll('.unit-item') : [];
@@ -29,7 +30,30 @@ function gatherUnits() {
   return list;
 }
 
+function getArenaParams(mode) {
+  if (mode === 'battle_royale') {
+    return {
+      widthStart: parseFloat(document.getElementById('arenaWidthStart')?.value || CFG.arenas.battle_royale.widthStart),
+      heightStart: parseFloat(document.getElementById('arenaHeightStart')?.value || CFG.arenas.battle_royale.heightStart),
+      widthEnd: parseFloat(document.getElementById('arenaWidthEnd')?.value || CFG.arenas.battle_royale.widthEnd),
+      heightEnd: parseFloat(document.getElementById('arenaHeightEnd')?.value || CFG.arenas.battle_royale.heightEnd),
+      shrinkDelay: parseFloat(document.getElementById('shrinkDelay')?.value || CFG.arenas.battle_royale.shrinkDelay),
+      shrinkDuration: parseFloat(document.getElementById('shrinkDuration')?.value || CFG.arenas.battle_royale.shrinkDuration)
+    };
+  }
+  return {
+    width: parseFloat(document.getElementById('arenaWidth')?.value || CFG.arenas.padrao.width),
+    height: parseFloat(document.getElementById('arenaHeight')?.value || CFG.arenas.padrao.height)
+  };
+}
+
 function startGame() {
+  const mode = document.getElementById('arena')?.value || 'padrao';
+  const params = getArenaParams(mode);
+  game.arena.reset(mode, params);
+  game.arena.update(0, { x: 0, y: 0, w: game.canvas.width, h: game.canvas.height });
+  game.bounds = game.arena.bounds;
+
   game.units = [];
   game.projectiles = [];
   game.effects = [];
@@ -50,8 +74,17 @@ function resetGame() {
 }
 
 export function boot() {
-  // arena select
+  // arena select e configuração
   const arenaSel = document.getElementById('arena');
+  const cfgStd = document.getElementById('cfgStandard');
+  const cfgBR = document.getElementById('cfgBR');
+  function updateArenaForm() {
+    const mode = arenaSel.value;
+    if (cfgStd) cfgStd.style.display = mode === 'padrao' ? '' : 'none';
+    if (cfgBR) cfgBR.style.display = mode === 'battle_royale' ? '' : 'none';
+    arenaNameEl && (arenaNameEl.textContent = arenaSel.options[arenaSel.selectedIndex]?.textContent || '');
+    drawPreview(mode, getArenaParams(mode));
+  }
   if (arenaSel) {
     Object.entries(CFG.arenas).forEach(([key, cfg]) => {
       const opt = document.createElement('option');
@@ -60,11 +93,10 @@ export function boot() {
       arenaSel.appendChild(opt);
     });
     arenaSel.value = game.arena.mode;
-    arenaNameEl && (arenaNameEl.textContent = arenaSel.options[arenaSel.selectedIndex]?.textContent || '');
-    arenaSel.onchange = () => {
-      game.arena.reset(arenaSel.value);
-      arenaNameEl && (arenaNameEl.textContent = arenaSel.options[arenaSel.selectedIndex]?.textContent || '');
-    };
+    updateArenaForm();
+    arenaSel.onchange = updateArenaForm;
+    const inputs = document.querySelectorAll('#cfgStandard input, #cfgBR input');
+    inputs.forEach(inp => inp.addEventListener('input', () => drawPreview(arenaSel.value, getArenaParams(arenaSel.value))));
   }
 
   // default unit rows

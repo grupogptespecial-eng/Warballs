@@ -28,6 +28,13 @@ Abra `public/index.html` em um navegador moderno. O arquivo importa
 interface e permite iniciar a partida clicando em **Iniciar** após adicionar
 unidades.
 
+Na seção **Partida** é possível escolher entre duas arenas:
+
+- **Arena Padrão** – defina manualmente largura e altura fixas.
+- **Battle Royale** – informe dimensões inicial/final e tempos de
+  delay/duração para que a arena encolha ou cresça suavemente durante a
+  partida.
+
 ## Desenvolvimento
 
 Instale as dependências (se houver) e execute os testes sintáticos:

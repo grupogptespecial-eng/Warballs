@@ -11,6 +11,9 @@ export const btnAddUnit = document.getElementById('btnAddUnit');
 // Limita um valor entre a e b
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
+// Interpolação linear
+export const lerp = (a, b, t) => a + (b - a) * t;
+
 // Ajuda a criar degraus a cada 5 níveis
 export const _seg5 = (L, start) => Math.max(0, Math.min((L - 1) - start, 4));
 
@@ -51,4 +54,9 @@ export function runTests() {
     el.title = results.join('\n');
   }
 }
+
+// Teste básico para lerp
+addTest('lerp', () => {
+  if (lerp(0, 10, 0.5) !== 5) throw new Error('lerp falhou');
+});
 

@@ -23,15 +23,26 @@ export const CLASSES = {
 export const CFG = {
   // Modos de arena disponíveis
   arenas: {
-    simples:       { key: 'simples',       label: 'Arena Simples',            scale: 1.00 },
-    simples_menor: { key: 'simples_menor', label: 'Arena Simples (Menor)',    scale: 0.50 },
+    padrao: {
+      key: 'padrao',
+      name: 'Arena Padrão',
+      // Largura/altura absolutas da arena
+      width: 1000,
+      height: 700
+    },
     battle_royale: {
-      key: 'battle_royale', label: 'Arena Battle Royale',
-      startScale: 1.00,
-      endScale: 0.75,
-      closeDefault: 25, // segundos
-      closeMin: 5,
-      closeMax: 180
+      key: 'battle_royale',
+      name: 'Arena Battle Royale',
+      // Dimensões iniciais
+      widthStart: 1200,
+      heightStart: 800,
+      // Dimensões finais
+      widthEnd: 600,
+      heightEnd: 400,
+      // Tempo em segundos antes de começar a transição
+      shrinkDelay: 5,
+      // Duração da transição
+      shrinkDuration: 20
     }
   },
 

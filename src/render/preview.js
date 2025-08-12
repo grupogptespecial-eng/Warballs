@@ -5,7 +5,7 @@ import { CFG } from '../config/cfg.js';
 export const previewCanvas = document.getElementById('preview');
 export const pctx = previewCanvas ? previewCanvas.getContext('2d') : null;
 
-export function drawPreview(mode = 'simples'){
+export function drawPreview(mode = 'padrao', params = {}){
   if (!previewCanvas || !pctx) return;
   const w = previewCanvas.width, h = previewCanvas.height;
 
@@ -35,20 +35,26 @@ export function drawPreview(mode = 'simples'){
   pctx.strokeRect(6, 6, w-12, h-12);
   pctx.restore();
 
-  // anéis de arena (start/end)
-  let sStart = 1.0, sEnd = 1.0;
-  if (mode === 'simples_menor') sStart = sEnd = CFG.arenas.simples_menor.scale;
+  const cfg = { ...(CFG.arenas[mode] || {}), ...params };
+  let wStart, hStart, wEnd, hEnd;
   if (mode === 'battle_royale') {
-    sStart = CFG.arenas.battle_royale.startScale;
-    sEnd   = CFG.arenas.battle_royale.endScale;
+    wStart = cfg.widthStart; hStart = cfg.heightStart;
+    wEnd = cfg.widthEnd;   hEnd = cfg.heightEnd;
+  } else {
+    wStart = wEnd = cfg.width; hStart = hEnd = cfg.height;
   }
-  const drawRing = (scale, alpha, color) => {
-    const ww = Math.round((w-12) * scale), hh = Math.round((h-12) * scale);
-    const x = 6 + Math.floor(((w-12) - ww)/2), y = 6 + Math.floor(((h-12) - hh)/2);
+  const maxW = Math.max(wStart, wEnd);
+  const maxH = Math.max(hStart, hEnd);
+  const scale = Math.min((w - 12) / maxW, (h - 12) / maxH);
+  const drawRing = (aw, ah, alpha, color) => {
+    const ww = Math.round(aw * scale);
+    const hh = Math.round(ah * scale);
+    const x = 6 + Math.floor(((w - 12) - ww) / 2);
+    const y = 6 + Math.floor(((h - 12) - hh) / 2);
     pctx.save(); pctx.globalAlpha = alpha; pctx.strokeStyle = color; pctx.lineWidth = 2;
     pctx.strokeRect(x, y, ww, hh); pctx.restore();
   };
-  drawRing(sStart, 0.9, '#7dd3fc');
-  if (sEnd !== sStart) drawRing(sEnd, 0.6, '#f59e0b');
+  drawRing(wStart, hStart, 0.9, '#7dd3fc');
+  if (wEnd !== wStart || hEnd !== hStart) drawRing(wEnd, hEnd, 0.6, '#f59e0b');
 }
 

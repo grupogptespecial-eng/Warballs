@@ -20,7 +20,7 @@ export const game = {
   particles: [],
   effects: [],
   summons: [],
-  arena: new Arena('simples'),
+  arena: new Arena('padrao'),
   bounds: { x: 0, y: 0, w: canvas ? canvas.width : 0, h: canvas ? canvas.height : 0 },
   debugHit: false,
 

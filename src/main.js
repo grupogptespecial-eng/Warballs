@@ -5,5 +5,5 @@ import { boot } from './scenes/boot.js';
 window.addEventListener('DOMContentLoaded', () => {
   game.init();
   boot();
-  drawPreview('simples');
+  drawPreview('padrao');
 });
