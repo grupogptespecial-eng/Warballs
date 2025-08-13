@@ -860,7 +860,7 @@ export class Unit {
       ctx.save();
       ctx.translate(this.pos.x, this.pos.y);
       applyMicroAnim(ctx, cfg.microAnim, now);
-      const scale = this.bodyR * 2 * GLOBAL_ITEM_SCALE_MULT;
+      const scale = (cfg.scale ?? CLASS_ITEM_SCALE_DEFAULT) * (this.bodyR * 2) * GLOBAL_ITEM_SCALE_MULT;
       drawItemSprite(ctx, itemId, scale, pal, now);
       ctx.restore();
       return;

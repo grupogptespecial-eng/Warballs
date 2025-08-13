@@ -10,7 +10,7 @@ export const CLASS_VISUALS = {
   monge:    { item:'colar_monge',    anchorAngleDeg:300,scale:0.13, microAnim:'subtle_pulse', palette:['#C8A26A','#5E3B21','#E5D7B8'] },
   paladino: { item:'insignia_escudo',anchorAngleDeg:20, scale:0.15, microAnim:'glint_slow',   palette:['#C9C9C9','#E6D27A','#7A6A3A'], weaponAngleDeg:20 },
   clerigo:  { item:'sigilo_sol',     anchorAngleDeg:330,scale:0.14, microAnim:'soft_glow',    palette:['#FFD67A','#F4B43A','#8A6A2A'], weaponAngleDeg:0 },
-  bruxo:    { item:'chifres_duplos', anchorAngleDeg:270,scale:0.15, microAnim:'idle_breath',  palette:['#7E57C2','#A586E8','#40345A'], weaponAngleDeg:-10 },
+  bruxo:    { item:'chifres_duplos', anchorAngleDeg:270,scale:0.18, microAnim:'idle_breath',  palette:['#7E57C2','#A586E8','#40345A'], weaponAngleDeg:-10 },
   guerreiro:{ item:'ombreira_metal', anchorAngleDeg:210,scale:0.15, microAnim:'sway_low',     palette:['#9BA4AE','#6B757F','#CACFD6'], weaponAngleDeg:15 }
 };
 
@@ -81,7 +81,35 @@ export function drawItemSprite(ctx, id, scale, pal, now){
 
   if (useId === 'ombreira_metal') { const R=scale*0.175; ctx.beginPath(); ctx.arc(0,0,R,-120*Math.PI/180,-10*Math.PI/180); ctx.lineTo(0,0); ctx.closePath(); const g=ctx.createLinearGradient(-R,0,R,0); g.addColorStop(0,shade(p1,-0.35)); g.addColorStop(1,p1); ctx.fillStyle=g; ctx.fill(); ctx.lineWidth=1.2; ctx.strokeStyle='rgba(0,0,0,0.75)'; ctx.stroke(); ctx.beginPath(); ctx.arc(R*0.6,-R*0.2,scale*0.02,0,TAU); ctx.fillStyle=shade(p1,-0.2); ctx.fill(); return; }
 
-  if (useId === 'chifres_duplos') { const S=scale*0.5; const baseCol=p1||'#7E57C2'; const TILT=12*Math.PI/180, OFF_X=S*0.64, OFF_Y=-S*0.48; const horn=(side)=>{ ctx.save(); ctx.translate(side*OFF_X,OFF_Y); ctx.scale(side,1); ctx.rotate(TILT); ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(S*0.36,-S*0.24,S*0.60,-S*0.60); ctx.quadraticCurveTo(S*0.88,-S*1.16,S*0.48,-S*1.84); ctx.quadraticCurveTo(S*0.12,-S*1.40,-S*0.04,-S*0.72); ctx.quadraticCurveTo(-S*0.04,-S*0.20,0,0); ctx.closePath(); const grad=ctx.createLinearGradient(0,-S,0,S); grad.addColorStop(0,shade(baseCol,0.20)); grad.addColorStop(1,shade(baseCol,-0.35)); ctx.fillStyle=grad; ctx.fill(); ctx.lineWidth=1.2; ctx.strokeStyle='rgba(0,0,0,0.75)'; ctx.stroke(); ctx.restore(); }; horn(1); horn(-1); return; }
+  if (useId === 'chifres_duplos') {
+    const R = scale * 0.5;
+    const baseCol = p1 || '#7E57C2';
+    const offsetY = -R * 0.85;
+    const spreadX = R * 0.65;
+    const horn = (side) => {
+      ctx.save();
+      ctx.translate(side * spreadX, offsetY);
+      ctx.scale(side, 1);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.bezierCurveTo(R * 0.15, -R * 0.25, R * 0.55, -R * 0.55, R * 0.35, -R * 1.4);
+      ctx.bezierCurveTo(R * 0.15, -R * 1.8, -R * 0.1, -R * 1.8, -R * 0.15, -R * 0.9);
+      ctx.bezierCurveTo(-R * 0.18, -R * 0.25, -R * 0.05, -R * 0.1, 0, 0);
+      ctx.closePath();
+      const g = ctx.createLinearGradient(0, -R * 1.4, 0, R * 0.1);
+      g.addColorStop(0, shade(baseCol, 0.25));
+      g.addColorStop(1, shade(baseCol, -0.30));
+      ctx.fillStyle = g;
+      ctx.fill();
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+      ctx.stroke();
+      ctx.restore();
+    };
+    horn(1);
+    horn(-1);
+    return;
+  }
 }
 
 // ===== Armas
@@ -117,7 +145,7 @@ export function renderUnitPreview(ctx, unit, teamColor, now){
   ctx.fill();
   ctx.globalAlpha = 1;
   // 3) itens
-  const cfg=CLASS_VISUALS[unit.className]; if (cfg){ const pal=cfg.palette||[]; if (cfg.item==='chifres_duplos' || cfg.item==='colar_monge' || (ITEM_ALIASES[cfg.item]==='saia_barbaro')){ ctx.save(); ctx.translate(unit.pos.x,unit.pos.y); applyMicroAnim(ctx,cfg.microAnim,now); drawItemSprite(ctx,cfg.item, unit.bodyR*2*GLOBAL_ITEM_SCALE_MULT, pal, now); ctx.restore(); } else { const safeR=LEVEL_SAFE_RADIUS_MULT*unit.bodyR; const anchor=(cfg.anchorAngleDeg||0)*Math.PI/180; let dist=unit.bodyR*0.82; if(dist<safeR) dist=safeR; let x=unit.pos.x+Math.cos(anchor)*dist, y=unit.pos.y+Math.sin(anchor)*dist; const scale=(cfg.scale ?? CLASS_ITEM_SCALE_DEFAULT)*(unit.bodyR*2)*GLOBAL_ITEM_SCALE_MULT; ctx.save(); ctx.translate(x,y); ctx.rotate(anchor); applyMicroAnim(ctx,cfg.microAnim,now); drawItemSprite(ctx,cfg.item,scale,pal,now); ctx.restore(); } }
+  const cfg=CLASS_VISUALS[unit.className]; if (cfg){ const pal=cfg.palette||[]; const baseScale=(cfg.scale ?? CLASS_ITEM_SCALE_DEFAULT)*(unit.bodyR*2)*GLOBAL_ITEM_SCALE_MULT; if (cfg.item==='chifres_duplos' || cfg.item==='colar_monge' || (ITEM_ALIASES[cfg.item]==='saia_barbaro')){ ctx.save(); ctx.translate(unit.pos.x,unit.pos.y); applyMicroAnim(ctx,cfg.microAnim,now); drawItemSprite(ctx,cfg.item, baseScale, pal, now); ctx.restore(); } else { const safeR=LEVEL_SAFE_RADIUS_MULT*unit.bodyR; const anchor=(cfg.anchorAngleDeg||0)*Math.PI/180; let dist=unit.bodyR*0.82; if(dist<safeR) dist=safeR; let x=unit.pos.x+Math.cos(anchor)*dist, y=unit.pos.y+Math.sin(anchor)*dist; ctx.save(); ctx.translate(x,y); ctx.rotate(anchor); applyMicroAnim(ctx,cfg.microAnim,now); drawItemSprite(ctx,cfg.item,baseScale,pal,now); ctx.restore(); } }
   // 4) arma
   ctx.save();
   ctx.translate(unit.pos.x, unit.pos.y);

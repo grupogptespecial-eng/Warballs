@@ -427,8 +427,8 @@ export const CLASS_VISUALS = {
   bruxo: {
     item: 'chifres_duplos',
     anchorAngleDeg: 270,
-    scale: 0.15,
-    microAnim: 'orbit_slow',
+    scale: 0.18,
+    microAnim: 'idle_breath',
     palette: ['#7E57C2', '#A586E8', '#40345A']
   },
   guerreiro: {
