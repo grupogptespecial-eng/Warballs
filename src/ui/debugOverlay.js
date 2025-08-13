@@ -1,6 +1,6 @@
 // Funções de UI e depuração
 
-import { TEAM, CLASSES } from '../config/cfg.js';
+import { TEAM, CLASSES, CFG } from '../config/cfg.js';
 import { unitListEl } from '../utils/misc.js';
 import { renderUnitPreview } from '../render/visuals_module.js';
 
@@ -144,4 +144,54 @@ export function wireUnitRow(div){
 // Mini-render para o row de unidade
 export function drawUnitThumbRow(ctx, klass, color, level){
   drawUnitThumb(ctx, klass, color, level);
+}
+
+// ===== Painel de Crates =====
+const CRATE_KEY = 'crateConfig_v1';
+
+export function populateCratePanel(){
+  const stored = typeof localStorage !== 'undefined' ? localStorage.getItem(CRATE_KEY) : null;
+  const cfg = stored ? JSON.parse(stored) : CFG.crates;
+  const types = ['Health','Xp','Hybrid'];
+  types.forEach(t=>{
+    const enable = document.getElementById(`enable${t}Crates`);
+    const panel  = document.getElementById(`cfg${t}Crate`);
+    if(!enable||!panel) return;
+    enable.checked = cfg[`enable${t}Crates`];
+    panel.style.display = enable.checked ? '' : 'none';
+    enable.addEventListener('change',()=>{ panel.style.display = enable.checked ? '' : 'none'; save(); });
+  });
+  // valores
+  const setVal = (id,val)=>{ const el=document.getElementById(id); if(el) el.value=val; };
+  setVal('healthAvg',cfg.health.avgPer100s); setVal('healthSize',cfg.health.sizePx); setVal('healthHeal',cfg.health.healAmount);
+  setVal('xpAvg',cfg.xp.avgPer100s); setVal('xpSize',cfg.xp.sizePx); setVal('xpAmount',cfg.xp.xpAmount);
+  setVal('hybridAvg',cfg.hybrid.avgPer100s); setVal('hybridSize',cfg.hybrid.sizePx); setVal('hybridHeal',cfg.hybrid.healAmount); setVal('hybridXp',cfg.hybrid.xpAmount);
+  document.getElementById('btnCrateReset')?.addEventListener('click',()=>{
+    if(typeof localStorage!=='undefined') localStorage.removeItem(CRATE_KEY);
+    populateCratePanel();
+  });
+  const inputs=document.querySelectorAll('#panelCrates input');
+  inputs.forEach(inp=>inp.addEventListener('input',save));
+
+  function save(){
+    if(typeof localStorage==='undefined') return;
+    localStorage.setItem(CRATE_KEY, JSON.stringify(readCrateConfig()));
+  }
+}
+
+export function readCrateConfig(){
+  const getNum=id=>parseFloat(document.getElementById(id)?.value||'0');
+  return {
+    enableHealthCrates: document.getElementById('enableHealthCrates')?.checked || false,
+    enableXpCrates: document.getElementById('enableXpCrates')?.checked || false,
+    enableHybridCrates: document.getElementById('enableHybridCrates')?.checked !== false,
+    health:{ avgPer100s:getNum('healthAvg'), sizePx:getNum('healthSize'), healAmount:getNum('healthHeal') },
+    xp:{ avgPer100s:getNum('xpAvg'), sizePx:getNum('xpSize'), xpAmount:getNum('xpAmount') },
+    hybrid:{ avgPer100s:getNum('hybridAvg'), sizePx:getNum('hybridSize'), healAmount:getNum('hybridHeal'), xpAmount:getNum('hybridXp') },
+    maxConcurrentPerType: CFG.crates.maxConcurrentPerType,
+    lifetime: CFG.crates.lifetime,
+    minDistanceFromUnits: CFG.crates.minDistanceFromUnits,
+    minDistanceBetweenCrates: CFG.crates.minDistanceBetweenCrates,
+    brCratePolicyOnShrink: CFG.crates.brCratePolicyOnShrink
+  };
 }

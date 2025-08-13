@@ -44,10 +44,12 @@ tipos de bônus:
 - **Experiência** – hexágono azul que concede XP;
 - **Híbrido** – octógono meio verde/meio azul que oferece ambos.
 
-Os parâmetros ficam em `CFG.crates`, onde é possível habilitar cada tipo e
-ajustar taxa média de spawn (`avgPer100s`), tamanho (`sizePx`) e recompensa
+Os parâmetros ficam em `CFG.crates` e também podem ser ajustados no painel
+**Crates** da interface. Ative cada tipo pela caixa de seleção e defina
+taxa média de spawn (`avgPer100s`), tamanho (`sizePx`) e recompensas
 (`healAmount`/`xpAmount`). Há limites globais de distância/quantidade,
-além do tempo de vida padrão (`lifetime`).
+além do tempo de vida padrão (`lifetime`). As configurações do painel são
+salvas em `localStorage` (chave `crateConfig_v1`).
 
 Em arenas do tipo Battle Royale, crates fora dos limites atuais seguem a
 política `brCratePolicyOnShrink`, que pode ser `despawn`, `pushInwards` ou

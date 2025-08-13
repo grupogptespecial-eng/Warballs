@@ -1,11 +1,12 @@
 import { game } from '../core/game.js';
 import { startLoop, stopLoop } from '../core/loop.js';
-import { addUnitRow } from '../ui/debugOverlay.js';
+import { addUnitRow, populateCratePanel, readCrateConfig } from '../ui/debugOverlay.js';
 import { unitListEl, btnAddUnit, arenaNameEl } from '../utils/misc.js';
 import { Unit } from '../unit/unit.js';
 import { TEAM, CFG } from '../config/cfg.js';
 import { V } from '../math/vec.js';
 import { drawPreview } from '../render/preview.js';
+import { CrateSystem } from '../core/crateSystem.js';
 
 function gatherUnits() {
   const rows = unitListEl ? unitListEl.querySelectorAll('.unit-item') : [];
@@ -51,6 +52,8 @@ function startGame() {
   const mode = document.getElementById('arena')?.value || 'padrao';
   const params = getArenaParams(mode);
   game.arena.reset(mode, params);
+  CrateSystem.clearAll();
+  CrateSystem.setConfig(readCrateConfig());
   game.arena.update(0, { x: 0, y: 0, w: game.canvas.width, h: game.canvas.height });
   game.bounds = game.arena.bounds;
 
@@ -104,6 +107,9 @@ export function boot() {
   addUnitRow({ klass: 'ranger', team: 'R' });
 
   if (btnAddUnit) btnAddUnit.onclick = () => addUnitRow();
+
+  // painel de crates
+  populateCratePanel();
 
   const btnStart = document.getElementById('btnStart');
   btnStart && (btnStart.onclick = startGame);

@@ -203,6 +203,11 @@
     z-index: 100;
   }
 
+  /* Painel de crates */
+  .crate-block{ margin-top:12px; }
+  .crate-block label{ display:flex; align-items:center; gap:6px; }
+  .crate-config{ margin-left:20px; margin-top:6px; display:none; }
+
   /* Mensagens simples */
   #message-box {
     position: fixed;
@@ -333,6 +338,41 @@
           • Selecione classe, equipe e nível em cada linha.<br/>
           • O modo Battle Royale encolhe ou expande a arena entre valores inicial e final.
         </div>
+      </section>
+
+      <!-- Crates -->
+      <section class="card" id="panelCrates">
+        <div class="card-title">Crates</div>
+
+        <div class="crate-block">
+          <label><input type="checkbox" id="enableHealthCrates"/> Vida</label>
+          <div id="cfgHealthCrate" class="crate-config">
+            <div class="row"><div class="label">Média/100s</div><input id="healthAvg" type="number" step="0.1" class="select" value="12"/></div>
+            <div class="row"><div class="label">Tamanho</div><input id="healthSize" type="number" class="select" value="18"/></div>
+            <div class="row"><div class="label">Cura</div><input id="healthHeal" type="number" class="select" value="12"/></div>
+          </div>
+        </div>
+
+        <div class="crate-block">
+          <label><input type="checkbox" id="enableXpCrates"/> XP</label>
+          <div id="cfgXpCrate" class="crate-config">
+            <div class="row"><div class="label">Média/100s</div><input id="xpAvg" type="number" step="0.1" class="select" value="12"/></div>
+            <div class="row"><div class="label">Tamanho</div><input id="xpSize" type="number" class="select" value="18"/></div>
+            <div class="row"><div class="label">XP</div><input id="xpAmount" type="number" class="select" value="8"/></div>
+          </div>
+        </div>
+
+        <div class="crate-block">
+          <label><input type="checkbox" id="enableHybridCrates"/> Vida+XP</label>
+          <div id="cfgHybridCrate" class="crate-config">
+            <div class="row"><div class="label">Média/100s</div><input id="hybridAvg" type="number" step="0.1" class="select" value="12"/></div>
+            <div class="row"><div class="label">Tamanho</div><input id="hybridSize" type="number" class="select" value="18"/></div>
+            <div class="row"><div class="label">Vida</div><input id="hybridHeal" type="number" class="select" value="8"/></div>
+            <div class="row"><div class="label">XP</div><input id="hybridXp" type="number" class="select" value="6"/></div>
+          </div>
+        </div>
+
+        <div style="margin-top:8px;"><button id="btnCrateReset" class="btn">Reset</button></div>
       </section>
     </aside>
   </div>
