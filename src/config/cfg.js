@@ -422,7 +422,9 @@ export const CLASS_VISUALS = {
     anchorAngleDeg: 330,
     scale: 0.14,
     microAnim: 'soft_glow',
-    palette: ['#FFD67A', '#F4B43A', '#8A6A2A']
+    palette: ['#FFD67A', '#F4B43A', '#8A6A2A'],
+    weaponAngleDeg: 110,
+    weaponScale: 2.0
   },
   bruxo: {
     item: 'chifres_duplos',
