@@ -8,7 +8,7 @@ export const CLASS_VISUALS = {
   barbaro:  { item:'saia_barbaro', anchorAngleDeg:120, scale:0.16, microAnim:'sway_low',   palette:['#8B4A2B','#C9935A','#402A1C'], weaponOverride:'axe_double_bit_v2', weaponAngleDeg:35 },
   ranger:   { item:'aljava_pequena', anchorAngleDeg:45, scale:0.14, microAnim:'idle_breath', palette:['#4E6B3A','#B89B6B','#2E3B22'], weaponAngleDeg:-25 },
   monge:    { item:'colar_monge',    anchorAngleDeg:300,scale:0.13, microAnim:'subtle_pulse', palette:['#C8A26A','#5E3B21','#E5D7B8'] },
-  paladino: { item:'insignia_escudo',anchorAngleDeg:20, scale:0.15, microAnim:'glint_slow',   palette:['#C9C9C9','#E6D27A','#7A6A3A'], weaponAngleDeg:20 },
+  paladino: { item:'insignia_escudo',anchorAngleDeg:20, scale:0.15, microAnim:'glint_slow',   palette:['#C9C9C9','#E6D27A','#7A6A3A'], weaponAngleDeg:110, weaponScale:2.0 },
   clerigo:  { item:'sigilo_sol',     anchorAngleDeg:330,scale:0.14, microAnim:'soft_glow',    palette:['#FFD67A','#F4B43A','#8A6A2A'], weaponAngleDeg:0 },
   bruxo:    { item:'chifres_duplos', anchorAngleDeg:270,scale:0.18, microAnim:'idle_breath',  palette:['#7E57C2','#A586E8','#40345A'], weaponAngleDeg:-10 },
   guerreiro:{ item:'ombreira_metal', anchorAngleDeg:210,scale:0.60, microAnim:'sway_low',     palette:['#9BA4AE','#6B757F','#CACFD6'], weaponAngleDeg:15, weaponScale:2.0, weaponOffsetMult:2.2 }
