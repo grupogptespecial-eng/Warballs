@@ -152,6 +152,8 @@ export function populateCratePanel(){
   setVal('healthAvg',cfg.health.avgPer100s); setVal('healthSize',cfg.health.sizePx); setVal('healthHeal',cfg.health.healAmount);
   setVal('xpAvg',cfg.xp.avgPer100s); setVal('xpSize',cfg.xp.sizePx); setVal('xpAmount',cfg.xp.xpAmount);
   setVal('hybridAvg',cfg.hybrid.avgPer100s); setVal('hybridSize',cfg.hybrid.sizePx); setVal('hybridHeal',cfg.hybrid.healAmount); setVal('hybridXp',cfg.hybrid.xpAmount);
+  setVal('crateLifetime', cfg.lifetime);
+  setVal('crateMax', cfg.maxConcurrentPerType);
   document.getElementById('btnCrateReset')?.addEventListener('click',()=>{
     if(typeof localStorage!=='undefined') localStorage.removeItem(CRATE_KEY);
     populateCratePanel();
@@ -174,8 +176,8 @@ export function readCrateConfig(){
     health:{ avgPer100s:getNum('healthAvg'), sizePx:getNum('healthSize'), healAmount:getNum('healthHeal') },
     xp:{ avgPer100s:getNum('xpAvg'), sizePx:getNum('xpSize'), xpAmount:getNum('xpAmount') },
     hybrid:{ avgPer100s:getNum('hybridAvg'), sizePx:getNum('hybridSize'), healAmount:getNum('hybridHeal'), xpAmount:getNum('hybridXp') },
-    maxConcurrentPerType: CFG.crates.maxConcurrentPerType,
-    lifetime: CFG.crates.lifetime,
+    maxConcurrentPerType: getNum('crateMax') || CFG.crates.maxConcurrentPerType,
+    lifetime: getNum('crateLifetime') || CFG.crates.lifetime,
     minDistanceFromUnits: CFG.crates.minDistanceFromUnits,
     minDistanceBetweenCrates: CFG.crates.minDistanceBetweenCrates,
     brCratePolicyOnShrink: CFG.crates.brCratePolicyOnShrink
