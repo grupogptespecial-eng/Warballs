@@ -203,6 +203,11 @@
     z-index: 100;
   }
 
+  /* Painel de crates */
+  .crate-block{ margin-top:12px; }
+  .crate-block label{ display:flex; align-items:center; gap:6px; }
+  .crate-config{ margin-left:20px; margin-top:6px; display:none; }
+
   /* Mensagens simples */
   #message-box {
     position: fixed;
@@ -275,13 +280,41 @@
           </select>
         </div>
 
-        <div id="brConfig" style="display:none">
+        <div id="cfgStandard">
           <div class="row">
-            <div class="label">Fechamento</div>
-            <input id="brTime" type="number" class="select" min="5" max="180" step="5" value="25" aria-label="Tempo para fechar (s)" />
+            <div class="label">Largura</div>
+            <input id="arenaWidth" type="number" class="select" min="100" value="1000" />
           </div>
-          <div class="small muted" style="margin-top:6px">
-            Battle Royale: o retângulo da arena encolhe ao longo do tempo.
+          <div class="row">
+            <div class="label">Altura</div>
+            <input id="arenaHeight" type="number" class="select" min="100" value="700" />
+          </div>
+        </div>
+
+        <div id="cfgBR" style="display:none">
+          <div class="row">
+            <div class="label">Largura Ini</div>
+            <input id="arenaWidthStart" type="number" class="select" value="1200" />
+          </div>
+          <div class="row">
+            <div class="label">Altura Ini</div>
+            <input id="arenaHeightStart" type="number" class="select" value="800" />
+          </div>
+          <div class="row">
+            <div class="label">Largura Final</div>
+            <input id="arenaWidthEnd" type="number" class="select" value="600" />
+          </div>
+          <div class="row">
+            <div class="label">Altura Final</div>
+            <input id="arenaHeightEnd" type="number" class="select" value="400" />
+          </div>
+          <div class="row">
+            <div class="label">Delay</div>
+            <input id="shrinkDelay" type="number" step="0.1" class="select" value="5" />
+          </div>
+          <div class="row">
+            <div class="label">Duração</div>
+            <input id="shrinkDuration" type="number" step="0.1" class="select" value="20" />
           </div>
         </div>
       </section>
@@ -303,8 +336,43 @@
         <div class="small muted">
           • Adicione pelo menos 2 unidades para iniciar.<br/>
           • Selecione classe, equipe e nível em cada linha.<br/>
-          • O modo Battle Royale encolhe a arena em <em>Fechamento</em> (segundos).
+          • O modo Battle Royale encolhe ou expande a arena entre valores inicial e final.
         </div>
+      </section>
+
+      <!-- Crates -->
+      <section class="card" id="panelCrates">
+        <div class="card-title">Crates</div>
+
+        <div class="crate-block">
+          <label><input type="checkbox" id="enableHealthCrates"/> Vida</label>
+          <div id="cfgHealthCrate" class="crate-config">
+            <div class="row"><div class="label">Média/100s</div><input id="healthAvg" type="number" step="0.1" class="select" value="12"/></div>
+            <div class="row"><div class="label">Tamanho</div><input id="healthSize" type="number" class="select" value="18"/></div>
+            <div class="row"><div class="label">Cura</div><input id="healthHeal" type="number" class="select" value="12"/></div>
+          </div>
+        </div>
+
+        <div class="crate-block">
+          <label><input type="checkbox" id="enableXpCrates"/> XP</label>
+          <div id="cfgXpCrate" class="crate-config">
+            <div class="row"><div class="label">Média/100s</div><input id="xpAvg" type="number" step="0.1" class="select" value="12"/></div>
+            <div class="row"><div class="label">Tamanho</div><input id="xpSize" type="number" class="select" value="18"/></div>
+            <div class="row"><div class="label">XP</div><input id="xpAmount" type="number" class="select" value="8"/></div>
+          </div>
+        </div>
+
+        <div class="crate-block">
+          <label><input type="checkbox" id="enableHybridCrates"/> Vida+XP</label>
+          <div id="cfgHybridCrate" class="crate-config">
+            <div class="row"><div class="label">Média/100s</div><input id="hybridAvg" type="number" step="0.1" class="select" value="12"/></div>
+            <div class="row"><div class="label">Tamanho</div><input id="hybridSize" type="number" class="select" value="18"/></div>
+            <div class="row"><div class="label">Vida</div><input id="hybridHeal" type="number" class="select" value="8"/></div>
+            <div class="row"><div class="label">XP</div><input id="hybridXp" type="number" class="select" value="6"/></div>
+          </div>
+        </div>
+
+        <div style="margin-top:8px;"><button id="btnCrateReset" class="btn">Reset</button></div>
       </section>
     </aside>
   </div>
@@ -317,7 +385,7 @@
         <span id="arenaName">—</span>
       </div>
       <div style="display:flex; gap:10px; justify-content:center;">
-        <button id="btnStart" class="btn primary">Iniciar Partida</button>
+        <button id="btnStartOverlay" class="btn primary">Iniciar Partida</button>
         <button id="btnMenu" class="btn ghost">Fechar</button>
       </div>
     </div>
@@ -338,21 +406,7 @@
     <div style="margin-top:16px; color:#ffb4b4;">Este jogo precisa de JavaScript habilitado.</div>
   </noscript>
 
-  <!-- Seu jogo JS -->
-  <script defer src="game.js"></script>
-
-  <!-- Boot seguro: só inicia se ainda não iniciou -->
-  <script defer>
-    window.addEventListener('DOMContentLoaded', () => {
-      try {
-        if (window.game && typeof game.init === 'function' && !game.__booted) {
-          game.__booted = true;
-          game.init();
-        }
-      } catch (err) {
-        console.error('Falha ao iniciar o jogo:', err);
-      }
-    });
-  </script>
+  <!-- Entrada principal em módulos ES -->
+  <script type="module" src="main.js"></script>
 </body>
 </html>
