@@ -22,6 +22,7 @@ export const CLASSES = {
   clerigo:   { label: 'Clérigo',   color: '#93c5fd', hasRanged: false, weaponLen: 36, tipRadius: 12, omega: 3.6 },
   ranger:    { label: 'Ranger',    color: '#34d399', hasRanged: true,  cooldownMiraPercent: 0.25, weaponLen: 36, tipRadius: 8,  omega: 3.6 },
   bruxo:     { label: 'Bruxo',     color: '#a78bfa', hasRanged: true,  cooldownMiraPercent: 0.10, weaponLen: 20, tipRadius: 6,  omega: 3.4 },
+  artifice:  { label: 'Artífice',  color: '#7FDBFF', hasRanged: true,  cooldownMiraPercent: 0.20, weaponLen: 34, tipRadius: 8,  omega: 3.6 },
   guerreiro: { label: 'Guerreiro', color: '#f59e0b', hasRanged: false, weaponLen: 38, tipRadius: 10, omega: 3.6 }
 };
 
@@ -255,6 +256,91 @@ export const CFG = {
     damage: {
       meleeBase: 14,
       throwBase: 11
+    }
+  },
+
+  // Configuração da classe Artífice
+  artifice: {
+    // Arma principal: Canhão Arcano
+    cannon: {
+      baseDamage: 13,
+      knockback: 0.85,
+      speed: 9.0,
+      lifeTime: 0.9,
+      cooldown: 0.95,
+      radius: 6,
+      pierce: 0,
+      friendlyFire: false,
+      miraCondPercent: 0.20,
+      precisionErrDeg: 6
+    },
+
+    // Passiva Overclock
+    overclock: {
+      tSemDano: 2.5,
+      cdRateMult: 1.35,
+      decayOnHit: true,
+      minUptimeAfterStart: 1.0
+    },
+
+    // Habilidade 1: Torreta Móvel
+    turret: {
+      maxActive: 2,
+      spawnCooldown: 4.0,
+      bodyRadius: 12,
+      baseHP: 65,
+      range: 6.0,
+      fireRate: 1.4,
+      bulletDamage: 7,
+      bulletSpeed: 8.0,
+      bulletKnock: 0.5,
+      xpOnBump: 8,
+      xpToLevel: [12, 28, 52],
+      perLevel: {
+        HP: [0, 20, 35, 55],
+        range: [0, 0.4, 0.6, 0.8],
+        fireRate: [0, 0.15, 0.25, 0.35],
+        bulletDamage: [0, 2, 3, 4]
+      },
+      decay: {
+        flatPerSec: 1.0,
+        pctMaxHPPerSec: 0.012,
+        minHPFloor: 1
+      },
+      repairOnBump: {
+        flat: 6,
+        pctMax: 0.06,
+        cd: 0.6
+      },
+      lifetime: 45,
+      pushableSpeed: 2.0
+    },
+
+    // Habilidade 2: Campo de Mineração
+    mines: {
+      capacityBase: 3,
+      capacityPerLevel: 1,
+      throwRadius: 4.5,
+      armingTime: 0.4,
+      detectRadius: 1.2,
+      damage: 18,
+      knockback: 1.2,
+      chainAffectsMines: true,
+      friendlyFire: false,
+      lifetime: 25,
+      cooldown: 0.35,
+      hitToDetonate: true
+    },
+
+    // Arena Battle Royale — política para gadgets fora da safe zone
+    arenaBRPolicy: 'disableOutside',
+
+    // Itens visuais e cores
+    visuals: {
+      goggles: { anchorDeg: 30, scale: 0.16, microAnim: 'idle_breath' },
+      turretColor: '#A6B1B8',
+      mineColor: '#C54B4B',
+      arcaneColor: '#7FDBFF'
     }
   },
 

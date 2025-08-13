@@ -59,7 +59,7 @@ Unidades com ataques à distância possuem uma espera oculta após o fim do
 cooldown normal. Durante esse período a arma só dispara se houver inimigo na
 linha de visão; caso contrário o tiro é efetuado quando a espera termina. O
 tempo extra é definido por classe em `src/config/cfg.js` através do campo
-`cooldownMiraPercent` (Ranger 25%, Bruxo 10%, Guerreiro 15% por padrão).
+`cooldownMiraPercent` (Ranger 25%, Bruxo 10%, Artífice 20% por padrão).
 
 ## Itens visuais por classe
 
@@ -79,6 +79,7 @@ Itens atuais:
 - **Clérigo** – sigilo solar
 - **Bruxo** – runa orbital
 - **Guerreiro** – ombreira metálica
+- **Artífice** – óculos sutis
 
 ## Guerreiro – Lança v2
 
