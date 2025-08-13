@@ -2,6 +2,7 @@
 
 import { CFG } from '../config/cfg.js';
 import { V } from '../math/vec.js';
+import { Particle } from '../entities/particle.js';
 import { inFrontArc, projApproaching } from '../utils/geometry.js';
 import { rrand } from '../utils/rand.js';
 import { nearestEnemyOf } from './unit.js';

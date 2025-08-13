@@ -80,7 +80,7 @@ export function castTurret() {
   const alive = this.art.turrets.filter(t => t.alive).length;
   if (alive >= T.maxActive) return;
   const dir = new V(Math.cos(this.angle), Math.sin(this.angle));
-  const pos = this.pos.add(dir.clone().mul(this.bodyR + 4));
+  const pos = this.pos.clone().add(dir.clone().mul(this.bodyR + 4));
   const t = new Turret(this, pos, T);
   this.art.turrets.push(t);
   game.spawnSummon && game.spawnSummon(t); // no-op se não existir
@@ -96,7 +96,7 @@ export function castMine() {
   const count = this.art.mines.filter(m => m.alive).length;
   if (count >= cap) return;
   const dir = V.fromAng(randAng());
-  const pos = this.pos.add(dir.clone().mul(M.throwRadius * CFG.body.radius));
+  const pos = this.pos.clone().add(dir.clone().mul(M.throwRadius * CFG.body.radius));
   const mine = new Mine(this, pos, M);
   this.art.mines.push(mine);
   game.spawnSummon && game.spawnSummon(mine);

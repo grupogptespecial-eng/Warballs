@@ -105,5 +105,20 @@ export class Turret {
     ctx.arc(0, 0, this.cfg.bodyRadius, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+
+    // Draw level indicator above the turret
+    ctx.save();
+    ctx.font = '700 12px system-ui,Segoe UI,Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+    const y = this.pos.y - this.cfg.bodyRadius - 2;
+    ctx.strokeText(String(this.level), this.pos.x, y);
+    ctx.shadowBlur = 4;
+    ctx.shadowColor = this.cfg.color || '#A6B1B8';
+    ctx.fillStyle = '#e6edf7';
+    ctx.fillText(String(this.level), this.pos.x, y);
+    ctx.restore();
   }
 }

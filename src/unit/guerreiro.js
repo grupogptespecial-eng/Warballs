@@ -4,6 +4,7 @@ import { V } from '../math/vec.js';
 import { CFG } from '../config/cfg.js';
 import { SpearProjectile } from '../entities/spear.js';
 import { Particle } from '../entities/particle.js';
+import { spawnSpearTrail } from '../vfx/spear_trail.js';
 import { distPointToSegment } from '../utils/geometry.js';
 import { randAng, rrand } from '../utils/rand.js';
 import { game } from '../core/game.js';
@@ -86,6 +87,7 @@ function startThrow(u, target) {
   const p = u.tip().add(dir.clone().mul(u.weaponTipR + 2));
   const proj = new SpearProjectile(u, p, dir);
   game.spawnProjectile(proj);
+  for (let i = 0; i < 3; i++) spawnSpearTrail(p, dir);
   u.gw.thrown = proj;
   u.gw.state = 'THROW_FLIGHT';
   u.gw.throwT = 0;
@@ -99,7 +101,8 @@ function tickThrow(u, dt) {
   if (u.gw.state === 'THROW_FLIGHT') {
     if (!u.gw.thrown || !u.gw.thrown.alive || u.gw.throwT >= T.flightMaxTime) {
       if (u.gw.thrown) u.gw.thrown.alive = false;
-      u.gw.state = 'IDLE';
+      u.gw.state = 'DISARMED';
+      u.gw.disarmT = T.cooldown * 0.4;
     }
   }
 }
@@ -111,6 +114,7 @@ export function updateGuerreiro(dt) {
 
   if (gw.meleeCD > 0) gw.meleeCD -= dt;
   if (gw.throwCD > 0) gw.throwCD -= dt;
+  if (gw.disarmT > 0) gw.disarmT -= dt;
   if (gw.aimT > 0) gw.aimT -= dt;
   if (gw.parryCD > 0) gw.parryCD -= dt;
   if (gw.disciplineReady && game.time > gw.disciplineExpire) gw.disciplineReady = false;
@@ -123,6 +127,10 @@ export function updateGuerreiro(dt) {
     tickThrow(this, dt);
     return;
   }
+  if (gw.state === 'DISARMED') {
+    if (gw.disarmT <= 0) gw.state = 'IDLE';
+    else return;
+  }
 
   // Postura de guerra
   const ST = CFG.guerreiro.stance;
@@ -134,10 +142,31 @@ export function updateGuerreiro(dt) {
     if (d <= ST.threatRadius * BR) { threat = true; break; }
   }
   if (threat) {
+    if (!gw.stanceActive) {
+      for (let i = 0; i < 8; i++) {
+        game.spawnParticle(new Particle(
+          this.pos.clone(),
+          V.fromAng(randAng(), rrand(80, 160)),
+          rrand(.2, .4),
+          '#fcd34d'
+        ));
+      }
+    }
     gw.stanceActive = true;
     gw.stanceGrace = ST.exitGrace;
-    this.omega = gw.baseOmega * (1 + ST.atkRateBonus);
-    this.knockResist = Math.min(ST.knockbackRedBase + (this.hpMax / 100) * ST.knockbackRedPer100HP, ST.knockbackRedMax);
+    this.omega = gw.baseOmega * 1.5;
+    this.knockResist = Math.min(
+      ST.knockbackRedBase + (this.hpMax / 100) * ST.knockbackRedPer100HP,
+      ST.knockbackRedMax
+    );
+    if (gw.state === 'THROW_FLIGHT' && gw.thrown) {
+      gw.thrown.alive = false;
+      gw.thrown = null;
+      gw.state = 'IDLE';
+      gw.disarmT = 0;
+    }
+    gw.aimT = 0;
+    gw.throwCD = CFG.guerreiro.throw.cooldown;
   } else if (gw.stanceActive) {
     gw.stanceGrace -= dt;
     if (gw.stanceGrace <= 0) {
@@ -162,7 +191,7 @@ export function updateGuerreiro(dt) {
 
   if (target && best <= meleeRange && gw.meleeCD <= 0) {
     startMelee(this, target);
-  } else if (target && best >= minThrow && best <= maxThrow) {
+  } else if (CFG.guerreiro.throw.enabled && target && best >= minThrow && best <= maxThrow) {
     if (gw.throwCD <= 0) {
       if (gw.aimT <= 0) gw.aimT = CFG.guerreiro.throw.cooldown * CFG.guerreiro.throw.miraCondPercent;
       if (gw.aimT > 0 && this.enemyInLineOfSight()) {
