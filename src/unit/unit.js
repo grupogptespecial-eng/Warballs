@@ -1005,6 +1005,7 @@ export class Unit {
     ctx.translate(this.pos.x, this.pos.y);
     const ang = this.angle + (((cfg && cfg.weaponAngleDeg) || 30) * Math.PI / 180);
     ctx.rotate(ang);
+    ctx.translate(this.bodyR * 0.9, 0);
     drawWeaponForUnit(ctx, this, this.bodyR * 1.2);
     ctx.restore();
     if (game.debugHit) {

@@ -101,11 +101,31 @@ export function renderUnitPreview(ctx, unit, teamColor, now){
   // 1) sombra
   ctx.save(); ctx.globalAlpha=0.35; ctx.fillStyle='#000'; ctx.beginPath(); ctx.ellipse(unit.pos.x, unit.pos.y + unit.bodyR*0.72, unit.bodyR*0.9, unit.bodyR*0.35, 0, 0, TAU); ctx.fill(); ctx.restore();
   // 2) corpo
-  const base=teamColor || '#8be9fd'; const grad=ctx.createRadialGradient(unit.pos.x-unit.bodyR*0.35, unit.pos.y-unit.bodyR*0.35, unit.bodyR*0.2, unit.pos.x, unit.pos.y, unit.bodyR*1.1); grad.addColorStop(0,base); grad.addColorStop(1,'rgba(0,0,0,0.6)'); ctx.beginPath(); ctx.arc(unit.pos.x,unit.pos.y,unit.bodyR,0,TAU); ctx.fillStyle=grad; ctx.fill();
+  const base = teamColor || '#8be9fd';
+  const outlineCol = shade(base, -0.70);
+  ctx.beginPath();
+  ctx.arc(unit.pos.x, unit.pos.y, unit.bodyR, 0, TAU);
+  ctx.fillStyle = base;
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = outlineCol;
+  ctx.stroke();
+  ctx.globalAlpha = 0.14;
+  ctx.beginPath();
+  ctx.arc(unit.pos.x - unit.bodyR * 0.35, unit.pos.y - unit.bodyR * 0.35, unit.bodyR * 0.55, 0, TAU);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.globalAlpha = 1;
   // 3) itens
   const cfg=CLASS_VISUALS[unit.className]; if (cfg){ const pal=cfg.palette||[]; if (cfg.item==='chifres_duplos' || cfg.item==='colar_monge' || (ITEM_ALIASES[cfg.item]==='saia_barbaro')){ ctx.save(); ctx.translate(unit.pos.x,unit.pos.y); applyMicroAnim(ctx,cfg.microAnim,now); drawItemSprite(ctx,cfg.item, unit.bodyR*2*GLOBAL_ITEM_SCALE_MULT, pal, now); ctx.restore(); } else { const safeR=LEVEL_SAFE_RADIUS_MULT*unit.bodyR; const anchor=(cfg.anchorAngleDeg||0)*Math.PI/180; let dist=unit.bodyR*0.82; if(dist<safeR) dist=safeR; let x=unit.pos.x+Math.cos(anchor)*dist, y=unit.pos.y+Math.sin(anchor)*dist; const scale=(cfg.scale ?? CLASS_ITEM_SCALE_DEFAULT)*(unit.bodyR*2)*GLOBAL_ITEM_SCALE_MULT; ctx.save(); ctx.translate(x,y); ctx.rotate(anchor); applyMicroAnim(ctx,cfg.microAnim,now); drawItemSprite(ctx,cfg.item,scale,pal,now); ctx.restore(); } }
   // 4) arma
-  ctx.save(); ctx.translate(unit.pos.x,unit.pos.y); ctx.rotate(((cfg && cfg.weaponAngleDeg)||30)*Math.PI/180); drawWeaponForUnit(ctx, unit, unit.bodyR*1.2); ctx.restore();
+  ctx.save();
+  ctx.translate(unit.pos.x, unit.pos.y);
+  const wAng = ((cfg && cfg.weaponAngleDeg) || 30) * Math.PI / 180;
+  ctx.rotate(wAng);
+  ctx.translate(unit.bodyR * 0.9, 0);
+  drawWeaponForUnit(ctx, unit, unit.bodyR * 1.2);
+  ctx.restore();
   // 5) destaque
   ctx.save(); ctx.globalAlpha=0.25; ctx.beginPath(); ctx.arc(unit.pos.x-unit.bodyR*0.35, unit.pos.y-unit.bodyR*0.35, unit.bodyR*0.45, 0, TAU); ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.fill(); ctx.restore();
 }

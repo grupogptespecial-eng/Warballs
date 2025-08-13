@@ -21,15 +21,9 @@ export function hideMessage() {
 
 // Opções de classes para selects
 export function optionClassHTML() {
-  return `
-    <option value="barbaro">Bárbaro</option>
-    <option value="paladino">Paladino</option>
-    <option value="monge">Monge</option>
-    <option value="clerigo">Clérigo</option>
-    <option value="ranger">Ranger</option>
-    <option value="bruxo">Bruxo</option>
-    <option value="guerreiro">Guerreiro</option>
-  `;
+  return Object.entries(CLASSES)
+    .map(([id, cfg]) => `<option value="${id}">${cfg.label}</option>`)
+    .join('\n');
 }
 
 export function populateClassSelect(selectEl) {
@@ -66,15 +60,7 @@ export function drawUnitThumb(ctx, klass, color, level){
 
 // Fallback de classes
 export function optionClassHTMLFallback() {
-  return `
-    <option value="barbaro">Bárbaro</option>
-    <option value="paladino">Paladino</option>
-    <option value="monge">Monge</option>
-    <option value="clerigo">Clérigo</option>
-    <option value="ranger">Ranger</option>
-    <option value="bruxo">Bruxo</option>
-    <option value="guerreiro">Guerreiro</option>
-  `;
+  return optionClassHTML();
 }
 
 export function getClassOptionsHTML() {
