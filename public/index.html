@@ -348,7 +348,8 @@
           <label><input type="checkbox" id="enableHealthCrates"/> Vida</label>
           <div id="cfgHealthCrate" class="crate-config">
             <div class="row"><div class="label">Média/100s</div><input id="healthAvg" type="number" step="0.1" class="select" value="12"/></div>
-            <div class="row"><div class="label">Tamanho</div><input id="healthSize" type="number" class="select" value="18"/></div>
+            <div class="row"><div class="label">Tempo de vida</div><input id="healthLifetime" type="number" class="select" value="35"/></div>
+            <div class="row"><div class="label">Máx. simultâneos</div><input id="healthMax" type="number" class="select" value="6"/></div>
             <div class="row"><div class="label">Cura</div><input id="healthHeal" type="number" class="select" value="12"/></div>
           </div>
         </div>
@@ -357,7 +358,8 @@
           <label><input type="checkbox" id="enableXpCrates"/> XP</label>
           <div id="cfgXpCrate" class="crate-config">
             <div class="row"><div class="label">Média/100s</div><input id="xpAvg" type="number" step="0.1" class="select" value="12"/></div>
-            <div class="row"><div class="label">Tamanho</div><input id="xpSize" type="number" class="select" value="18"/></div>
+            <div class="row"><div class="label">Tempo de vida</div><input id="xpLifetime" type="number" class="select" value="35"/></div>
+            <div class="row"><div class="label">Máx. simultâneos</div><input id="xpMax" type="number" class="select" value="6"/></div>
             <div class="row"><div class="label">XP</div><input id="xpAmount" type="number" class="select" value="8"/></div>
           </div>
         </div>
@@ -366,14 +368,12 @@
           <label><input type="checkbox" id="enableHybridCrates"/> Vida+XP</label>
           <div id="cfgHybridCrate" class="crate-config">
             <div class="row"><div class="label">Média/100s</div><input id="hybridAvg" type="number" step="0.1" class="select" value="12"/></div>
-            <div class="row"><div class="label">Tamanho</div><input id="hybridSize" type="number" class="select" value="18"/></div>
+            <div class="row"><div class="label">Tempo de vida</div><input id="hybridLifetime" type="number" class="select" value="35"/></div>
+            <div class="row"><div class="label">Máx. simultâneos</div><input id="hybridMax" type="number" class="select" value="6"/></div>
             <div class="row"><div class="label">Vida</div><input id="hybridHeal" type="number" class="select" value="8"/></div>
             <div class="row"><div class="label">XP</div><input id="hybridXp" type="number" class="select" value="6"/></div>
           </div>
         </div>
-
-        <div class="row"><div class="label">Tempo de vida</div><input id="crateLifetime" type="number" class="select" value="35"/></div>
-        <div class="row"><div class="label">Máx./Tipo</div><input id="crateMax" type="number" class="select" value="6"/></div>
 
         <div style="margin-top:8px;"><button id="btnCrateReset" class="btn">Reset</button></div>
       </section>

@@ -8,6 +8,7 @@ import { game } from '../core/game.js';
 import { Particle } from './particle.js';
 import { V } from '../math/vec.js';
 import { Projectile } from './projectile.js';
+import { spawnSpearTrail } from '../vfx/spear_trail.js';
 
 export class SpearProjectile extends Projectile {
   constructor(owner, pos, dir) {
@@ -40,6 +41,7 @@ export class SpearProjectile extends Projectile {
     this.life -= dt;
     if (this.life <= 0) { this.alive = false; return; }
     this.stepMove(dt);
+    spawnSpearTrail(this.pos.clone(), this.dir.clone());
 
     // fora da arena
     if (this.pos.x < arena.x - this.rad || this.pos.x > arena.x + arena.w + this.rad ||

@@ -233,6 +233,7 @@ export class Unit {
           state: 'IDLE',
           meleeCD: 0,
           throwCD: 0,
+          disarmT: 0,
           aimT: 0,
           parryCD: 0,
           lastAttackType: null,

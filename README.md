@@ -46,11 +46,11 @@ tipos de bônus:
 
 Os parâmetros ficam em `CFG.crates` e também podem ser ajustados no painel
 **Crates** da interface. Ative cada tipo pela caixa de seleção e defina
-taxa média de spawn (`avgPer100s`), tamanho (`sizePx`), recompensas
-(`healAmount`/`xpAmount`), tempo de vida (`lifetime`) e o número máximo de
-crates simultâneas por tipo (`maxConcurrentPerType`). Há limites globais de
-distância entre crates e de distância mínima de unidades. As configurações
-do painel são salvas em `localStorage` (chave `crateConfig_v1`).
+taxa média de spawn (`avgPer100s`), tempo de vida (`lifetime`), máximo
+simultâneo (`maxConcurrent`), tamanho (`sizePx`) e recompensas
+(`healAmount`/`xpAmount`). Há limites globais de distância entre crates e
+de distância mínima de unidades. As configurações do painel são salvas em
+`localStorage` (chave `crateConfig_v2`).
 
 Em arenas do tipo Battle Royale, crates fora dos limites atuais seguem a
 política `brCratePolicyOnShrink`, que pode ser `despawn`, `pushInwards` ou
@@ -95,7 +95,12 @@ projétil retorna automaticamente após um tempo de voo máximo. Alternar entre 
 ataque corpo‑a‑corpo e um arremesso dentro do tempo de `discipline.swapWindow`
 ativa **Disciplina Marcial**, concedendo bônus de dano no próximo acerto. A
 classe conta ainda com Postura de Guerra, Parry avançado e outras manobras
-táticas descritas em `CFG.guerreiro`.
+táticas descritas em `CFG.guerreiro`. Quando ameaçado por inimigos próximos,
+o Guerreiro aborta qualquer arremesso em preparação ou em voo, aumenta em 50 %
+a velocidade de giro e reduz pela metade o tempo entre golpes corpo‑a‑corpo,
+retornando à cadência normal após a área estar limpa. Arremessos de lança,
+ativação da postura e aparos agora disparam partículas para destacar cada
+habilidade.
 
 ## Desenvolvimento
 
