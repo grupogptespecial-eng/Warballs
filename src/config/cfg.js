@@ -434,9 +434,11 @@ export const CLASS_VISUALS = {
   guerreiro: {
     item: 'ombreira_metal',
     anchorAngleDeg: 210,
-    scale: 0.15,
+    scale: 0.60,
     microAnim: 'sway_low',
-    palette: ['#9BA4AE', '#6B757F', '#CACFD6']
+    palette: ['#9BA4AE', '#6B757F', '#CACFD6'],
+    weaponScale: 2.0,
+    weaponOffsetMult: 2.2
   }
 };
 

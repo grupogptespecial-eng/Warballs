@@ -11,7 +11,7 @@ export const CLASS_VISUALS = {
   paladino: { item:'insignia_escudo',anchorAngleDeg:20, scale:0.15, microAnim:'glint_slow',   palette:['#C9C9C9','#E6D27A','#7A6A3A'], weaponAngleDeg:20 },
   clerigo:  { item:'sigilo_sol',     anchorAngleDeg:330,scale:0.14, microAnim:'soft_glow',    palette:['#FFD67A','#F4B43A','#8A6A2A'], weaponAngleDeg:0 },
   bruxo:    { item:'chifres_duplos', anchorAngleDeg:270,scale:0.18, microAnim:'idle_breath',  palette:['#7E57C2','#A586E8','#40345A'], weaponAngleDeg:-10 },
-  guerreiro:{ item:'ombreira_metal', anchorAngleDeg:210,scale:0.15, microAnim:'sway_low',     palette:['#9BA4AE','#6B757F','#CACFD6'], weaponAngleDeg:15 }
+  guerreiro:{ item:'ombreira_metal', anchorAngleDeg:210,scale:0.60, microAnim:'sway_low',     palette:['#9BA4AE','#6B757F','#CACFD6'], weaponAngleDeg:15, weaponScale:2.0, weaponOffsetMult:2.2 }
 };
 
 // Aliases (compat)
@@ -151,8 +151,10 @@ export function renderUnitPreview(ctx, unit, teamColor, now){
   ctx.translate(unit.pos.x, unit.pos.y);
   const wAng = ((cfg && cfg.weaponAngleDeg) || 30) * Math.PI / 180;
   ctx.rotate(wAng);
-  ctx.translate(unit.bodyR * 0.9, 0);
-  drawWeaponForUnit(ctx, unit, unit.bodyR * 1.2);
+  const wScale = unit.bodyR * 1.2 * ((cfg && cfg.weaponScale) || 1);
+  const wOff = unit.bodyR * ((cfg && cfg.weaponOffsetMult) || 0.9);
+  ctx.translate(wOff, 0);
+  drawWeaponForUnit(ctx, unit, wScale);
   ctx.restore();
   // 5) destaque
   ctx.save(); ctx.globalAlpha=0.25; ctx.beginPath(); ctx.arc(unit.pos.x-unit.bodyR*0.35, unit.pos.y-unit.bodyR*0.35, unit.bodyR*0.45, 0, TAU); ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.fill(); ctx.restore();

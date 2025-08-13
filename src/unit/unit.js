@@ -1005,8 +1005,10 @@ export class Unit {
     ctx.translate(this.pos.x, this.pos.y);
     const ang = this.angle + (((cfg && cfg.weaponAngleDeg) || 30) * Math.PI / 180);
     ctx.rotate(ang);
-    ctx.translate(this.bodyR * 0.9, 0);
-    drawWeaponForUnit(ctx, this, this.bodyR * 1.2);
+    const wScale = this.bodyR * 1.2 * ((cfg && cfg.weaponScale) || 1);
+    const wOff = this.bodyR * ((cfg && cfg.weaponOffsetMult) || 0.9);
+    ctx.translate(wOff, 0);
+    drawWeaponForUnit(ctx, this, wScale);
     ctx.restore();
     if (game.debugHit) {
       ctx.globalAlpha = 0.3;
