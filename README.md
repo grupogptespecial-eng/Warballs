@@ -76,7 +76,7 @@ nível. Esses elementos são apenas visuais e não afetam colisões.
 Itens atuais (com micro‑animação):
 
 - **Bárbaro** – saia e machado duplo *(sway_low)*
-- **Ranger** – aljava pequena *(idle_breath)*
+- **Ranger** – aljava grande (4×) *(idle_breath)*
 - **Monge** – colar *(subtle_pulse)*
 - **Paladino** – insígnia de escudo *(glint_slow)*
 - **Clérigo** – sigilo solar *(soft_glow)*
