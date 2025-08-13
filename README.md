@@ -69,8 +69,8 @@ Cada classe pode exibir um pequeno item cosmético preso ao corpo do personagem
 para reforçar sua identidade. As definições estão em `src/config/cfg.js` no
 objeto `CLASS_VISUALS`, que indica o item, ângulo de ancoragem, escala e a
 microanimação utilizada. O tamanho padrão é dado por `CLASS_ITEM_SCALE_DEFAULT`
-com multiplicador global `GLOBAL_ITEM_SCALE_MULT`, e os itens jamais ultrapassam
-o raio seguro `LEVEL_SAFE_RADIUS_MULT * BALL_RADIUS`, reservado ao texto de
+com multiplicador global `GLOBAL_ITEM_SCALE_MULT` (160% por padrão), e os itens
+jamais ultrapassam o raio seguro `LEVEL_SAFE_RADIUS_MULT * BALL_RADIUS`, reservado ao texto de
 nível. Esses elementos são apenas visuais e não afetam colisões.
 
 Itens atuais (com micro‑animação):

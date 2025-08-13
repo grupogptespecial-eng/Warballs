@@ -382,7 +382,7 @@ export const CFG = {
 // Escalas globais para itens visuais presos às unidades
 // Tamanho padrão relativo ao diâmetro da bola e raio seguro para o texto do nível
 export const CLASS_ITEM_SCALE_DEFAULT = 0.15 * (CFG.body.radius * 2);
-export const GLOBAL_ITEM_SCALE_MULT = 2.0;
+export const GLOBAL_ITEM_SCALE_MULT = 1.6;
 export const LEVEL_SAFE_RADIUS_MULT = 0.42;
 
 // Configuração visual por classe. Cada item é posicionado usando um ângulo fixo
@@ -391,7 +391,7 @@ export const CLASS_VISUALS = {
   barbaro: {
     item: 'saia_barbaro',
     anchorAngleDeg: 120,
-    scale: 0.15,
+    scale: 0.16,
     microAnim: 'sway_low',
     palette: ['#8B4A2B', '#C9935A', '#402A1C'],
     weaponOverride: 'axe_double_bit_v2'
@@ -399,42 +399,42 @@ export const CLASS_VISUALS = {
   ranger: {
     item: 'aljava_pequena',
     anchorAngleDeg: 45,
-    scale: 0.15,
+    scale: 0.14,
     microAnim: 'idle_breath',
     palette: ['#4E6B3A', '#B89B6B', '#2E3B22']
   },
   monge: {
     item: 'colar_monge',
     anchorAngleDeg: 300,
-    scale: 0.14,
+    scale: 0.13,
     microAnim: 'subtle_pulse',
     palette: ['#C8A26A', '#5E3B21', '#E5D7B8']
   },
   paladino: {
     item: 'insignia_escudo',
     anchorAngleDeg: 20,
-    scale: 0.16,
+    scale: 0.15,
     microAnim: 'glint_slow',
     palette: ['#C9C9C9', '#E6D27A', '#7A6A3A']
   },
   clerigo: {
     item: 'sigilo_sol',
     anchorAngleDeg: 330,
-    scale: 0.15,
+    scale: 0.14,
     microAnim: 'soft_glow',
     palette: ['#FFD67A', '#F4B43A', '#8A6A2A']
   },
   bruxo: {
     item: 'chifres_duplos',
-    anchorAngleDeg: 250,
-    scale: 0.13,
+    anchorAngleDeg: 270,
+    scale: 0.15,
     microAnim: 'orbit_slow',
     palette: ['#7E57C2', '#A586E8', '#40345A']
   },
   guerreiro: {
     item: 'ombreira_metal',
     anchorAngleDeg: 210,
-    scale: 0.16,
+    scale: 0.15,
     microAnim: 'sway_low',
     palette: ['#9BA4AE', '#6B757F', '#CACFD6']
   }
