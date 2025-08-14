@@ -21,7 +21,14 @@ export const CLASS_VISUALS = {
   monge:    { item:'colar_monge',    scale:0.6, palette:[], distanceFromCenter:0.82, internalRotationDeg:0 },
   paladino: { item:'insignia_escudo',anchorAngleDeg:20, scale:0.55, microAnim:'glint_slow',   palette:['#C9C9C9','#E6D27A','#7A6A3A'], weaponAngleDeg:-90, weaponScale:2.0, weaponOffsetMult:2.0, distanceFromCenter:0.62, internalRotationDeg:0 },
   clerigo:  { item:'sigilo_sol',     anchorAngleDeg:330,scale:0.34, microAnim:'soft_glow',    palette:['#FFD67A','#F4B43A','#8A6A2A'], weaponAngleDeg:90, weaponScale:2.5, weaponOffsetMult:1.8, distanceFromCenter:0.72, internalRotationDeg:0 },
-  bruxo:    { item:'chifres_duplos', anchorAngleDeg:270,scale:0.18, microAnim:'idle_breath',  palette:['#7E57C2','#A586E8','#40345A'], weaponAngleDeg:-10, distanceFromCenter:0.82, internalRotationDeg:0 },
+  bruxo:    {
+    weaponAngleDeg:-10,
+    palette:['#7E57C2','#A586E8','#40345A'],
+    items:[
+      { item:'chifre_bruxo', anchorAngleDeg:270, scale:0.18, microAnim:'idle_breath', palette:['#7E57C2','#A586E8','#40345A'], distanceFromCenter:0.82, itemOffsetX:-0.18, flipX:true },
+      { item:'chifre_bruxo', anchorAngleDeg:270, scale:0.18, microAnim:'idle_breath', palette:['#7E57C2','#A586E8','#40345A'], distanceFromCenter:0.82, itemOffsetX:0.18 }
+    ]
+  },
   artifice: { item:'goggles',        anchorAngleDeg:270, scale:0.56, microAnim:'idle_breath',  palette:['#A6B1B8','#E0E7EA','#3B4A5A'], weaponOverride:'arcane_cannon', weaponAngleDeg:40, weaponScale:1.8, weaponOffsetMult:1.5, distanceFromCenter:0.52, internalRotationDeg:0 },
   guerreiro:{ item:'ombreira_metal', anchorAngleDeg:210,scale:0.60, microAnim:'sway_low',     palette:['#9BA4AE','#6B757F','#CACFD6'], weaponAngleDeg:15, weaponScale:3.5, weaponOffsetMult:2.8, distanceFromCenter:0.82, internalRotationDeg:0 }
 };
@@ -215,33 +222,23 @@ export function drawItemSprite(ctx, id, scale, pal, now){
 
   if (useId === 'ombreira_metal') { const R=scale*0.175; ctx.beginPath(); ctx.arc(0,0,R,-120*Math.PI/180,-10*Math.PI/180); ctx.lineTo(0,0); ctx.closePath(); const g=ctx.createLinearGradient(-R,0,R,0); g.addColorStop(0,shade(p1,-0.35)); g.addColorStop(1,p1); ctx.fillStyle=g; ctx.fill(); ctx.lineWidth=1.2; ctx.strokeStyle='rgba(0,0,0,0.75)'; ctx.stroke(); ctx.beginPath(); ctx.arc(R*0.6,-R*0.2,scale*0.02,0,TAU); ctx.fillStyle=shade(p1,-0.2); ctx.fill(); return; }
 
-  if (useId === 'chifres_duplos') {
+  if (useId === 'chifre_bruxo') {
     const R = scale * 0.5;
     const baseCol = p1 || '#7E57C2';
-    const offsetY = -R * 0.85;
-    const spreadX = R * 0.65;
-    const horn = (side) => {
-      ctx.save();
-      ctx.translate(side * spreadX, offsetY);
-      ctx.scale(side, 1);
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.bezierCurveTo(R * 0.15, -R * 0.25, R * 0.55, -R * 0.55, R * 0.35, -R * 1.4);
-      ctx.bezierCurveTo(R * 0.15, -R * 1.8, -R * 0.1, -R * 1.8, -R * 0.15, -R * 0.9);
-      ctx.bezierCurveTo(-R * 0.18, -R * 0.25, -R * 0.05, -R * 0.1, 0, 0);
-      ctx.closePath();
-      const g = ctx.createLinearGradient(0, -R * 1.4, 0, R * 0.1);
-      g.addColorStop(0, shade(baseCol, 0.25));
-      g.addColorStop(1, shade(baseCol, -0.30));
-      ctx.fillStyle = g;
-      ctx.fill();
-      ctx.lineWidth = 1.2;
-      ctx.strokeStyle = 'rgba(0,0,0,0.75)';
-      ctx.stroke();
-      ctx.restore();
-    };
-    horn(1);
-    horn(-1);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.bezierCurveTo(R * 0.15, -R * 0.25, R * 0.55, -R * 0.55, R * 0.35, -R * 1.4);
+    ctx.bezierCurveTo(R * 0.15, -R * 1.8, -R * 0.1, -R * 1.8, -R * 0.15, -R * 0.9);
+    ctx.bezierCurveTo(-R * 0.18, -R * 0.25, -R * 0.05, -R * 0.1, 0, 0);
+    ctx.closePath();
+    const g = ctx.createLinearGradient(0, -R * 1.4, 0, R * 0.1);
+    g.addColorStop(0, shade(baseCol, 0.25));
+    g.addColorStop(1, shade(baseCol, -0.30));
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+    ctx.stroke();
     return;
   }
 }
@@ -319,34 +316,39 @@ export function renderUnitPreview(ctx, unit, teamColor, now){
   // 3) itens
   const cfg=CLASS_VISUALS[unit.className];
   if (cfg){
-    const pal=cfg.palette||[];
-    const baseScale=(cfg.scale ?? CLASS_ITEM_SCALE_DEFAULT)*(unit.bodyR*2)*GLOBAL_ITEM_SCALE_MULT;
-    const iRot=(cfg.internalRotationDeg ?? 0)*Math.PI/180;
-    if (cfg.item==='chifres_duplos' || cfg.item==='colar_monge' || (ITEM_ALIASES[cfg.item]==='saia_barbaro')){
-      ctx.save();
-      const offX=unit.bodyR*(cfg.itemOffsetX ?? 0);
-      const offY=unit.bodyR*(cfg.itemOffsetY ?? 0);
-      ctx.translate(unit.pos.x+offX,unit.pos.y+offY);
-      ctx.rotate(iRot);
-      applyMicroAnim(ctx,cfg.microAnim,now);
-      drawItemSprite(ctx,cfg.item, baseScale, pal, now);
-      ctx.restore();
-    } else {
-      const safeR=LEVEL_SAFE_RADIUS_MULT*unit.bodyR;
-      const anchor=(cfg.anchorAngleDeg||0)*Math.PI/180;
-      let dist=unit.bodyR*(cfg.distanceFromCenter ?? 0.82);
-      if(dist<safeR) dist=safeR;
-      const offX=unit.bodyR*(cfg.itemOffsetX ?? 0);
-      const offY=unit.bodyR*(cfg.itemOffsetY ?? 0);
-      const x=unit.pos.x+Math.cos(anchor)*dist+offX;
-      const y=unit.pos.y+Math.sin(anchor)*dist+offY;
-      ctx.save();
-      ctx.translate(x,y);
-      ctx.rotate(anchor);
-      ctx.rotate(iRot);
-      applyMicroAnim(ctx,cfg.microAnim,now);
-      drawItemSprite(ctx,cfg.item,baseScale,pal,now);
-      ctx.restore();
+    const items=cfg.items || [cfg];
+    for(const ic of items){
+      const pal=ic.palette||[];
+      const baseScale=(ic.scale ?? CLASS_ITEM_SCALE_DEFAULT)*(unit.bodyR*2)*GLOBAL_ITEM_SCALE_MULT;
+      const iRot=(ic.internalRotationDeg ?? 0)*Math.PI/180;
+      if (ic.item==='colar_monge' || (ITEM_ALIASES[ic.item]==='saia_barbaro')){
+        ctx.save();
+        const offX=unit.bodyR*(ic.itemOffsetX ?? 0);
+        const offY=unit.bodyR*(ic.itemOffsetY ?? 0);
+        ctx.translate(unit.pos.x+offX,unit.pos.y+offY);
+        ctx.rotate(iRot);
+        applyMicroAnim(ctx,ic.microAnim,now);
+        if (ic.flipX) ctx.scale(-1,1);
+        drawItemSprite(ctx,ic.item, baseScale, pal, now);
+        ctx.restore();
+      } else {
+        const safeR=LEVEL_SAFE_RADIUS_MULT*unit.bodyR;
+        const anchor=(ic.anchorAngleDeg||0)*Math.PI/180;
+        let dist=unit.bodyR*(ic.distanceFromCenter ?? 0.82);
+        if(dist<safeR) dist=safeR;
+        const offX=unit.bodyR*(ic.itemOffsetX ?? 0);
+        const offY=unit.bodyR*(ic.itemOffsetY ?? 0);
+        const x=unit.pos.x+Math.cos(anchor)*dist+offX;
+        const y=unit.pos.y+Math.sin(anchor)*dist+offY;
+        ctx.save();
+        ctx.translate(x,y);
+        ctx.rotate(anchor);
+        ctx.rotate(iRot);
+        applyMicroAnim(ctx,ic.microAnim,now);
+        if (ic.flipX) ctx.scale(-1,1);
+        drawItemSprite(ctx,ic.item,baseScale,pal,now);
+        ctx.restore();
+      }
     }
   }
   // 4) arma (omitida para classes sem arma, ex.: monge)

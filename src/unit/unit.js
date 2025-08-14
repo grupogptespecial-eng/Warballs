@@ -932,39 +932,43 @@ export class Unit {
     if (!cfg) return;
 
     const now = performance.now();
-    const pal = cfg.palette || [];
-    const itemId = cfg.item;
-    const iRot = (cfg.internalRotationDeg ?? 0) * Math.PI / 180;
-    if (itemId === 'chifres_duplos' || itemId === 'colar_monge' || ITEM_ALIASES[itemId] === 'saia_barbaro') {
-      ctx.save();
-      const offY = this.bodyR * (cfg.itemOffsetY ?? 0);
-      const offX = this.bodyR * (cfg.itemOffsetX ?? 0);
-      ctx.translate(this.pos.x + offX, this.pos.y + offY);
-      ctx.rotate(iRot);
-      applyMicroAnim(ctx, cfg.microAnim, now);
-      const scale = (cfg.scale ?? CLASS_ITEM_SCALE_DEFAULT) * (this.bodyR * 2) * GLOBAL_ITEM_SCALE_MULT;
-      drawItemSprite(ctx, itemId, scale, pal, now);
-      ctx.restore();
-      return;
+    const items = cfg.items || [cfg];
+    for (const ic of items) {
+      const pal = ic.palette || [];
+      const itemId = ic.item;
+      const iRot = (ic.internalRotationDeg ?? 0) * Math.PI / 180;
+      if (itemId === 'colar_monge' || ITEM_ALIASES[itemId] === 'saia_barbaro') {
+        ctx.save();
+        const offY = this.bodyR * (ic.itemOffsetY ?? 0);
+        const offX = this.bodyR * (ic.itemOffsetX ?? 0);
+        ctx.translate(this.pos.x + offX, this.pos.y + offY);
+        ctx.rotate(iRot);
+        applyMicroAnim(ctx, ic.microAnim, now);
+        if (ic.flipX) ctx.scale(-1, 1);
+        const scale = (ic.scale ?? CLASS_ITEM_SCALE_DEFAULT) * (this.bodyR * 2) * GLOBAL_ITEM_SCALE_MULT;
+        drawItemSprite(ctx, itemId, scale, pal, now);
+        ctx.restore();
+      } else {
+        const anchor = (ic.anchorAngleDeg || 0) * Math.PI / 180;
+        const safeR = LEVEL_SAFE_RADIUS_MULT * this.bodyR;
+        let dist = this.bodyR * (ic.distanceFromCenter ?? 0.82);
+        if (dist < safeR) dist = safeR;
+        const offX = this.bodyR * (ic.itemOffsetX ?? 0);
+        const offY = this.bodyR * (ic.itemOffsetY ?? 0);
+        const x = this.pos.x + Math.cos(anchor) * dist + offX;
+        const y = this.pos.y + Math.sin(anchor) * dist + offY;
+        const scale = (ic.scale ?? CLASS_ITEM_SCALE_DEFAULT) * (this.bodyR * 2) * GLOBAL_ITEM_SCALE_MULT;
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(anchor);
+        ctx.rotate(iRot);
+        applyMicroAnim(ctx, ic.microAnim, now);
+        if (ic.flipX) ctx.scale(-1, 1);
+        drawItemSprite(ctx, itemId, scale, pal, now);
+        ctx.restore();
+      }
     }
-
-    const anchor = (cfg.anchorAngleDeg || 0) * Math.PI / 180;
-    const safeR = LEVEL_SAFE_RADIUS_MULT * this.bodyR;
-    let dist = this.bodyR * (cfg.distanceFromCenter ?? 0.82);
-    if (dist < safeR) dist = safeR;
-    const offX = this.bodyR * (cfg.itemOffsetX ?? 0);
-    const offY = this.bodyR * (cfg.itemOffsetY ?? 0);
-    const x = this.pos.x + Math.cos(anchor) * dist + offX;
-    const y = this.pos.y + Math.sin(anchor) * dist + offY;
-    const scale = (cfg.scale ?? CLASS_ITEM_SCALE_DEFAULT) * (this.bodyR * 2) * GLOBAL_ITEM_SCALE_MULT;
-
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(anchor);
-    ctx.rotate(iRot);
-    applyMicroAnim(ctx, cfg.microAnim, now);
-    drawItemSprite(ctx, itemId, scale, pal, now);
-    ctx.restore();
   }
 
   draw(ctx) {
