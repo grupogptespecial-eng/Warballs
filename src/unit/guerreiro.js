@@ -63,7 +63,7 @@ function tickMelee(u, dt) {
       const d = distPointToSegment(other.pos, base, tip);
       if (d < other.bodyR + u.weaponTipR) {
         let dmg = CFG.guerreiro.damage.meleeBase;
-        const proj = ((other.pos.x - base.x) * Math.cos(u.angle) + (other.pos.y - base.y) * Math.sin(u.angle));
+        const proj = ((other.pos.x - base.x) * Math.cos(u.angle) + (other.pos.y - base.y) * Math.sin(u.angle)) - u.weaponOffset;
         if (proj > u.weaponLen * 0.8) dmg *= CFG.guerreiro.spear.tipBonus;
         if (u.gw.disciplineReady && u.gw.disciplineStacks > 0) {
           dmg *= 1 + u.gw.disciplineStacks * CFG.guerreiro.discipline.nextHitBonus;

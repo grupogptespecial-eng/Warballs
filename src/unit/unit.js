@@ -114,6 +114,7 @@ export class Unit {
 
     this.weaponLen = CFG.weapon.length;
     this.weaponTipR = CFG.weapon.tipRadius;
+    this.weaponOffset = this.bodyR * 1.4;
     this.omega = CFG.weapon.omega * (Math.random() < 0.5 ? -1 : 1);
     this.angle = randAng();
 
@@ -156,10 +157,23 @@ export class Unit {
     this.gw = null;
   }
 
+  applyWeaponVisuals(cfg) {
+    const scale = cfg.weaponScale ?? 1;
+    this.weaponLen = cfg.weaponLen * scale;
+    this.weaponTipR = cfg.tipRadius * scale;
+    const offMult = cfg.weaponOffsetMult ?? 1.4;
+    this.weaponOffset = this.bodyR * offMult;
+  }
+
   // === Inicialização e progressão ===
   applyClassDefaults() {
-    this.hasRanged = !!CLASSES[this.className]?.hasRanged;
-    this.cooldownMiraPercent = CLASSES[this.className]?.cooldownMiraPercent || 0;
+    const base = CLASSES[this.className] || {};
+    this.hasRanged = !!base.hasRanged;
+    this.cooldownMiraPercent = base.cooldownMiraPercent || 0;
+    if (base.weaponLen != null) this.weaponLen = base.weaponLen;
+    if (base.tipRadius != null) this.weaponTipR = base.tipRadius;
+    if (base.omega != null) this.omega = base.omega * (Math.random() < 0.5 ? -1 : 1);
+
     if (this.className === 'ranger') {
       this.baseHP = CFG.ranger.hpBase;
       this.hpMax = this.baseHP;
@@ -178,8 +192,6 @@ export class Unit {
       this.dashTarget = null;
       this.urroT = 0;
       this.urroCD = 0;
-      this.weaponLen = 40;
-      this.weaponTipR = 11;
 
     } else if (this.className === 'paladino') {
       this.baseHP = palHP(1);
@@ -244,10 +256,22 @@ export class Unit {
           stanceActive: false,
           stanceGrace: 0,
           baseOmega: this.omega,
-          baseWeaponLen: this.weaponLen,
-          baseWeaponTipR: this.weaponTipR
+          baseWeaponLen: 0,
+          baseWeaponTipR: 0
         };
       }
+
+    const vis = CLASS_VISUALS[this.className] || {};
+    this.applyWeaponVisuals({
+      weaponLen: this.weaponLen,
+      tipRadius: this.weaponTipR,
+      weaponScale: vis.weaponScale,
+      weaponOffsetMult: vis.weaponOffsetMult
+    });
+    if (this.className === 'guerreiro' && this.gw) {
+      this.gw.baseWeaponLen = this.weaponLen;
+      this.gw.baseWeaponTipR = this.weaponTipR;
+    }
   }
 
   xpCost() { return CFG.xp.cost(this.level); }
@@ -350,9 +374,10 @@ export class Unit {
 
   // === Física e colisão ===
   tip() {
+    const reach = this.weaponOffset + this.weaponLen;
     return new V(
-      this.pos.x + Math.cos(this.angle) * (this.bodyR + this.weaponLen),
-      this.pos.y + Math.sin(this.angle) * (this.bodyR + this.weaponLen)
+      this.pos.x + Math.cos(this.angle) * reach,
+      this.pos.y + Math.sin(this.angle) * reach
     );
   }
 
