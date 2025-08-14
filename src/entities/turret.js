@@ -7,7 +7,7 @@ import { drawRoundedRect } from '../utils/geometry.js';
 import { CFG } from '../config/cfg.js';
 
 export class Turret {
-  constructor(owner, pos, cfg) {
+  constructor(owner, pos, cfg, startLevel = 1) {
     this.owner = owner;
     this.pos = pos.clone();
     this.cfg = cfg;
@@ -34,6 +34,10 @@ export class Turret {
     this.bulletDamage = cfg.bulletDamage;
     this.bulletSpeed = cfg.bulletSpeed;
     this.bulletKnock = cfg.bulletKnock;
+
+    // initialize starting level based on the owner's level
+    const target = Math.max(1, Math.min(startLevel, (cfg.xpToLevel?.length || 0) + 1));
+    for (let i = 1; i < target; i++) this.levelUp();
   }
 
   levelUp() {

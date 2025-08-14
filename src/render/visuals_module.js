@@ -16,14 +16,14 @@ export const BARBARIAN_PALETTE = {
 };
 
 export const CLASS_VISUALS = {
-  barbaro:  { item:'saia_barbaro', scale:0.16, microAnim:'sway_low',   palette:[BARBARIAN_PALETTE.leatherBase,BARBARIAN_PALETTE.leatherLight,BARBARIAN_PALETTE.leatherStroke], weaponOverride:'axe_double_bit_v2', weaponAngleDeg:35 },
-  ranger:   { item:'aljava_pequena', anchorAngleDeg:45, scale:0.56, microAnim:'idle_breath', palette:['#4E6B3A','#B89B6B','#2E3B22'], weaponAngleDeg:-25, weaponScale:1.56, weaponOffsetMult:1.2 },
-  monge:    { item:'colar_monge',    scale:0.16, palette:[] },
-  paladino: { item:'insignia_escudo',anchorAngleDeg:20, scale:0.15, microAnim:'glint_slow',   palette:['#C9C9C9','#E6D27A','#7A6A3A'], weaponAngleDeg:-90, weaponScale:2.0, weaponOffsetMult:1.0 },
-  clerigo:  { item:'sigilo_sol',     anchorAngleDeg:330,scale:0.14, microAnim:'soft_glow',    palette:['#FFD67A','#F4B43A','#8A6A2A'], weaponAngleDeg:90, weaponScale:2.0, weaponOffsetMult:1.0 },
+  barbaro:  { item:'saia_barbaro', scale:0.4, microAnim:'sway_low',   palette:[BARBARIAN_PALETTE.leatherBase,BARBARIAN_PALETTE.leatherLight,BARBARIAN_PALETTE.leatherStroke], weaponOverride:'axe_double_bit_v2', weaponAngleDeg:35 ,weaponOffsetMult:2.0, itemOffsetY:0.2},
+  ranger:   { item:'aljava_pequena', anchorAngleDeg:45, scale:0.56, microAnim:'idle_breath', palette:['#4E6B3A','#B89B6B','#2E3B22'], weaponAngleDeg:-25, weaponScale:1.56, weaponOffsetMult:1.5 },
+  monge:    { item:'colar_monge',    scale:0.6, palette:[] },
+  paladino: { item:'insignia_escudo',anchorAngleDeg:20, scale:0.45, microAnim:'glint_slow',   palette:['#C9C9C9','#E6D27A','#7A6A3A'], weaponAngleDeg:-90, weaponScale:2.0, weaponOffsetMult:2.0 },
+  clerigo:  { item:'sigilo_sol',     anchorAngleDeg:330,scale:0.34, microAnim:'soft_glow',    palette:['#FFD67A','#F4B43A','#8A6A2A'], weaponAngleDeg:90, weaponScale:2.5, weaponOffsetMult:1.8 },
   bruxo:    { item:'chifres_duplos', anchorAngleDeg:270,scale:0.18, microAnim:'idle_breath',  palette:['#7E57C2','#A586E8','#40345A'], weaponAngleDeg:-10 },
-  artifice: { item:'goggles',        anchorAngleDeg:30, scale:0.16, microAnim:'idle_breath',  palette:['#A6B1B8','#E0E7EA','#3B4A5A'], weaponOverride:'arcane_cannon', weaponAngleDeg:40, weaponScale:1.8 },
-  guerreiro:{ item:'ombreira_metal', anchorAngleDeg:210,scale:0.60, microAnim:'sway_low',     palette:['#9BA4AE','#6B757F','#CACFD6'], weaponAngleDeg:15, weaponScale:2.0, weaponOffsetMult:2.2 }
+  artifice: { item:'goggles',        anchorAngleDeg:270, scale:0.16, microAnim:'idle_breath',  palette:['#A6B1B8','#E0E7EA','#3B4A5A'], weaponOverride:'arcane_cannon', weaponAngleDeg:40, weaponScale:1.8, weaponOffsetMult:1.5 },
+  guerreiro:{ item:'ombreira_metal', anchorAngleDeg:210,scale:0.60, microAnim:'sway_low',     palette:['#9BA4AE','#6B757F','#CACFD6'], weaponAngleDeg:15, weaponScale:3.5, weaponOffsetMult:2.8 }
 };
 
 // Aliases (compat)
@@ -140,29 +140,75 @@ export function drawItemSprite(ctx, id, scale, pal, now){
   if (useId === 'sigilo_sol') { const R=scale*0.14, r=scale*0.05; ctx.beginPath(); ctx.arc(0,0,R,0,TAU); const g=ctx.createRadialGradient(0,0,r*0.6,0,0,R); g.addColorStop(0,p1); g.addColorStop(1,shade(p1,-0.25)); ctx.fillStyle=g; ctx.fill(); ctx.lineWidth=1.1; ctx.strokeStyle='rgba(0,0,0,0.75)'; ctx.stroke(); ctx.lineWidth=1.4; ctx.strokeStyle=shade(p1,0.15); for(let i=0;i<8;i++){ const a=(i/8)*TAU + Math.sin(now/1100)*0.02; ctx.beginPath(); ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r); ctx.lineTo(Math.cos(a)*R,Math.sin(a)*R); ctx.stroke(); } return; }
 
   if (useId === 'goggles') {
-    const r = scale * 0.15;
     ctx.save();
-    ctx.lineWidth = r * 0.6;
-    ctx.strokeStyle = p2;
+    // counter-rotate so goggles stay horizontal at top anchor
+    ctx.rotate(Math.PI / 2);
+    const s = scale / 400;
+    ctx.scale(s, s);
+    // straps
+    const strapGradL = ctx.createLinearGradient(-200, 0, -120, 0);
+    strapGradL.addColorStop(0, '#5b3b1e');
+    strapGradL.addColorStop(1, '#2d1e10');
+    ctx.fillStyle = strapGradL;
+    rr(ctx, -200, -15, 80, 30, 5);
+    ctx.fill();
+    const strapGradR = ctx.createLinearGradient(120, 0, 200, 0);
+    strapGradR.addColorStop(0, '#5b3b1e');
+    strapGradR.addColorStop(1, '#2d1e10');
+    ctx.fillStyle = strapGradR;
+    rr(ctx, 120, -15, 80, 30, 5);
+    ctx.fill();
+    // left frame
+    const frameGradL = ctx.createLinearGradient(-135, -55, -25, 45);
+    frameGradL.addColorStop(0, '#d4a64a');
+    frameGradL.addColorStop(1, '#7a5520');
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#5a3b17';
+    ctx.fillStyle = frameGradL;
     ctx.beginPath();
-    ctx.moveTo(-r*3,0);
-    ctx.lineTo(r*3,0);
+    ctx.arc(-80, 0, 55, 0, TAU);
+    ctx.fill();
     ctx.stroke();
-    const lens=(sx)=>{
-      const x=sx*r*1.2;
-      const grad=ctx.createRadialGradient(x-r*0.3,-r*0.3,r*0.2,x,0,r*1.1);
-      grad.addColorStop(0,p1);
-      grad.addColorStop(1,shade(p1,-0.25));
-      ctx.beginPath();
-      ctx.arc(x,0,r,0,TAU);
-      ctx.fillStyle=grad;
-      ctx.fill();
-      ctx.lineWidth=1.2;
-      ctx.strokeStyle='rgba(0,0,0,0.75)';
-      ctx.stroke();
-    };
-    lens(-1);
-    lens(1);
+    // right frame
+    const frameGradR = ctx.createLinearGradient(25, -55, 135, 45);
+    frameGradR.addColorStop(0, '#d4a64a');
+    frameGradR.addColorStop(1, '#7a5520');
+    ctx.fillStyle = frameGradR;
+    ctx.beginPath();
+    ctx.arc(80, 0, 55, 0, TAU);
+    ctx.fill();
+    ctx.stroke();
+    // lenses
+    const lensGradL = ctx.createRadialGradient(-80, 0, 0, -80, 0, 35);
+    lensGradL.addColorStop(0, '#5de0d6');
+    lensGradL.addColorStop(0.6, '#1b7b78');
+    lensGradL.addColorStop(1, '#0a3f3d');
+    ctx.fillStyle = lensGradL;
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#0d4d4a';
+    ctx.beginPath();
+    ctx.arc(-80, 0, 35, 0, TAU);
+    ctx.fill();
+    ctx.stroke();
+    const lensGradR = ctx.createRadialGradient(80, 0, 0, 80, 0, 35);
+    lensGradR.addColorStop(0, '#5de0d6');
+    lensGradR.addColorStop(0.6, '#1b7b78');
+    lensGradR.addColorStop(1, '#0a3f3d');
+    ctx.fillStyle = lensGradR;
+    ctx.beginPath();
+    ctx.arc(80, 0, 35, 0, TAU);
+    ctx.fill();
+    ctx.stroke();
+    // bridge
+    const bridgeGrad = ctx.createLinearGradient(-20, -12, 20, 12);
+    bridgeGrad.addColorStop(0, '#d4a64a');
+    bridgeGrad.addColorStop(1, '#7a5520');
+    ctx.fillStyle = bridgeGrad;
+    ctx.strokeStyle = '#5a3b17';
+    ctx.lineWidth = 3;
+    rr(ctx, -20, -12, 40, 24, 6);
+    ctx.fill();
+    ctx.stroke();
     ctx.restore();
     return;
   }
@@ -278,7 +324,7 @@ export function renderUnitPreview(ctx, unit, teamColor, now){
     ctx.translate(unit.pos.x, unit.pos.y);
     const wAng = (cfg?.weaponAngleDeg ?? 30) * Math.PI / 180;
     const wScale = unit.bodyR * 1.2 * (cfg?.weaponScale ?? 1);
-    const wOff = unit.bodyR * (cfg?.weaponOffsetMult ?? 0.9);
+    const wOff = unit.bodyR * (cfg?.weaponOffsetMult ?? 1.4);
     if (unit.className === 'paladino' || unit.className === 'clerigo') {
       ctx.rotate(0);
       ctx.translate(wOff, 0);

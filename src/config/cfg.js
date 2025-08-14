@@ -1,4 +1,5 @@
 // Configurações globais e constantes do jogo
+import { BARBARIAN_PALETTE } from '../render/visuals_module.js';
 
 // Definição das equipes disponíveis
 export const TEAM = {
@@ -187,7 +188,7 @@ export const CFG = {
     hpPerLevel: 10,
 
     spear: {
-      shaftLenFactor: 1.65,
+      shaftLenFactor: 3.0,
       shaftThickness: 0.12,
       tipBonus: 1.25,
       meleeStartup: 0.085,
@@ -200,12 +201,12 @@ export const CFG = {
 
     throw: {
       enabled: true,
-      minRange: 1.65,
-      maxRange: 5.8,
-      speed: 9.5,
-      flightMaxTime: 0.6,
+      minRange: 3.0,
+      maxRange: 16.0,
+      speed: 16.0,
+      flightMaxTime: 1.0,
       onHitStop: 0.06,
-      cooldown: 0.55,
+      cooldown: 0.9,
       returnMode: 'auto',
       friendlyFire: false,
       miraCondPercent: 0.2,
@@ -229,34 +230,35 @@ export const CFG = {
         radial: 240,
         lockT: 0.22
       },
-      advance: {
-        vulnerableFOVDeg: 35,
-        dashSpeed: 8.0,
-        dashDuration: 0.12,
-        angAccel: 1800,
-        connectAngleDeg: 10,
-        cooldown: 0.5
+        advance: {
+          vulnerableFOVDeg: 35,
+          dashSpeed: 8.0,
+          dashDuration: 0.12,
+          angAccel: 1800,
+          connectAngleDeg: 10,
+          triggerRadius: 2.5,
+          cooldown: 0.75
+        },
+        dodge: {
+          ttiProjectile: 0.35,
+          sidestepDist: 0.6,
+          cooldown: 1.65
+        }
       },
-      dodge: {
-        ttiProjectile: 0.35,
-        sidestepDist: 0.6,
-        cooldown: 1.1
+
+      stance: {
+        threatRadius: 2.5,
+        atkRateBonus: 0.5,
+        knockbackRedBase: 0.2,
+        knockbackRedPer100HP: 0.2,
+        knockbackRedMax: 0.6,
+        exitGrace: 0.35
+      },
+
+      damage: {
+        meleeBase: 24,
+        throwBase: 22.5
       }
-    },
-
-    stance: {
-      threatRadius: 3.6,
-      atkRateBonus: 0.5,
-      knockbackRedBase: 0.2,
-      knockbackRedPer100HP: 0.2,
-      knockbackRedMax: 0.6,
-      exitGrace: 0.35
-    },
-
-    damage: {
-      meleeBase: 14,
-      throwBase: 11
-    }
   },
 
   // Configuração da classe Artífice
@@ -407,74 +409,14 @@ export const LEVEL_SAFE_RADIUS_MULT = 0.42;
 // Configuração visual por classe. Cada item é posicionado usando um ângulo fixo
 // e pode ajustar escala, animação e paleta de cores.
 export const CLASS_VISUALS = {
-  barbaro: {
-    item: 'saia_barbaro',
-    scale: 0.16,
-    microAnim: 'sway_low',
-    palette: ['#8B4A2B', '#C9935A', '#402A1C'],
-    weaponOverride: 'axe_double_bit_v2'
-  },
-  ranger: {
-    item: 'aljava_pequena',
-    anchorAngleDeg: 45,
-    scale: 0.56,
-    microAnim: 'idle_breath',
-    palette: ['#4E6B3A', '#B89B6B', '#2E3B22'],
-    weaponAngleDeg: -25,
-    weaponScale: 1.56,
-    weaponOffsetMult: 1.2
-  },
-  monge: {
-    item: 'colar_monge',
-    scale: 0.16,
-    palette: []
-  },
-  paladino: {
-    item: 'insignia_escudo',
-    anchorAngleDeg: 20,
-    scale: 0.15,
-    microAnim: 'glint_slow',
-    palette: ['#C9C9C9', '#E6D27A', '#7A6A3A'],
-    weaponAngleDeg: -90,
-    weaponScale: 2.0,
-    weaponOffsetMult: 1.0
-  },
-  clerigo: {
-    item: 'sigilo_sol',
-    anchorAngleDeg: 330,
-    scale: 0.14,
-    microAnim: 'soft_glow',
-    palette: ['#FFD67A', '#F4B43A', '#8A6A2A'],
-    weaponAngleDeg: 90,
-    weaponScale: 2.0,
-    weaponOffsetMult: 1.0
-  },
-  bruxo: {
-    item: 'chifres_duplos',
-    anchorAngleDeg: 270,
-    scale: 0.18,
-    microAnim: 'idle_breath',
-    palette: ['#7E57C2', '#A586E8', '#40345A']
-  },
-  artifice: {
-    item: 'goggles',
-    anchorAngleDeg: 30,
-    scale: 0.16,
-    microAnim: 'idle_breath',
-    palette: ['#A6B1B8', '#E0E7EA', '#3B4A5A'],
-    weaponOverride: 'arcane_cannon',
-    weaponAngleDeg: 40,
-    weaponScale: 1.8
-  },
-  guerreiro: {
-    item: 'ombreira_metal',
-    anchorAngleDeg: 210,
-    scale: 0.60,
-    microAnim: 'sway_low',
-    palette: ['#9BA4AE', '#6B757F', '#CACFD6'],
-    weaponScale: 2.0,
-    weaponOffsetMult: 2.2
-  }
+  barbaro:  { item:'saia_barbaro', scale:0.4, microAnim:'sway_low',   palette:[BARBARIAN_PALETTE.leatherBase,BARBARIAN_PALETTE.leatherLight,BARBARIAN_PALETTE.leatherStroke], weaponOverride:'axe_double_bit_v2', weaponAngleDeg:35 ,weaponOffsetMult:2.0, itemOffsetY:0.2},
+  ranger:   { item:'aljava_pequena', anchorAngleDeg:45, scale:0.56, microAnim:'idle_breath', palette:['#4E6B3A','#B89B6B','#2E3B22'], weaponAngleDeg:-25, weaponScale:1.56, weaponOffsetMult:1.5 },
+  monge:    { item:'colar_monge',    scale:0.6, palette:[] },
+  paladino: { item:'insignia_escudo',anchorAngleDeg:20, scale:0.45, microAnim:'glint_slow',   palette:['#C9C9C9','#E6D27A','#7A6A3A'], weaponAngleDeg:-90, weaponScale:2.0, weaponOffsetMult:2.0 },
+  clerigo:  { item:'sigilo_sol',     anchorAngleDeg:330,scale:0.34, microAnim:'soft_glow',    palette:['#FFD67A','#F4B43A','#8A6A2A'], weaponAngleDeg:90, weaponScale:2.5, weaponOffsetMult:1.8 },
+  bruxo:    { item:'chifres_duplos', anchorAngleDeg:270,scale:0.18, microAnim:'idle_breath',  palette:['#7E57C2','#A586E8','#40345A'], weaponAngleDeg:-10 },
+  artifice: { item:'goggles',        anchorAngleDeg:270, scale:0.16, microAnim:'idle_breath',  palette:['#A6B1B8','#E0E7EA','#3B4A5A'], weaponOverride:'arcane_cannon', weaponAngleDeg:40, weaponScale:1.8, weaponOffsetMult:1.5 },
+  guerreiro:{ item:'ombreira_metal', anchorAngleDeg:210,scale:0.60, microAnim:'sway_low',     palette:['#9BA4AE','#6B757F','#CACFD6'], weaponAngleDeg:15, weaponScale:3.5, weaponOffsetMult:2.8 }
 };
 
 export const ITEM_ALIASES = {

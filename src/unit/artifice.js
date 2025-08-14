@@ -88,7 +88,7 @@ export function castTurret() {
   const r = T.bodyRadius;
   pos.x = clamp(pos.x, b.x + r, b.x + b.w - r);
   pos.y = clamp(pos.y, b.y + r, b.y + b.h - r);
-  const t = new Turret(this, pos, T);
+  const t = new Turret(this, pos, T, this.level);
   this.art.turrets.push(t);
   game.spawnSummon && game.spawnSummon(t); // no-op se não existir
   this.art.a1cd = T.spawnCooldown;

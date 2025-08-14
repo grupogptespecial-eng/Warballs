@@ -911,7 +911,9 @@ export class Unit {
     const itemId = cfg.item;
     if (itemId === 'chifres_duplos' || itemId === 'colar_monge' || ITEM_ALIASES[itemId] === 'saia_barbaro') {
       ctx.save();
-      ctx.translate(this.pos.x, this.pos.y);
+      const offY = this.bodyR * (cfg.itemOffsetY ?? 0);
+      const offX = this.bodyR * (cfg.itemOffsetX ?? 0);
+      ctx.translate(this.pos.x + offX, this.pos.y + offY);
       applyMicroAnim(ctx, cfg.microAnim, now);
       const scale = (cfg.scale ?? CLASS_ITEM_SCALE_DEFAULT) * (this.bodyR * 2) * GLOBAL_ITEM_SCALE_MULT;
       drawItemSprite(ctx, itemId, scale, pal, now);
@@ -923,8 +925,10 @@ export class Unit {
     const safeR = LEVEL_SAFE_RADIUS_MULT * this.bodyR;
     let dist = this.bodyR * 0.82;
     if (dist < safeR) dist = safeR;
-    const x = this.pos.x + Math.cos(anchor) * dist;
-    const y = this.pos.y + Math.sin(anchor) * dist;
+    const offX = this.bodyR * (cfg.itemOffsetX ?? 0);
+    const offY = this.bodyR * (cfg.itemOffsetY ?? 0);
+    const x = this.pos.x + Math.cos(anchor) * dist + offX;
+    const y = this.pos.y + Math.sin(anchor) * dist + offY;
     const scale = (cfg.scale ?? CLASS_ITEM_SCALE_DEFAULT) * (this.bodyR * 2) * GLOBAL_ITEM_SCALE_MULT;
 
     ctx.save();
@@ -1065,14 +1069,14 @@ export class Unit {
 
     const cfg = CLASS_VISUALS[this.className];
     const skipWeapon = (this.className === 'guerreiro' && this.gw &&
-      (this.gw.state === 'THROW_FLIGHT' || this.gw.state === 'DISARMED')) ||
+      (this.gw.state === 'THROW_FLIGHT' || this.gw.state === 'DISARMED' || this.gw.throwCD > 0)) ||
       this.className === 'monge';
     if (!skipWeapon) {
       ctx.save();
       ctx.translate(this.pos.x, this.pos.y);
       const off = (cfg?.weaponAngleDeg ?? 30) * Math.PI / 180;
       const wScale = this.bodyR * 1.2 * (cfg?.weaponScale ?? 1);
-      const wOff = this.bodyR * (cfg?.weaponOffsetMult ?? 0.9);
+      const wOff = this.bodyR * (cfg?.weaponOffsetMult ?? 1.4);
       if (this.className === 'paladino' || this.className === 'clerigo') {
         ctx.rotate(this.angle);
         ctx.translate(wOff, 0);

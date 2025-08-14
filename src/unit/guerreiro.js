@@ -113,7 +113,8 @@ function tickThrow(u, dt) {
       if (u.gw.thrown) u.gw.thrown.alive = false;
       u.gw.thrown = null;
       u.gw.state = 'DISARMED';
-      u.gw.disarmT = T.cooldown * 0.4;
+      u.gw.disarmT = T.cooldown;
+      u.gw.throwCD = T.cooldown;
       u.gw.stanceActive = false;
       u.omega = u.gw.baseOmega;
       u.knockResist = 0;
@@ -189,7 +190,7 @@ export function updateGuerreiro(dt) {
     return;
   }
   if (gw.state === 'DISARMED') {
-    if (gw.disarmT <= 0) {
+    if (gw.disarmT <= 0 && gw.throwCD <= 0) {
       gw.state = 'IDLE';
       this.weaponLen = gw.baseWeaponLen;
       this.weaponTipR = gw.baseWeaponTipR;
@@ -270,6 +271,7 @@ export function updateGuerreiro(dt) {
       if (this.team && u.team && this.team === u.team) continue;
       const to = new V(u.pos.x - this.pos.x, u.pos.y - this.pos.y);
       const dist = to.len();
+      if (dist > A.triggerRadius * BR) continue;
       const ang = Math.atan2(to.y, to.x);
       const diff = Math.atan2(Math.sin(ang - this.angle), Math.cos(ang - this.angle));
       if (Math.abs(diff) > A.vulnerableFOVDeg * Math.PI / 180) continue;
@@ -309,10 +311,18 @@ export function updateGuerreiro(dt) {
     if (gw.throwCD <= 0) {
       if (gw.aimT <= 0) {
         gw.aimT = CFG.guerreiro.throw.cooldown * CFG.guerreiro.throw.miraCondPercent;
-      }
-      if (gw.aimT > 0 && this.enemyInLineOfSight()) {
-        startThrow(this, target);
-        gw.aimT = 0;
+      } else {
+        const ang = Math.atan2(target.pos.y - this.pos.y, target.pos.x - this.pos.x);
+        let diff = Math.atan2(Math.sin(ang - this.angle), Math.cos(ang - this.angle));
+        const maxVel = CFG.guerreiro.spear.maxAngVel * Math.PI / 180;
+        const step = Math.max(-maxVel * dt, Math.min(maxVel * dt, diff));
+        this.angle += step;
+        diff = Math.atan2(Math.sin(ang - this.angle), Math.cos(ang - this.angle));
+        const snap = CFG.guerreiro.spear.aimSnapDeg * Math.PI / 180;
+        if (Math.abs(diff) <= snap && this.enemyInLineOfSight()) {
+          startThrow(this, target);
+          gw.aimT = 0;
+        }
       }
     }
   }
