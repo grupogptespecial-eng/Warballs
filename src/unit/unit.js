@@ -1069,7 +1069,7 @@ export class Unit {
 
     const cfg = CLASS_VISUALS[this.className];
     const skipWeapon = (this.className === 'guerreiro' && this.gw &&
-      (this.gw.state === 'THROW_FLIGHT' || this.gw.state === 'DISARMED' || this.gw.throwCD > 0)) ||
+      (this.gw.state === 'THROW_FLIGHT' || this.gw.disarmT > 0)) ||
       this.className === 'monge';
     if (!skipWeapon) {
       ctx.save();

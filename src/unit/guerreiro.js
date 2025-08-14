@@ -113,7 +113,7 @@ function tickThrow(u, dt) {
       if (u.gw.thrown) u.gw.thrown.alive = false;
       u.gw.thrown = null;
       u.gw.state = 'DISARMED';
-      u.gw.disarmT = T.cooldown;
+      u.gw.disarmT = T.cooldown * 0.3;
       u.gw.throwCD = T.cooldown;
       u.gw.stanceActive = false;
       u.omega = u.gw.baseOmega;
@@ -190,7 +190,7 @@ export function updateGuerreiro(dt) {
     return;
   }
   if (gw.state === 'DISARMED') {
-    if (gw.disarmT <= 0 && gw.throwCD <= 0) {
+    if (gw.disarmT <= 0) {
       gw.state = 'IDLE';
       this.weaponLen = gw.baseWeaponLen;
       this.weaponTipR = gw.baseWeaponTipR;

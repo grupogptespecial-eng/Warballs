@@ -206,7 +206,7 @@ export const CFG = {
       speed: 16.0,
       flightMaxTime: 1.0,
       onHitStop: 0.06,
-      cooldown: 0.9,
+      cooldown: 1.35,
       returnMode: 'auto',
       friendlyFire: false,
       miraCondPercent: 0.2,
