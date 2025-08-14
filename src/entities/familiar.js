@@ -22,6 +22,7 @@ export class Familiar {
     this.hp = this.hpMax;
     this.alive = true;
     this.fireCD = 0;
+    this.level = owner.level;
   }
 
   canDamage(other) {
@@ -71,6 +72,7 @@ export class Familiar {
     if (this.pos.x > arena.x + arena.w - this.bodyR) { this.pos.x = arena.x + arena.w - this.bodyR; this.vel.x = -Math.abs(this.vel.x); }
     if (this.pos.y < arena.y + this.bodyR) { this.pos.y = arena.y + this.bodyR; this.vel.y = Math.abs(this.vel.y); }
     if (this.pos.y > arena.y + arena.h - this.bodyR) { this.pos.y = arena.y + arena.h - this.bodyR; this.vel.y = -Math.abs(this.vel.y); }
+    this.level = this.owner.level;
   }
 
   draw(ctx) {
@@ -94,6 +96,20 @@ export class Familiar {
     g.addColorStop(1, '#9d7fff');
     ctx.fillStyle = g;
     ctx.fill();
+
+    const yLvl = y - 2;
+    ctx.save();
+    ctx.font = '700 12px system-ui,Segoe UI,Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+    ctx.strokeText(String(this.level), this.pos.x, yLvl);
+    ctx.shadowBlur = 4;
+    ctx.shadowColor = this.color;
+    ctx.fillStyle = '#e6edf7';
+    ctx.fillText(String(this.level), this.pos.x, yLvl);
+    ctx.restore();
   }
 }
 

@@ -8,6 +8,7 @@ import { game } from '../core/game.js';
 import { Particle } from './particle.js';
 import { V } from '../math/vec.js';
 import { Projectile } from './projectile.js';
+import { spawnSpearTrail } from '../vfx/spear_trail.js';
 
 export class SpearProjectile extends Projectile {
   constructor(owner, pos, dir) {
@@ -40,6 +41,7 @@ export class SpearProjectile extends Projectile {
     this.life -= dt;
     if (this.life <= 0) { this.alive = false; return; }
     this.stepMove(dt);
+    spawnSpearTrail(this.pos.clone(), this.dir.clone());
 
     // fora da arena
     if (this.pos.x < arena.x - this.rad || this.pos.x > arena.x + arena.w + this.rad ||
@@ -57,9 +59,10 @@ export class SpearProjectile extends Projectile {
         let dmg = this.dmgBase;
         const proj = ((u.pos.x - tail.x) * this.dir.x + (u.pos.y - tail.y) * this.dir.y);
         if (proj > this.len * 0.8) dmg *= CFG.guerreiro.spear.tipBonus;
-        if (this.owner && this.owner.gw && this.owner.gw.disciplineReady) {
-          dmg *= 1 + CFG.guerreiro.discipline.nextHitBonus;
+        if (this.owner && this.owner.gw && this.owner.gw.disciplineReady && this.owner.gw.disciplineStacks > 0) {
+          dmg *= 1 + this.owner.gw.disciplineStacks * CFG.guerreiro.discipline.nextHitBonus;
           this.owner.gw.disciplineReady = false;
+          this.owner.gw.disciplineStacks = 0;
         }
         const dealt = u.hit(dmg, this.dir.clone().mul(this.knock), this.owner);
         if (dealt > 0) {

@@ -46,11 +46,11 @@ tipos de bônus:
 
 Os parâmetros ficam em `CFG.crates` e também podem ser ajustados no painel
 **Crates** da interface. Ative cada tipo pela caixa de seleção e defina
-taxa média de spawn (`avgPer100s`), tamanho (`sizePx`), recompensas
-(`healAmount`/`xpAmount`), tempo de vida (`lifetime`) e o número máximo de
-crates simultâneas por tipo (`maxConcurrentPerType`). Há limites globais de
-distância entre crates e de distância mínima de unidades. As configurações
-do painel são salvas em `localStorage` (chave `crateConfig_v1`).
+taxa média de spawn (`avgPer100s`), tempo de vida (`lifetime`), máximo
+simultâneo (`maxConcurrent`), tamanho (`sizePx`) e recompensas
+(`healAmount`/`xpAmount`). Há limites globais de distância entre crates e
+de distância mínima de unidades. As configurações do painel são salvas em
+`localStorage` (chave `crateConfig_v2`).
 
 Em arenas do tipo Battle Royale, crates fora dos limites atuais seguem a
 política `brCratePolicyOnShrink`, que pode ser `despawn`, `pushInwards` ou
@@ -76,9 +76,7 @@ nível. Esses elementos são apenas visuais e não afetam colisões.
 
 Itens atuais (com micro‑animação):
 
-- **Bárbaro** – saia e machado duplo *(sway_low)*
-- **Preset/Paleta**: `SAIA_PRESET` define as proporções da saia; as cores do
-  Bárbaro são expostas em `BARBARIAN_PALETTE` (couro, metal e madeira).
+- **Bárbaro** – saia e machado duplo *(sway_low)*. As cores do Bárbaro estão em `BARBARIAN_PALETTE` (couro, metal e madeira).
 - **Ranger** – aljava grande (4×) *(idle_breath)*
 - **Monge** – colar *(subtle_pulse)*
 - **Paladino** – insígnia de escudo *(glint_slow)*
@@ -93,9 +91,25 @@ O Guerreiro alterna entre estocadas de média distância e arremessos curtos de
 lança. A arma possui geometria segmentada (ponta letal e cabo sólido) e o
 projétil retorna automaticamente após um tempo de voo máximo. Alternar entre um
 ataque corpo‑a‑corpo e um arremesso dentro do tempo de `discipline.swapWindow`
-ativa **Disciplina Marcial**, concedendo bônus de dano no próximo acerto. A
-classe conta ainda com Postura de Guerra, Parry avançado e outras manobras
-táticas descritas em `CFG.guerreiro`.
+gera uma carga de **Disciplina Marcial** (até `ceil(nível/2)`), consumida no
+próximo acerto para bônus de dano acumulado.
+
+A classe conta ainda com Postura de Guerra e a habilidade multifuncional
+**Manobras de Guerra**, composta por três gatilhos independentes:
+
+- **Parry Avançado** – contato arma vs arma: o Guerreiro vence o choque,
+  empurra a arma inimiga, inicia o cooldown compartilhado e solta faíscas.
+- **Avanço Tático** – inimigo vulnerável à frente: dash curto com partículas
+  douradas e grande aceleração angular até alinhar a lança.
+- **Desvio** – projétil prestes a atingir sem interceptação: passo lateral com
+  nuvem de poeira, consumindo o mesmo `maneuverCD`.
+
+Quando ameaçado por inimigos próximos,
+o Guerreiro aborta qualquer arremesso em preparação ou em voo, aumenta em 50 %
+a velocidade de giro e reduz pela metade o tempo entre golpes corpo‑a‑corpo,
+retornando à cadência normal após a área estar limpa. Arremessos de lança,
+ativação da postura e aparos agora disparam partículas para destacar cada
+habilidade, e a postura ativa mantém uma aura vermelha ao redor do Guerreiro.
 
 ## Desenvolvimento
 

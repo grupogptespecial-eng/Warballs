@@ -246,7 +246,7 @@ export const CFG = {
 
     stance: {
       threatRadius: 3.6,
-      atkRateBonus: 0.15,
+      atkRateBonus: 0.5,
       knockbackRedBase: 0.2,
       knockbackRedPer100HP: 0.2,
       knockbackRedMax: 0.6,
@@ -362,14 +362,31 @@ export const CFG = {
 
   // Configuração do sistema de crates (power‑ups de vida/XP)
   crates: {
-    enableHealthCrates: false,
-    enableXpCrates: false,
-    enableHybridCrates: true,
-    health: { avgPer100s: 12, sizePx: 18, healAmount: 12 },
-    xp:     { avgPer100s: 12, sizePx: 18, xpAmount: 8 },
-    hybrid: { avgPer100s: 12, sizePx: 18, healAmount: 8, xpAmount: 6 },
-    maxConcurrentPerType: 6,
-    lifetime: 35,
+    health: {
+      enabled: false,
+      avgPer100s: 12,
+      lifetime: 35,
+      maxConcurrent: 6,
+      sizePx: 18,
+      healAmount: 12
+    },
+    xp: {
+      enabled: false,
+      avgPer100s: 12,
+      lifetime: 35,
+      maxConcurrent: 6,
+      sizePx: 18,
+      xpAmount: 8
+    },
+    hybrid: {
+      enabled: true,
+      avgPer100s: 12,
+      lifetime: 35,
+      maxConcurrent: 6,
+      sizePx: 18,
+      healAmount: 8,
+      xpAmount: 6
+    },
     minDistanceFromUnits: 28,
     minDistanceBetweenCrates: 24,
     brCratePolicyOnShrink: 'despawn'
@@ -399,9 +416,12 @@ export const CLASS_VISUALS = {
   ranger: {
     item: 'aljava_pequena',
     anchorAngleDeg: 45,
-    scale: 0.14,
+    scale: 0.56,
     microAnim: 'idle_breath',
-    palette: ['#4E6B3A', '#B89B6B', '#2E3B22']
+    palette: ['#4E6B3A', '#B89B6B', '#2E3B22'],
+    weaponAngleDeg: -25,
+    weaponScale: 1.56,
+    weaponOffsetMult: 1.2
   },
   monge: {
     item: 'colar_monge',
@@ -415,7 +435,9 @@ export const CLASS_VISUALS = {
     anchorAngleDeg: 20,
     scale: 0.15,
     microAnim: 'glint_slow',
-    palette: ['#C9C9C9', '#E6D27A', '#7A6A3A']
+    palette: ['#C9C9C9', '#E6D27A', '#7A6A3A'],
+    weaponAngleDeg: -90,
+    weaponScale: 2.0
   },
   clerigo: {
     item: 'sigilo_sol',
@@ -423,7 +445,7 @@ export const CLASS_VISUALS = {
     scale: 0.14,
     microAnim: 'soft_glow',
     palette: ['#FFD67A', '#F4B43A', '#8A6A2A'],
-    weaponAngleDeg: 110,
+    weaponAngleDeg: -90,
     weaponScale: 2.0
   },
   bruxo: {

@@ -3,6 +3,7 @@ import { V } from '../math/vec.js';
 import { Projectile } from './projectile.js';
 import { game } from '../core/game.js';
 import { nearestEnemyOf } from '../unit/unit.js';
+import { drawRoundedRect } from '../utils/geometry.js';
 
 export class Turret {
   constructor(owner, pos, cfg) {
@@ -18,6 +19,9 @@ export class Turret {
     this.lifetime = cfg.lifetime;
     this.fireCD = 0;
     this.bumpCD = 0;
+
+    // visual orientation
+    this.angle = 0;
 
     // Stats that may scale with level
     this.range = cfg.range;
@@ -80,15 +84,16 @@ export class Turret {
         const dist = to.len();
         if (dist <= this.range * this.owner.bodyR) {
           const dir = to.mul(1 / dist);
-          const spec = {
-            speed: this.bulletSpeed,
-            dmg: this.bulletDamage,
-            knock: this.bulletKnock,
-            radius: 4,
-            life: 1.0,
-            canHurtAllies: false
-          };
-          game.spawnProjectile(new Projectile(this.owner, this.pos.clone(), dir, spec));
+          this.angle = Math.atan2(dir.y, dir.x);
+          const p = this.pos.clone().add(dir.clone().mul(this.cfg.bodyRadius));
+          const proj = new Projectile(this.owner, p, dir);
+          proj.speed = this.bulletSpeed;
+          proj.dmg = this.bulletDamage;
+          proj.knock = this.bulletKnock;
+          proj.life = 1.0;
+          proj.rad = 4;
+          proj.canHurtAllies = false;
+          game.spawnProjectile(proj);
           this.fireCD = 1 / this.fireRate;
         }
       }
@@ -100,10 +105,54 @@ export class Turret {
   draw(ctx) {
     ctx.save();
     ctx.translate(this.pos.x, this.pos.y);
+    ctx.rotate(this.angle);
     ctx.fillStyle = this.cfg.color || '#A6B1B8';
+    // barrel
+    ctx.fillRect(0, -2, this.cfg.bodyRadius * 1.5, 4);
+    // base
     ctx.beginPath();
     ctx.arc(0, 0, this.cfg.bodyRadius, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
+
+    // bars
+    const w = 40, h = 5, pad = 2;
+    const x = this.pos.x - w / 2;
+    const y = this.pos.y - this.cfg.bodyRadius - 16;
+    drawRoundedRect(ctx, x, y, w, h, 2);
+    ctx.fillStyle = 'rgba(8,12,18,0.85)';
+    ctx.fill();
+    drawRoundedRect(ctx, x, y, w * (this.hp / this.maxHP), h, 2);
+    const hpGrad = ctx.createLinearGradient(x, y, x + w, y);
+    hpGrad.addColorStop(0, '#7eed90');
+    hpGrad.addColorStop(1, '#37d86b');
+    ctx.fillStyle = hpGrad;
+    ctx.fill();
+    const y2 = y + h + pad;
+    drawRoundedRect(ctx, x, y2, w, h - 1, 2);
+    ctx.fillStyle = 'rgba(8,12,18,0.85)';
+    ctx.fill();
+    const xpReq = this.cfg.xpToLevel[this.level - 1] || 1;
+    const xpR = (this.level > this.cfg.xpToLevel.length) ? 1 : (this.xp / xpReq);
+    drawRoundedRect(ctx, x, y2, w * xpR, h - 1, 2);
+    const xpGrad = ctx.createLinearGradient(x, y2, x + w, y2);
+    xpGrad.addColorStop(0, '#96d8ff');
+    xpGrad.addColorStop(1, '#3ab2ff');
+    ctx.fillStyle = xpGrad;
+    ctx.fill();
+
+    // level indicator
+    ctx.save();
+    ctx.font = '700 12px system-ui,Segoe UI,Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+    ctx.strokeText(String(this.level), this.pos.x, this.pos.y);
+    ctx.shadowBlur = 4;
+    ctx.shadowColor = this.cfg.color || '#A6B1B8';
+    ctx.fillStyle = '#e6edf7';
+    ctx.fillText(String(this.level), this.pos.x, this.pos.y);
     ctx.restore();
   }
 }
