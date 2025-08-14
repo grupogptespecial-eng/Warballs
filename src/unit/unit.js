@@ -999,13 +999,15 @@ export class Unit {
 
     if (this.className === 'clerigo' && this.beamT > 0) {
       const t = this.tip();
-      const len = CFG.clerigo.beam.range;
+      const B = CFG.clerigo.beam;
+      const start = this.weaponTipR + 2 + B.range * (B.startOffsetPct || 0);
+      const end = this.weaponTipR + 2 + B.range;
       ctx.save();
-      ctx.strokeStyle = CFG.clerigo.beam.color;
-      ctx.lineWidth = CFG.clerigo.beam.width;
+      ctx.strokeStyle = B.color;
+      ctx.lineWidth = B.width;
       ctx.beginPath();
-      ctx.moveTo(t.x, t.y);
-      ctx.lineTo(t.x + Math.cos(this.angle) * len, t.y + Math.sin(this.angle) * len);
+      ctx.moveTo(t.x + Math.cos(this.angle) * start, t.y + Math.sin(this.angle) * start);
+      ctx.lineTo(t.x + Math.cos(this.angle) * end, t.y + Math.sin(this.angle) * end);
       ctx.stroke();
       ctx.restore();
     }

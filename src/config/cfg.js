@@ -152,7 +152,7 @@ export const CFG = {
     },
 
     beam: {
-      cd: 18.0, dur: 1.6, range: 900, width: 26,
+      cd: 18.0, dur: 1.6, range: 900, width: 26, startOffsetPct: 0.15,
       // dano do Sunbeam aumentado em 70%
       dpsBase: 102, dpsPerLevel: 7.65, push: 900, tick: 0.06,
       color: '#ffe28a', edge: '#f59e0b'
@@ -175,7 +175,7 @@ export const CFG = {
     hex:    { cd: 8, dur: 6, dmgMult: 2.5, color: '#b794f4' },
     link:   { leechPct: 0.20 },
     familiar: {
-      hpBase: 80, hpPerLevel: 8, bodyR: 14, color: '#c7b2ff',
+      hpBase: 40, hpPerLevel: 4, bodyR: 14, color: '#c7b2ff',
       fireCD: 1.2,
       bullet: { speed: 750, life: 1.2, rad: 5, dmg: 6, knock: 120, color: '#d6c7ff' },
       cdAfterDeath: 10
@@ -206,7 +206,7 @@ export const CFG = {
       speed: 16.0,
       flightMaxTime: 1.0,
       onHitStop: 0.06,
-      cooldown: 1.35,
+      cooldown: 1.7,
       returnMode: 'auto',
       friendlyFire: false,
       miraCondPercent: 0.2,
@@ -415,7 +415,7 @@ export const CLASS_VISUALS = {
   paladino: { item:'insignia_escudo',anchorAngleDeg:20, scale:0.45, microAnim:'glint_slow',   palette:['#C9C9C9','#E6D27A','#7A6A3A'], weaponAngleDeg:-90, weaponScale:2.0, weaponOffsetMult:2.0 },
   clerigo:  { item:'sigilo_sol',     anchorAngleDeg:330,scale:0.34, microAnim:'soft_glow',    palette:['#FFD67A','#F4B43A','#8A6A2A'], weaponAngleDeg:90, weaponScale:2.5, weaponOffsetMult:1.8 },
   bruxo:    { item:'chifres_duplos', anchorAngleDeg:270,scale:0.18, microAnim:'idle_breath',  palette:['#7E57C2','#A586E8','#40345A'], weaponAngleDeg:-10 },
-  artifice: { item:'goggles',        anchorAngleDeg:270, scale:0.16, microAnim:'idle_breath',  palette:['#A6B1B8','#E0E7EA','#3B4A5A'], weaponOverride:'arcane_cannon', weaponAngleDeg:40, weaponScale:1.8, weaponOffsetMult:1.5 },
+  artifice: { item:'goggles',        anchorAngleDeg:270, scale:0.36, microAnim:'idle_breath',  palette:['#A6B1B8','#E0E7EA','#3B4A5A'], weaponOverride:'arcane_cannon', weaponAngleDeg:40, weaponScale:1.8, weaponOffsetMult:1.5 },
   guerreiro:{ item:'ombreira_metal', anchorAngleDeg:210,scale:0.60, microAnim:'sway_low',     palette:['#9BA4AE','#6B757F','#CACFD6'], weaponAngleDeg:15, weaponScale:3.5, weaponOffsetMult:2.8 }
 };
 
