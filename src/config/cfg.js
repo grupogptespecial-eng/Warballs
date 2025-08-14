@@ -265,12 +265,12 @@ export const CFG = {
   artifice: {
     // Arma principal: Canhão Arcano
     cannon: {
-      baseDamage: 13,
-      knockback: 0.85,
+      baseDamage: 18.2,
+      knockback: 1.19,
       // velocidade dobrada
       speed: 18.0,
       lifeTime: 0.9,
-      cooldown: 0.95,
+      cooldown: 1.33,
       radius: 6,
       pierce: 0,
       friendlyFire: false,
@@ -280,7 +280,7 @@ export const CFG = {
 
     // Passiva Overclock
     overclock: {
-      tSemDano: 2.5,
+      tSemDano: 3.5,
       cdRateMult: 1.35,
       decayOnHit: true,
       minUptimeAfterStart: 1.0
@@ -332,7 +332,7 @@ export const CFG = {
       chainAffectsMines: true,
       friendlyFire: false,
       lifetime: 25,
-      cooldown: 0.35,
+      cooldown: 0.49,
       hitToDetonate: true
     },
 
