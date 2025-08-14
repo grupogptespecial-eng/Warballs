@@ -812,7 +812,7 @@ export class Unit {
     const base = this.pos.clone();
     const tip = this.tip();
     for (const s of summons) {
-      if (!s.alive || s.kind !== 'familiar') continue;
+      if (!s.alive || (s.kind !== 'familiar' && s.kind !== 'turret' && s.kind !== 'mine')) continue;
       if (this.team && s.team && this.team === s.team) continue;
       if (distPointToSegment(s.pos, base, tip) >= s.bodyR + this.weaponTipR) continue;
       if ((this.weaponLockT || 0) > 0) continue;
@@ -840,16 +840,25 @@ export class Unit {
         this.isDashing = false;
         this.firstImpactDash = false;
       }
-      const dealt = s.hit(dmg, V.fromAng(this.angle, knockMag), this);
-      if (dealt > 0) this.gainXPOffense(dealt);
-      for (let i = 0; i < CFG.vfx.particlesOnHit; i++) {
-        game.spawnParticle(new Particle(
-          s.pos.clone(),
-          V.fromAng(randAng(), rrand(50, 220)),
-          rrand(0.2, 0.6),
-          '#e5e7eb'
-        ));
+
+      let dealt;
+      if (s.kind === 'familiar') {
+        const knock = V.fromAng(this.angle, knockMag);
+        dealt = s.hit(dmg, knock, this);
+        if (dealt > 0) {
+          for (let i = 0; i < CFG.vfx.particlesOnHit; i++) {
+            game.spawnParticle(new Particle(
+              s.pos.clone(),
+              V.fromAng(randAng(), rrand(50, 220)),
+              rrand(0.2, 0.6),
+              '#e5e7eb'
+            ));
+          }
+        }
+      } else {
+        dealt = s.hit(dmg, this);
       }
+      if (dealt > 0) this.gainXPOffense(dealt);
     }
   }
 
