@@ -24,6 +24,7 @@ export const game = {
   arena: new Arena('padrao'),
   bounds: { x: 0, y: 0, w: canvas ? canvas.width : 0, h: canvas ? canvas.height : 0 },
   debugHit: false,
+  restartTimer: null,
 
   init() {
     this.resize();
@@ -112,6 +113,14 @@ export const game = {
     this.effects = this.effects.filter(e => e.alive !== false);
     this.particles = this.particles.filter(p => p.alive);
     this.summons = this.summons.filter(s => s.alive);
+
+    if (this.units.length <= 1 && !this.restartTimer && typeof window !== 'undefined') {
+      window.stopLoop?.();
+      this.restartTimer = setTimeout(() => {
+        this.restartTimer = null;
+        window.startGame?.();
+      }, 5000);
+    }
   },
 
   draw() {

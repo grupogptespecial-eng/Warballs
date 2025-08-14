@@ -7,7 +7,7 @@ import { drawRoundedRect } from '../utils/geometry.js';
 import { CFG } from '../config/cfg.js';
 
 export class Turret {
-  constructor(owner, pos, cfg) {
+  constructor(owner, pos, cfg, startLevel = 1) {
     this.owner = owner;
     this.pos = pos.clone();
     this.cfg = cfg;
@@ -34,10 +34,12 @@ export class Turret {
     this.bulletDamage = cfg.bulletDamage;
     this.bulletSpeed = cfg.bulletSpeed;
     this.bulletKnock = cfg.bulletKnock;
+
+    // initialize starting level based on the owner's level
+    for (let i = 1; i < startLevel; i++) this.levelUp();
   }
 
   levelUp() {
-    if (this.level >= 4) return;
     this.level++;
     const per = this.cfg.perLevel;
     this.maxHP += per.HP[this.level - 1] || 0;
@@ -46,6 +48,14 @@ export class Turret {
     this.bulletDamage += per.bulletDamage[this.level - 1] || 0;
     // heal 20% of new max HP on level up
     this.hp = Math.min(this.maxHP, this.hp + this.maxHP * 0.2);
+  }
+
+  xpToLevel(level) {
+    const arr = this.cfg.xpToLevel;
+    if (level - 1 < arr.length) return arr[level - 1];
+    const last = arr[arr.length - 1];
+    const inc = arr.length >= 2 ? arr[arr.length - 1] - arr[arr.length - 2] : last;
+    return last + inc * (level - arr.length);
   }
 
   hit(dmg, attacker) {
@@ -63,6 +73,13 @@ export class Turret {
     this.lifetime -= dt;
     if (this.lifetime <= 0) { this.alive = false; return; }
 
+    // arena bounds
+    if (arena) {
+      const inside = this.pos.x >= arena.x && this.pos.x <= arena.x + arena.w &&
+                     this.pos.y >= arena.y && this.pos.y <= arena.y + arena.h;
+      if (!inside) { this.alive = false; return; }
+    }
+
     // decay damage
     const dec = this.cfg.decay;
     this.hp -= dec.flatPerSec * dt + dec.pctMaxHPPerSec * this.maxHP * dt;
@@ -78,7 +95,7 @@ export class Turret {
         this.hp = Math.min(this.maxHP, this.hp + heal);
         this.xp += this.cfg.xpOnBump;
         this.bumpCD = rep.cd;
-        while (this.level <= this.cfg.xpToLevel.length && this.xp >= this.cfg.xpToLevel[this.level - 1]) {
+        while (this.xp >= this.xpToLevel(this.level)) {
           this.levelUp();
         }
       }
@@ -158,8 +175,8 @@ export class Turret {
     drawRoundedRect(ctx, x, y2, w, h - 1, 2);
     ctx.fillStyle = 'rgba(8,12,18,0.85)';
     ctx.fill();
-    const xpReq = this.cfg.xpToLevel[this.level - 1] || 1;
-    const xpR = (this.level > this.cfg.xpToLevel.length) ? 1 : (this.xp / xpReq);
+    const xpReq = this.xpToLevel(this.level);
+    const xpR = Math.min(1, this.xp / xpReq);
     drawRoundedRect(ctx, x, y2, w * xpR, h - 1, 2);
     const xpGrad = ctx.createLinearGradient(x, y2, x + w, y2);
     xpGrad.addColorStop(0, '#96d8ff');

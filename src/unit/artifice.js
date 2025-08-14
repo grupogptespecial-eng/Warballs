@@ -70,6 +70,9 @@ export function fireCannon() {
   proj.canHurtAllies = C.friendlyFire;
   proj.color = '#444';
   game.spawnProjectile(proj);
+  if (C.selfKnockback) {
+    this.vel.add(dir.clone().mul(-C.selfKnockback * CFG.body.radius));
+  }
   this.art.cannonCD = C.cooldown;
   return C.cooldown;
 }
@@ -88,7 +91,7 @@ export function castTurret() {
   const r = T.bodyRadius;
   pos.x = clamp(pos.x, b.x + r, b.x + b.w - r);
   pos.y = clamp(pos.y, b.y + r, b.y + b.h - r);
-  const t = new Turret(this, pos, T);
+  const t = new Turret(this, pos, T, this.level);
   this.art.turrets.push(t);
   game.spawnSummon && game.spawnSummon(t); // no-op se não existir
   this.art.a1cd = T.spawnCooldown;
