@@ -349,7 +349,7 @@ export const CFG = {
   },
 
   // Sistema de níveis e experiência
-  level: { max: 20, hpPerLevelPct: 0.081, dmgPerLevelPct: 0.0675 },
+  level: { max: 20, hpPerLevelPct: 0.10, dmgPerLevelPct: 0.075 },
   xp: {
     cost(level) { return Math.floor(35 + level * 15 + Math.pow(level, 1.6) * 8); },
     gain: { hitTaken: 5, weaponClash: 10, hitDealtBase: 18, hitDealtPerDmg: 1.2, kill: 60 }
