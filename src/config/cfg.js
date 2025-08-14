@@ -127,7 +127,7 @@ export const CFG = {
     impactBurst: { speed: 320, wallSpeed: 260, grantStack: true },
     // "local" é usado no CD local do dano de corpo no collide()
     rajada: { dur: 0.45, interval: 0.15, hits: 3, bonus: 1.15, cd: 6, detectR: 160, coneDeg: 85, local: 0.12 },
-    deflect: { coneDeg: 110, rSense: 120, rHit: 50, dur: 1.2, cd: 5.5, dmgMult: 2.0, speedBoost: 1.1 },
+    deflect: { coneDeg: 150, rSense: 160, rHit: 65, dur: 1.6, cd: 4.0, dmgMult: 2.5, speedBoost: 1.3 },
     parry: {
       omegaMul: -1.1,
       tangentForce: 420,
