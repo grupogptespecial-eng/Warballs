@@ -152,7 +152,7 @@ export const CFG = {
     },
 
     beam: {
-      cd: 18.0, dur: 1.6, range: 900, width: 26, startOffsetPct: 0.15,
+      cd: 18.0, dur: 1.6, range: 900, width: 26,
       // dano do Sunbeam aumentado em 70%
       dpsBase: 102, dpsPerLevel: 7.65, push: 900, tick: 0.06,
       color: '#ffe28a', edge: '#f59e0b'
