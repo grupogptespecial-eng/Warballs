@@ -402,7 +402,7 @@ export const CFG = {
 
 // Escalas globais para itens visuais presos às unidades
 // Tamanho padrão relativo ao diâmetro da bola e raio seguro para o texto do nível
-export const CLASS_ITEM_SCALE_DEFAULT = 0.15 * (CFG.body.radius * 2);
+export const CLASS_ITEM_SCALE_DEFAULT = 0.15;
 export const GLOBAL_ITEM_SCALE_MULT = 1.6;
 export const LEVEL_SAFE_RADIUS_MULT = 0.42;
 
