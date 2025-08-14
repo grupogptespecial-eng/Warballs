@@ -8,6 +8,7 @@ import { Turret } from '../entities/turret.js';
 import { Mine } from '../entities/mine.js';
 import { game } from '../core/game.js';
 import { randAng } from '../utils/rand.js';
+import { clamp } from '../utils/misc.js';
 
 export function makeArtificeState() {
   const C = CFG.artifice || {};
@@ -58,16 +59,17 @@ export function fireCannon() {
   if (this.className !== 'artifice') return;
   const C = this.art.cfg.cannon;
   const dir = new V(Math.cos(this.angle), Math.sin(this.angle));
-  const p = this.tip().add(dir.clone().mul(this.weaponTipR + 2));
-  const spec = {
-    speed: C.speed,
-    dmg: C.baseDamage * this.dmgMult(),
-    knock: C.knockback,
-    life: C.lifeTime,
-    radius: C.radius,
-    canHurtAllies: C.friendlyFire
-  };
-  game.spawnProjectile(new Projectile(this, p, dir, spec));
+  const p = this.tip().add(dir.clone().mul(2));
+  const proj = new Projectile(this, p, dir);
+  // velocidade baseada no raio corporal
+  proj.speed = C.speed * CFG.body.radius;
+  proj.dmg = C.baseDamage * this.dmgMult();
+  proj.knock = C.knockback;
+  proj.life = C.lifeTime;
+  proj.rad = C.radius;
+  proj.canHurtAllies = C.friendlyFire;
+  proj.color = '#444';
+  game.spawnProjectile(proj);
   this.art.cannonCD = C.cooldown;
   return C.cooldown;
 }
@@ -78,9 +80,14 @@ export function castTurret() {
   if (this.art.a1cd > 0) return;
   const T = this.art.cfg.turret;
   const alive = this.art.turrets.filter(t => t.alive).length;
-  if (alive >= T.maxActive) return;
+  const cap = Math.ceil(this.level / 2);
+  if (alive >= cap) return;
   const dir = new V(Math.cos(this.angle), Math.sin(this.angle));
-  const pos = this.pos.add(dir.clone().mul(this.bodyR + 4));
+  const pos = this.pos.clone().add(dir.clone().mul(this.bodyR + 4));
+  const b = game.bounds;
+  const r = T.bodyRadius;
+  pos.x = clamp(pos.x, b.x + r, b.x + b.w - r);
+  pos.y = clamp(pos.y, b.y + r, b.y + b.h - r);
   const t = new Turret(this, pos, T);
   this.art.turrets.push(t);
   game.spawnSummon && game.spawnSummon(t); // no-op se não existir
@@ -96,7 +103,11 @@ export function castMine() {
   const count = this.art.mines.filter(m => m.alive).length;
   if (count >= cap) return;
   const dir = V.fromAng(randAng());
-  const pos = this.pos.add(dir.clone().mul(M.throwRadius * CFG.body.radius));
+  const pos = this.pos.clone().add(dir.clone().mul(M.throwRadius * CFG.body.radius));
+  const b = game.bounds;
+  const r = M.bodyRadius || 8;
+  pos.x = clamp(pos.x, b.x + r, b.x + b.w - r);
+  pos.y = clamp(pos.y, b.y + r, b.y + b.h - r);
   const mine = new Mine(this, pos, M);
   this.art.mines.push(mine);
   game.spawnSummon && game.spawnSummon(mine);

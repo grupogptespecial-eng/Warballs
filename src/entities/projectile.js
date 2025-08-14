@@ -159,6 +159,23 @@ export class Projectile {
       }
     }
 
+    // Turrets can take damage from enemy projectiles
+    for (const s of game.summons) {
+      if (!s.alive || s.kind !== 'turret') continue;
+      if (this.owner && s.team && this.owner.team && s.team === this.owner.team && !this.canHurtAllies) continue;
+
+      const d = new V(s.pos.x - this.pos.x, s.pos.y - this.pos.y).len();
+      if (d < s.bodyR + this.rad) {
+        const dealt = s.hit(this.dmg, this.owner);
+        if (dealt > 0 && this.owner) this.owner.gainXPOffense?.(dealt);
+        if (!this.penetration) this.alive = false;
+        for (let i = 0; i < CFG.vfx.particlesOnHit; i++) {
+          game.spawnParticle(new Particle(this.pos.clone(), V.fromAng(rrand(0, Math.PI * 2), rrand(50, 220)), rrand(.2, .6), this.color));
+        }
+        if (!this.alive) break;
+      }
+    }
+
     this.trail.push(this.pos.clone());
     if (this.trail.length > CFG.ranged.trail) this.trail.shift();
   }

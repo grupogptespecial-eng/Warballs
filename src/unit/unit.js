@@ -233,15 +233,19 @@ export class Unit {
           state: 'IDLE',
           meleeCD: 0,
           throwCD: 0,
+          disarmT: 0,
           aimT: 0,
-          parryCD: 0,
+          maneuverCD: 0,
           lastAttackType: null,
           lastAttackTime: 0,
           disciplineReady: false,
           disciplineExpire: 0,
+          disciplineStacks: 0,
           stanceActive: false,
           stanceGrace: 0,
-          baseOmega: this.omega
+          baseOmega: this.omega,
+          baseWeaponLen: this.weaponLen,
+          baseWeaponTipR: this.weaponTipR
         };
       }
   }
@@ -671,9 +675,10 @@ export class Unit {
         else                                     tipBase = CFG.engage.tipDamageBase;
         let dmg = tipBase * this.dmgMult();
         if (this.className === 'barbaro') dmg = barbApplyPassiveDamage(this, dmg);
-        if (this.className === 'guerreiro' && this.gw && this.gw.disciplineReady) {
-          dmg *= 1 + CFG.guerreiro.discipline.nextHitBonus;
+        if (this.className === 'guerreiro' && this.gw && this.gw.disciplineReady && this.gw.disciplineStacks > 0) {
+          dmg *= 1 + this.gw.disciplineStacks * CFG.guerreiro.discipline.nextHitBonus;
           this.gw.disciplineReady = false;
+          this.gw.disciplineStacks = 0;
         }
         let knockMag =
             (this.className === 'barbaro') ? barbKnock(this.level)
@@ -720,9 +725,10 @@ export class Unit {
         else                                      tipBase = CFG.engage.tipDamageBase;
         let dmg = tipBase * other.dmgMult();
         if (other.className === 'barbaro') dmg = barbApplyPassiveDamage(other, dmg);
-        if (other.className === 'guerreiro' && other.gw && other.gw.disciplineReady) {
-          dmg *= 1 + CFG.guerreiro.discipline.nextHitBonus;
+        if (other.className === 'guerreiro' && other.gw && other.gw.disciplineReady && other.gw.disciplineStacks > 0) {
+          dmg *= 1 + other.gw.disciplineStacks * CFG.guerreiro.discipline.nextHitBonus;
           other.gw.disciplineReady = false;
+          other.gw.disciplineStacks = 0;
         }
         let knockMag =
             (other.className === 'barbaro') ? barbKnock(other.level)
@@ -776,6 +782,51 @@ export class Unit {
           V.fromAng(rrand(0, Math.PI * 2), rrand(30, 150)),
           rrand(0.15, 0.45),
           '#9aa6c1'
+        ));
+    }
+    }
+  }
+
+  collideSummons(summons) {
+    const base = this.pos.clone();
+    const tip = this.tip();
+    for (const s of summons) {
+      if (!s.alive || s.kind !== 'familiar') continue;
+      if (this.team && s.team && this.team === s.team) continue;
+      if (distPointToSegment(s.pos, base, tip) >= s.bodyR + this.weaponTipR) continue;
+      if ((this.weaponLockT || 0) > 0) continue;
+
+      let tipBase;
+      if (this.className === 'barbaro')        tipBase = barbTip(this.level);
+      else if (this.className === 'paladino')  tipBase = CFG.paladino.tipBase;
+      else if (this.className === 'clerigo')   tipBase = clericTip(this.level);
+      else if (this.className === 'guerreiro') tipBase = CFG.guerreiro.damage.meleeBase;
+      else                                     tipBase = CFG.engage.tipDamageBase;
+      let dmg = tipBase * this.dmgMult();
+      if (this.className === 'barbaro') dmg = barbApplyPassiveDamage(this, dmg);
+      if (this.className === 'guerreiro' && this.gw && this.gw.disciplineReady && this.gw.disciplineStacks > 0) {
+        dmg *= 1 + this.gw.disciplineStacks * CFG.guerreiro.discipline.nextHitBonus;
+        this.gw.disciplineReady = false;
+        this.gw.disciplineStacks = 0;
+      }
+      let knockMag =
+          (this.className === 'barbaro') ? barbKnock(this.level)
+        : (this.className === 'clerigo') ? clericKnock(this.level)
+        : 380;
+      if (this.className === 'barbaro' && this.isDashing && this.firstImpactDash) {
+        dmg *= CFG.barbaro.dash.dmgBonus;
+        knockMag = knockMag * CFG.barbaro.dash.knockBonus;
+        this.isDashing = false;
+        this.firstImpactDash = false;
+      }
+      const dealt = s.hit(dmg, V.fromAng(this.angle, knockMag), this);
+      if (dealt > 0) this.gainXPOffense(dealt);
+      for (let i = 0; i < CFG.vfx.particlesOnHit; i++) {
+        game.spawnParticle(new Particle(
+          s.pos.clone(),
+          V.fromAng(randAng(), rrand(50, 220)),
+          rrand(0.2, 0.6),
+          '#e5e7eb'
         ));
       }
     }
@@ -982,6 +1033,16 @@ export class Unit {
       ctx.restore();
     }
 
+    if (this.className === 'guerreiro' && this.gw && this.gw.stanceActive) {
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(this.pos.x, this.pos.y, this.bodyR + 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
     ctx.save();
     const base = this.color;
     const outlineCol = shade(base, -0.70);
@@ -1003,15 +1064,27 @@ export class Unit {
     this.drawClassItem(ctx);
 
     const cfg = CLASS_VISUALS[this.className];
-    ctx.save();
-    ctx.translate(this.pos.x, this.pos.y);
-    const ang = this.angle + (((cfg && cfg.weaponAngleDeg) || 30) * Math.PI / 180);
-    ctx.rotate(ang);
-    const wScale = this.bodyR * 1.2 * ((cfg && cfg.weaponScale) || 1);
-    const wOff = this.bodyR * ((cfg && cfg.weaponOffsetMult) || 0.9);
-    ctx.translate(wOff, 0);
-    drawWeaponForUnit(ctx, this, wScale);
-    ctx.restore();
+    const skipWeapon = (this.className === 'guerreiro' && this.gw &&
+      (this.gw.state === 'THROW_FLIGHT' || this.gw.state === 'DISARMED')) ||
+      this.className === 'monge';
+    if (!skipWeapon) {
+      ctx.save();
+      ctx.translate(this.pos.x, this.pos.y);
+      const off = (cfg?.weaponAngleDeg ?? 30) * Math.PI / 180;
+      const wScale = this.bodyR * 1.2 * (cfg?.weaponScale ?? 1);
+      const wOff = this.bodyR * (cfg?.weaponOffsetMult ?? 0.9);
+      if (this.className === 'paladino' || this.className === 'clerigo') {
+        ctx.rotate(this.angle);
+        ctx.translate(wOff, 0);
+        ctx.rotate(off);
+      } else {
+        const ang = this.angle + off;
+        ctx.rotate(ang);
+        ctx.translate(wOff, 0);
+      }
+      drawWeaponForUnit(ctx, this, wScale);
+      ctx.restore();
+    }
     if (game.debugHit) {
       ctx.globalAlpha = 0.3;
       ctx.strokeStyle = '#fff';

@@ -200,7 +200,7 @@ export const CFG = {
 
     throw: {
       enabled: true,
-      minRange: 2.2,
+      minRange: 1.65,
       maxRange: 5.8,
       speed: 9.5,
       flightMaxTime: 0.6,
@@ -246,7 +246,7 @@ export const CFG = {
 
     stance: {
       threatRadius: 3.6,
-      atkRateBonus: 0.15,
+      atkRateBonus: 0.5,
       knockbackRedBase: 0.2,
       knockbackRedPer100HP: 0.2,
       knockbackRedMax: 0.6,
@@ -265,7 +265,8 @@ export const CFG = {
     cannon: {
       baseDamage: 13,
       knockback: 0.85,
-      speed: 9.0,
+      // velocidade dobrada
+      speed: 18.0,
       lifeTime: 0.9,
       cooldown: 0.95,
       radius: 6,
@@ -292,7 +293,8 @@ export const CFG = {
       range: 6.0,
       fireRate: 1.4,
       bulletDamage: 7,
-      bulletSpeed: 8.0,
+      // dobro da velocidade anterior
+      bulletSpeed: 16.0,
       bulletKnock: 0.5,
       xpOnBump: 8,
       xpToLevel: [12, 28, 52],
@@ -362,14 +364,31 @@ export const CFG = {
 
   // Configuração do sistema de crates (power‑ups de vida/XP)
   crates: {
-    enableHealthCrates: false,
-    enableXpCrates: false,
-    enableHybridCrates: true,
-    health: { avgPer100s: 12, sizePx: 18, healAmount: 12 },
-    xp:     { avgPer100s: 12, sizePx: 18, xpAmount: 8 },
-    hybrid: { avgPer100s: 12, sizePx: 18, healAmount: 8, xpAmount: 6 },
-    maxConcurrentPerType: 6,
-    lifetime: 35,
+    health: {
+      enabled: false,
+      avgPer100s: 12,
+      lifetime: 35,
+      maxConcurrent: 6,
+      sizePx: 18,
+      healAmount: 12
+    },
+    xp: {
+      enabled: false,
+      avgPer100s: 12,
+      lifetime: 35,
+      maxConcurrent: 6,
+      sizePx: 18,
+      xpAmount: 8
+    },
+    hybrid: {
+      enabled: true,
+      avgPer100s: 12,
+      lifetime: 35,
+      maxConcurrent: 6,
+      sizePx: 18,
+      healAmount: 8,
+      xpAmount: 6
+    },
     minDistanceFromUnits: 28,
     minDistanceBetweenCrates: 24,
     brCratePolicyOnShrink: 'despawn'
@@ -390,7 +409,6 @@ export const LEVEL_SAFE_RADIUS_MULT = 0.42;
 export const CLASS_VISUALS = {
   barbaro: {
     item: 'saia_barbaro',
-    anchorAngleDeg: 120,
     scale: 0.16,
     microAnim: 'sway_low',
     palette: ['#8B4A2B', '#C9935A', '#402A1C'],
@@ -399,23 +417,27 @@ export const CLASS_VISUALS = {
   ranger: {
     item: 'aljava_pequena',
     anchorAngleDeg: 45,
-    scale: 0.14,
+    scale: 0.56,
     microAnim: 'idle_breath',
-    palette: ['#4E6B3A', '#B89B6B', '#2E3B22']
+    palette: ['#4E6B3A', '#B89B6B', '#2E3B22'],
+    weaponAngleDeg: -25,
+    weaponScale: 1.56,
+    weaponOffsetMult: 1.2
   },
   monge: {
     item: 'colar_monge',
-    anchorAngleDeg: 300,
-    scale: 0.078,
-    microAnim: 'subtle_pulse',
-    palette: ['#C8A26A', '#5E3B21', '#E5D7B8']
+    scale: 0.16,
+    palette: []
   },
   paladino: {
     item: 'insignia_escudo',
     anchorAngleDeg: 20,
     scale: 0.15,
     microAnim: 'glint_slow',
-    palette: ['#C9C9C9', '#E6D27A', '#7A6A3A']
+    palette: ['#C9C9C9', '#E6D27A', '#7A6A3A'],
+    weaponAngleDeg: -90,
+    weaponScale: 2.0,
+    weaponOffsetMult: 1.0
   },
   clerigo: {
     item: 'sigilo_sol',
@@ -423,8 +445,9 @@ export const CLASS_VISUALS = {
     scale: 0.14,
     microAnim: 'soft_glow',
     palette: ['#FFD67A', '#F4B43A', '#8A6A2A'],
-    weaponAngleDeg: 110,
-    weaponScale: 2.0
+    weaponAngleDeg: 90,
+    weaponScale: 2.0,
+    weaponOffsetMult: 1.0
   },
   bruxo: {
     item: 'chifres_duplos',
@@ -454,5 +477,9 @@ export const CLASS_VISUALS = {
   }
 };
 
-export const ITEM_ALIASES = { tanga_barbaro: 'saia_barbaro' };
+export const ITEM_ALIASES = {
+  tanga_barbaro: 'saia_barbaro',
+  necklace_monge: 'colar_monge',
+  rosario_monge: 'colar_monge'
+};
 

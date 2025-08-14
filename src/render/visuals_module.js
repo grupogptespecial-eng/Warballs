@@ -15,28 +15,53 @@ export const BARBARIAN_PALETTE = {
   woodDark: '#7E572C'
 };
 
-// Preset com proporções usadas ao desenhar a saia do Bárbaro via Canvas
-export const SAIA_PRESET = {
-  topo: 0.40,
-  margem: 0.131387,
-  barriga: 0.416058,
-  cauda: 0.781022,
-  dip: 0.678102
-};
-
 export const CLASS_VISUALS = {
-  barbaro:  { item:'saia_barbaro', anchorAngleDeg:120, scale:0.16, microAnim:'sway_low',   palette:[BARBARIAN_PALETTE.leatherBase,BARBARIAN_PALETTE.leatherLight,BARBARIAN_PALETTE.leatherStroke], weaponOverride:'axe_double_bit_v2', weaponAngleDeg:35 },
-  ranger:   { item:'aljava_pequena', anchorAngleDeg:45, scale:0.56, microAnim:'idle_breath', palette:['#4E6B3A','#B89B6B','#2E3B22'], weaponAngleDeg:-25, weaponScale:1.3, weaponOffsetMult:1.2 },
-  monge:    { item:'colar_monge',    anchorAngleDeg:300,scale:0.078, microAnim:'subtle_pulse', palette:['#C8A26A','#5E3B21','#E5D7B8'] },
-  paladino: { item:'insignia_escudo',anchorAngleDeg:20, scale:0.15, microAnim:'glint_slow',   palette:['#C9C9C9','#E6D27A','#7A6A3A'], weaponAngleDeg:110, weaponScale:2.0 },
-  clerigo:  { item:'sigilo_sol',     anchorAngleDeg:330,scale:0.14, microAnim:'soft_glow',    palette:['#FFD67A','#F4B43A','#8A6A2A'], weaponAngleDeg:110, weaponScale:2.0 },
+  barbaro:  { item:'saia_barbaro', scale:0.16, microAnim:'sway_low',   palette:[BARBARIAN_PALETTE.leatherBase,BARBARIAN_PALETTE.leatherLight,BARBARIAN_PALETTE.leatherStroke], weaponOverride:'axe_double_bit_v2', weaponAngleDeg:35 },
+  ranger:   { item:'aljava_pequena', anchorAngleDeg:45, scale:0.56, microAnim:'idle_breath', palette:['#4E6B3A','#B89B6B','#2E3B22'], weaponAngleDeg:-25, weaponScale:1.56, weaponOffsetMult:1.2 },
+  monge:    { item:'colar_monge',    scale:0.16, palette:[] },
+  paladino: { item:'insignia_escudo',anchorAngleDeg:20, scale:0.15, microAnim:'glint_slow',   palette:['#C9C9C9','#E6D27A','#7A6A3A'], weaponAngleDeg:-90, weaponScale:2.0, weaponOffsetMult:1.0 },
+  clerigo:  { item:'sigilo_sol',     anchorAngleDeg:330,scale:0.14, microAnim:'soft_glow',    palette:['#FFD67A','#F4B43A','#8A6A2A'], weaponAngleDeg:90, weaponScale:2.0, weaponOffsetMult:1.0 },
   bruxo:    { item:'chifres_duplos', anchorAngleDeg:270,scale:0.18, microAnim:'idle_breath',  palette:['#7E57C2','#A586E8','#40345A'], weaponAngleDeg:-10 },
   artifice: { item:'goggles',        anchorAngleDeg:30, scale:0.16, microAnim:'idle_breath',  palette:['#A6B1B8','#E0E7EA','#3B4A5A'], weaponOverride:'arcane_cannon', weaponAngleDeg:40, weaponScale:1.8 },
   guerreiro:{ item:'ombreira_metal', anchorAngleDeg:210,scale:0.60, microAnim:'sway_low',     palette:['#9BA4AE','#6B757F','#CACFD6'], weaponAngleDeg:15, weaponScale:2.0, weaponOffsetMult:2.2 }
 };
 
 // Aliases (compat)
-export const ITEM_ALIASES = { tanga_barbaro: 'saia_barbaro' };
+export const ITEM_ALIASES = {
+  tanga_barbaro: 'saia_barbaro',
+  necklace_monge: 'colar_monge',
+  rosario_monge: 'colar_monge'
+};
+
+const BAND_PATH = new Path2D("M -160,40 Q -60,-10 0,5 Q 60,-10 160,40 L 160,70 Q 50,60 0,70 Q -50,60 -160,70 Z");
+const SKIRT_PATH = new Path2D("M -120,70 L 120,70 Q 40,110 70,140 Q 30,180 0,200 Q -30,180 -70,140 Q -40,110 -120,70 Z");
+
+// Raio base e posições relativas para o colar do monge
+const MONK_BEAD_RADIUS = 17.6;
+const MONK_BEAD_POSITIONS = [
+  { x:   0,  y:  59 },
+  { x: -32,  y:  53 },
+  { x: -64,  y:  47 },
+  { x: -96,  y:  37 },
+  { x:  32,  y:  53 },
+  { x:  64,  y:  47 },
+  { x:  96,  y:  37 }
+];
+
+let MONK_BEAD_GRAD = null;
+function initMonkBeadGrad(ctx) {
+  MONK_BEAD_GRAD = ctx.createRadialGradient(
+    -MONK_BEAD_RADIUS * 0.35,
+    -MONK_BEAD_RADIUS * 0.35,
+    MONK_BEAD_RADIUS * 0.1,
+    0,
+    0,
+    MONK_BEAD_RADIUS
+  );
+  MONK_BEAD_GRAD.addColorStop(0, '#c47a4a');
+  MONK_BEAD_GRAD.addColorStop(0.55, '#8d4d2d');
+  MONK_BEAD_GRAD.addColorStop(1, '#4a2416');
+}
 
 // ===== Helpers
 export const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -62,33 +87,47 @@ export function drawItemSprite(ctx, id, scale, pal, now){
   const useId = ITEM_ALIASES[id] || id;
 
   if (useId === 'saia_barbaro') {
-    const R = scale*0.5; // scale recebido já é diâmetro; usar metade como base
-    const pBase = p1 || '#8B4A2B';
-    const pLight= p2 || '#C9935A';
-    const top = -R*0.35, w = R*1.9;
-    const x0=-w*0.5, x1=w*0.5;
-    // Faixa
-    ctx.beginPath();
-    ctx.moveTo(x0, top);
-    ctx.quadraticCurveTo(-w*0.25, top - R*0.18, 0, top - R*0.10);
-    ctx.quadraticCurveTo( w*0.25, top - R*0.18, x1, top);
-    ctx.lineTo(x1, top + R*0.14);
-    ctx.quadraticCurveTo( w*0.10, top + R*0.06, 0, top + R*0.12);
-    ctx.quadraticCurveTo(-w*0.10, top + R*0.06, x0, top + R*0.14);
-    ctx.closePath();
-    let g1=ctx.createLinearGradient(0,top-R*0.2,0,top+R*0.2); g1.addColorStop(0,pLight); g1.addColorStop(1,pBase);
-    ctx.fillStyle=g1; ctx.fill(); ctx.lineWidth=2; ctx.strokeStyle='rgba(0,0,0,0.7)'; ctx.stroke();
-    // Corpo serrilhado
-    const h=R*0.9; ctx.beginPath(); ctx.moveTo(x0+R*0.10, top+R*0.12); ctx.lineTo(x1-R*0.10, top+R*0.12);
-    const teeth=7, span=(x1-R*0.10)-(x0+R*0.10);
-    for(let i=0;i<teeth;i++){ const xx=(x0+R*0.10)+(i+0.5)*(span/teeth); const yy=top+R*0.12+(i%2?h*0.55:h*0.70); ctx.lineTo(xx,yy);} ctx.lineTo(x0+R*0.10, top+R*0.12); ctx.closePath();
-    let g2=ctx.createLinearGradient(0,top+R*0.1,0,top+h); g2.addColorStop(0,shade(pBase,0.05)); g2.addColorStop(1,shade(pBase,-0.25)); ctx.fillStyle=g2; ctx.fill(); ctx.lineWidth=2; ctx.strokeStyle='rgba(0,0,0,0.65)'; ctx.stroke();
+    const R = scale * 0.5 * 0.805;
+    const s = R / 100; // coordenadas originais usam R=100
+    ctx.save();
+    ctx.translate(0, -21 * s);
+    ctx.scale(s, s);
+    const g1 = ctx.createLinearGradient(0, 40, 0, 70);
+    g1.addColorStop(0, '#C9935A');
+    g1.addColorStop(1, '#8B4A2B');
+    ctx.fillStyle = g1;
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(42,27,20,0.75)';
+    ctx.fill(BAND_PATH);
+    ctx.stroke(BAND_PATH);
+    const g2 = ctx.createLinearGradient(0, 70, 0, 200);
+    g2.addColorStop(0, '#91502F');
+    g2.addColorStop(1, '#6F3F25');
+    ctx.fillStyle = g2;
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(42,27,20,0.7)';
+    ctx.fill(SKIRT_PATH);
+    ctx.stroke(SKIRT_PATH);
+    ctx.restore();
     return;
   }
 
   if (useId === 'colar_monge') {
-    const R=scale*0.46, beads=7, r=scale*0.065; const a0=20*Math.PI/180, a1=160*Math.PI/180;
-    for(let i=0;i<beads;i++){ const tt=(beads===1?0.5:i/(beads-1)); const a=a0+(a1-a0)*tt; const x=Math.cos(a)*R, y=Math.sin(a)*R; const grad=ctx.createRadialGradient(x-r*0.35,y-r*0.35,r*0.2,x,y,r*1.1); grad.addColorStop(0,p1); grad.addColorStop(1,'#8f6a3e'); ctx.beginPath(); ctx.arc(x,y,r,0,TAU); ctx.fillStyle=grad; ctx.fill(); ctx.lineWidth=2; ctx.strokeStyle='rgba(0,0,0,0.7)'; ctx.stroke(); }
+    if (!MONK_BEAD_GRAD) initMonkBeadGrad(ctx);
+    ctx.save();
+    const R = scale * 0.5;
+    const s = R / 100;
+    ctx.scale(s, s);
+    ctx.fillStyle = MONK_BEAD_GRAD;
+    ctx.strokeStyle = '#3a1d12';
+    ctx.lineWidth = 3;
+    for (const { x, y } of MONK_BEAD_POSITIONS) {
+      ctx.beginPath();
+      ctx.arc(x, y, MONK_BEAD_RADIUS, 0, TAU);
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.restore();
     return;
   }
 
@@ -162,7 +201,43 @@ export function drawItemSprite(ctx, id, scale, pal, now){
 }
 
 // ===== Armas
-export function drawAxeDoubleBitV2(ctx,S,pal){ const [metal,accent,wood] = pal || ['#cfd5dd','#e7d39e','#7a4b2a']; rr(ctx,-S*0.055,-S*0.64,S*0.11,S*1.28,S*0.07); const cab=ctx.createLinearGradient(0,-S*0.64,0,S*0.64); cab.addColorStop(0,shade(wood,0.12)); cab.addColorStop(1,shade(wood,-0.30)); ctx.fillStyle=cab; ctx.fill(); rr(ctx,-S*0.11,-S*0.12,S*0.22,S*0.24,S*0.05); ctx.fillStyle=shade(metal,-0.22); ctx.fill(); const blade=(sx)=>{ ctx.save(); ctx.scale(sx,1); ctx.beginPath(); ctx.moveTo(S*0.10,0); ctx.quadraticCurveTo(S*0.56,-S*0.30,S*0.58,0); ctx.quadraticCurveTo(S*0.56,S*0.30,S*0.10,0); const grad=ctx.createLinearGradient(S*0.10,-S*0.32,S*0.58,S*0.32); grad.addColorStop(0,shade(metal,-0.06)); grad.addColorStop(1,shade(metal,0.14)); ctx.fillStyle=grad; ctx.fill(); ctx.lineWidth=1.4; ctx.strokeStyle='rgba(0,0,0,0.72)'; ctx.stroke(); ctx.restore(); }; blade(1); blade(-1); ctx.beginPath(); ctx.moveTo(0,-S*0.62); ctx.lineTo(S*0.06,-S*0.38); ctx.lineTo(-S*0.06,-S*0.38); ctx.closePath(); const spike=ctx.createLinearGradient(0,-S*0.62,0,-S*0.38); spike.addColorStop(0,shade(metal,0.12)); spike.addColorStop(1,shade(metal,-0.20)); ctx.fillStyle=spike; ctx.fill(); ctx.lineWidth=1.2; ctx.strokeStyle='rgba(0,0,0,0.7)'; ctx.stroke(); }
+export function drawAxeDoubleBitV2(ctx, S){
+  const s = S / 200;
+  // cabo de madeira
+  rr(ctx, -160 * s, -8 * s, 320 * s, 16 * s, 8 * s);
+  const g = ctx.createLinearGradient(0, -8 * s, 0, 8 * s);
+  g.addColorStop(0, '#A8743A');
+  g.addColorStop(1, '#7E572C');
+  ctx.fillStyle = g;
+  ctx.fill();
+  // junta metálica
+  ctx.lineWidth = 2 * s;
+  ctx.fillStyle = '#D5D9DF';
+  ctx.strokeStyle = '#848C96';
+  rr(ctx, 140 * s, -14 * s, 28 * s, 28 * s, 3 * s);
+  ctx.fill();
+  ctx.stroke();
+  // lâminas
+  const blade = (tx, ty, rot) => {
+    ctx.save();
+    ctx.translate(tx * s, ty * s);
+    ctx.rotate(rot * Math.PI / 180);
+    ctx.beginPath();
+    ctx.moveTo(0, -20 * s);
+    ctx.lineTo(60 * s, -80 * s);
+    ctx.lineTo(60 * s, 80 * s);
+    ctx.lineTo(0, 20 * s);
+    ctx.closePath();
+    ctx.fillStyle = '#D5D9DF';
+    ctx.strokeStyle = '#848C96';
+    ctx.lineWidth = 3 * s;
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  };
+  blade(154, -17, 270);
+  blade(154, 17, 90);
+}
 
 export function drawSword(ctx,S,pal){ const [metal,gold]=pal||['#dfe5ee','#e6d27a']; rr(ctx,-S*0.04,-S*0.5,S*0.08,S*0.9,S*0.04); ctx.fillStyle=metal; ctx.fill(); rr(ctx,-S*0.18,-S*0.15,S*0.36,S*0.10,S*0.05); ctx.fillStyle=gold; ctx.fill(); rr(ctx,-S*0.04,S*0.4,S*0.08,S*0.2,S*0.04); ctx.fillStyle=shade(gold,-0.45); ctx.fill(); }
 export function drawMace(ctx,S,pal){ const [metal]=pal||['#cfd5dd']; rr(ctx,-S*0.04,-S*0.4,S*0.08,S*0.7,S*0.04); ctx.fillStyle=shade(metal,-0.2); ctx.fill(); ctx.beginPath(); ctx.arc(0,-S*0.45,S*0.12,0,TAU); ctx.fillStyle=metal; ctx.fill(); }
@@ -173,7 +248,7 @@ export function drawSpear(ctx,S,pal){ const [metal]=pal||['#dfe5ee']; rr(ctx,-S*
 export function drawArcaneCannon(ctx,S,pal){ const [metal,energy,wood]=pal||['#A6B1B8','#7FDBFF','#7E572C']; rr(ctx,-S*0.25,-S*0.12,S*0.3,S*0.24,S*0.05); ctx.fillStyle=shade(wood,-0.2); ctx.fill(); ctx.lineWidth=1.2; ctx.strokeStyle='rgba(0,0,0,0.7)'; ctx.stroke(); ctx.beginPath(); ctx.rect(-S*0.05,-S*0.15,S*0.55,S*0.30); let g=ctx.createLinearGradient(-S*0.05,0,S*0.5,0); g.addColorStop(0,shade(metal,-0.2)); g.addColorStop(1,metal); ctx.fillStyle=g; ctx.fill(); ctx.strokeStyle='rgba(0,0,0,0.7)'; ctx.stroke(); ctx.beginPath(); ctx.arc(S*0.5,0,S*0.18,-Math.PI/2,Math.PI/2); ctx.fillStyle=energy; ctx.fill(); ctx.stroke(); }
 
 // ===== Escolha de arma por classe/override
-export function drawWeaponForUnit(ctx, unit, S){ const cfg = CLASS_VISUALS[unit.className] || {}; if (cfg.weaponOverride === 'axe_double_bit_v2') return drawAxeDoubleBitV2(ctx,S,cfg.palette); if (cfg.weaponOverride === 'arcane_cannon') return drawArcaneCannon(ctx,S,cfg.palette); switch(unit.className){ case 'ranger': return drawBow(ctx,S,cfg.palette); case 'paladino': return drawSword(ctx,S,cfg.palette); case 'clerigo': return drawMace(ctx,S,cfg.palette); case 'bruxo': return drawBook(ctx,S,cfg.palette); case 'guerreiro': return drawSpear(ctx,S,cfg.palette); case 'artifice': return drawArcaneCannon(ctx,S,cfg.palette); default: return drawMace(ctx,S,cfg.palette); } }
+export function drawWeaponForUnit(ctx, unit, S){ const cfg = CLASS_VISUALS[unit.className] || {}; if (cfg.weaponOverride === 'axe_double_bit_v2') return drawAxeDoubleBitV2(ctx,S,cfg.palette); if (cfg.weaponOverride === 'arcane_cannon') return drawArcaneCannon(ctx,S,cfg.palette); switch(unit.className){ case 'ranger': return drawBow(ctx,S,cfg.palette); case 'paladino': return drawSword(ctx,S,cfg.palette); case 'clerigo': return drawMace(ctx,S,cfg.palette); case 'bruxo': return drawBook(ctx,S,cfg.palette); case 'guerreiro': return drawSpear(ctx,S,cfg.palette); case 'artifice': return drawArcaneCannon(ctx,S,cfg.palette); case 'monge': return; default: return drawMace(ctx,S,cfg.palette); } }
 
 // ===== Render Unit (bola + item + arma + nível)
 export function renderUnitPreview(ctx, unit, teamColor, now){
@@ -197,16 +272,24 @@ export function renderUnitPreview(ctx, unit, teamColor, now){
   ctx.globalAlpha = 1;
   // 3) itens
   const cfg=CLASS_VISUALS[unit.className]; if (cfg){ const pal=cfg.palette||[]; const baseScale=(cfg.scale ?? CLASS_ITEM_SCALE_DEFAULT)*(unit.bodyR*2)*GLOBAL_ITEM_SCALE_MULT; if (cfg.item==='chifres_duplos' || cfg.item==='colar_monge' || (ITEM_ALIASES[cfg.item]==='saia_barbaro')){ ctx.save(); ctx.translate(unit.pos.x,unit.pos.y); applyMicroAnim(ctx,cfg.microAnim,now); drawItemSprite(ctx,cfg.item, baseScale, pal, now); ctx.restore(); } else { const safeR=LEVEL_SAFE_RADIUS_MULT*unit.bodyR; const anchor=(cfg.anchorAngleDeg||0)*Math.PI/180; let dist=unit.bodyR*0.82; if(dist<safeR) dist=safeR; let x=unit.pos.x+Math.cos(anchor)*dist, y=unit.pos.y+Math.sin(anchor)*dist; ctx.save(); ctx.translate(x,y); ctx.rotate(anchor); applyMicroAnim(ctx,cfg.microAnim,now); drawItemSprite(ctx,cfg.item,baseScale,pal,now); ctx.restore(); } }
-  // 4) arma
-  ctx.save();
-  ctx.translate(unit.pos.x, unit.pos.y);
-  const wAng = ((cfg && cfg.weaponAngleDeg) || 30) * Math.PI / 180;
-  ctx.rotate(wAng);
-  const wScale = unit.bodyR * 1.2 * ((cfg && cfg.weaponScale) || 1);
-  const wOff = unit.bodyR * ((cfg && cfg.weaponOffsetMult) || 0.9);
-  ctx.translate(wOff, 0);
-  drawWeaponForUnit(ctx, unit, wScale);
-  ctx.restore();
+  // 4) arma (omitida para classes sem arma, ex.: monge)
+  if (unit.className !== 'monge') {
+    ctx.save();
+    ctx.translate(unit.pos.x, unit.pos.y);
+    const wAng = (cfg?.weaponAngleDeg ?? 30) * Math.PI / 180;
+    const wScale = unit.bodyR * 1.2 * (cfg?.weaponScale ?? 1);
+    const wOff = unit.bodyR * (cfg?.weaponOffsetMult ?? 0.9);
+    if (unit.className === 'paladino' || unit.className === 'clerigo') {
+      ctx.rotate(0);
+      ctx.translate(wOff, 0);
+      ctx.rotate(wAng);
+    } else {
+      ctx.rotate(wAng);
+      ctx.translate(wOff, 0);
+    }
+    drawWeaponForUnit(ctx, unit, wScale);
+    ctx.restore();
+  }
   // 5) destaque
   ctx.save(); ctx.globalAlpha=0.25; ctx.beginPath(); ctx.arc(unit.pos.x-unit.bodyR*0.35, unit.pos.y-unit.bodyR*0.35, unit.bodyR*0.45, 0, TAU); ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.fill(); ctx.restore();
 }

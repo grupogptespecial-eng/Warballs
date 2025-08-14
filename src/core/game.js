@@ -97,6 +97,8 @@ export const game = {
       }
     }
 
+    for (const u of this.units) u.collideSummons?.(this.summons);
+
     CrateSystem.update(dt);
     for (const u of this.units) CrateSystem.tryPickup(u);
 

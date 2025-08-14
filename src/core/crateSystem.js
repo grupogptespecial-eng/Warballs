@@ -27,9 +27,11 @@ export const CrateSystem = {
 
   update(dt) {
     const bounds = this.deps.getArenaBounds();
-    if (this.config.enableHealthCrates) this.maybeSpawn('HEALTH', this.config.health, dt, bounds);
-    if (this.config.enableXpCrates) this.maybeSpawn('XP', this.config.xp, dt, bounds);
-    if (this.config.enableHybridCrates) this.maybeSpawn('HYBRID', this.config.hybrid, dt, bounds);
+    const types = ['health', 'xp', 'hybrid'];
+    for (const t of types) {
+      const cfg = this.config[t];
+      if (cfg?.enabled) this.maybeSpawn(t.toUpperCase(), cfg, dt, bounds);
+    }
 
     const now = this.deps.now();
     for (const c of this.crates) {
@@ -66,7 +68,7 @@ export const CrateSystem = {
   },
 
   maybeSpawn(kind, cfg, dt, bounds) {
-    if (this.count(kind) >= this.config.maxConcurrentPerType) return;
+    if (this.count(kind) >= cfg.maxConcurrent) return;
     const lambda = cfg.avgPer100s / 100;
     const p = 1 - Math.exp(-lambda * dt);
     while (this.deps.rng() < p) {
@@ -80,7 +82,7 @@ export const CrateSystem = {
         healAmount: cfg.healAmount || 0,
         xpAmount: cfg.xpAmount || 0,
         spawnTime: this.deps.now(),
-        lifetime: this.config.lifetime,
+        lifetime: cfg.lifetime,
         state: 'ACTIVE'
       });
     }
@@ -161,6 +163,19 @@ export const CrateSystem = {
 
       ctx.fill();
       ctx.stroke();
+
+      if (c.state !== 'DISABLED') {
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        let txt = '';
+        if (c.healAmount && c.xpAmount) txt = `${c.healAmount}/${c.xpAmount}`;
+        else if (c.healAmount) txt = `${c.healAmount}`;
+        else if (c.xpAmount) txt = `${c.xpAmount}`;
+        ctx.fillText(txt, 0, 0);
+      }
+
       ctx.restore();
     }
   },
