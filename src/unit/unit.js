@@ -72,7 +72,8 @@ import {
 
 import {
   updateGuerreiro,
-  guerreiroParryAgainst
+  guerreiroParryAgainst,
+  registerSwap
 } from './guerreiro.js';
 
 import {
@@ -243,7 +244,6 @@ export class Unit {
         this.weaponTipR = S.shaftThickness * CFG.body.radius;
         this.gw = {
           state: 'IDLE',
-          meleeCD: 0,
           throwCD: 0,
           disarmT: 0,
           aimT: 0,
@@ -684,10 +684,7 @@ export class Unit {
     const t2 = other.tip();
     {
       const d1 = new V(other.pos.x - t1.x, other.pos.y - t1.y).len();
-      const warriorThisMeleeBlocked =
-        (this.className === 'guerreiro' && this.gw && this.gw.state !== 'MELEE_ACTIVE');
       if (this.className !== 'ranger' && this.className !== 'monge'
-          && !warriorThisMeleeBlocked
           && d1 < other.bodyR + this.weaponTipR
           && this.canDamage(other)
           && (this.weaponLockT || 0) <= 0
@@ -719,6 +716,7 @@ export class Unit {
         if (dealt > 0) {
           this.gainXPOffense(dealt);
           if (this.className === 'paladino') this.trySacredStrike(t1, dealt);
+          if (this.className === 'guerreiro' && this.gw) registerSwap(this, 'MELEE');
         }
         for (let i = 0; i < CFG.vfx.particlesOnHit; i++) {
           game.spawnParticle(new Particle(
@@ -734,10 +732,7 @@ export class Unit {
     // Colisão arma (other) vs corpo (this)
     {
       const d2 = new V(this.pos.x - t2.x, this.pos.y - t2.y).len();
-      const warriorOtherMeleeBlocked =
-        (other.className === 'guerreiro' && other.gw && other.gw.state !== 'MELEE_ACTIVE');
       if (other.className !== 'ranger' && other.className !== 'monge'
-          && !warriorOtherMeleeBlocked
           && d2 < this.bodyR + other.weaponTipR
           && other.canDamage(this)
           && (other.weaponLockT || 0) <= 0
@@ -769,6 +764,7 @@ export class Unit {
         if (dealt > 0) {
           other.gainXPOffense(dealt);
           if (other.className === 'paladino') other.trySacredStrike(t2, dealt);
+          if (other.className === 'guerreiro' && other.gw) registerSwap(other, 'MELEE');
         }
         for (let i = 0; i < CFG.vfx.particlesOnHit; i++) {
           game.spawnParticle(new Particle(
