@@ -409,14 +409,14 @@ export const LEVEL_SAFE_RADIUS_MULT = 0.42;
 // Configuração visual por classe. Cada item é posicionado usando um ângulo fixo
 // e pode ajustar escala, animação e paleta de cores.
 export const CLASS_VISUALS = {
-  barbaro:  { item:'saia_barbaro', scale:0.4, microAnim:'sway_low',   palette:[BARBARIAN_PALETTE.leatherBase,BARBARIAN_PALETTE.leatherLight,BARBARIAN_PALETTE.leatherStroke], weaponOverride:'axe_double_bit_v2', weaponAngleDeg:35 ,weaponOffsetMult:2.0, itemOffsetY:0.2},
-  ranger:   { item:'aljava_pequena', anchorAngleDeg:45, scale:0.56, microAnim:'idle_breath', palette:['#4E6B3A','#B89B6B','#2E3B22'], weaponAngleDeg:-25, weaponScale:1.56, weaponOffsetMult:1.5 },
-  monge:    { item:'colar_monge',    scale:0.6, palette:[] },
-  paladino: { item:'insignia_escudo',anchorAngleDeg:20, scale:0.45, microAnim:'glint_slow',   palette:['#C9C9C9','#E6D27A','#7A6A3A'], weaponAngleDeg:-90, weaponScale:2.0, weaponOffsetMult:2.0 },
-  clerigo:  { item:'sigilo_sol',     anchorAngleDeg:330,scale:0.34, microAnim:'soft_glow',    palette:['#FFD67A','#F4B43A','#8A6A2A'], weaponAngleDeg:90, weaponScale:2.5, weaponOffsetMult:1.8 },
-  bruxo:    { item:'chifres_duplos', anchorAngleDeg:270,scale:0.18, microAnim:'idle_breath',  palette:['#7E57C2','#A586E8','#40345A'], weaponAngleDeg:-10 },
-  artifice: { item:'goggles',        anchorAngleDeg:270, scale:0.36, microAnim:'idle_breath',  palette:['#A6B1B8','#E0E7EA','#3B4A5A'], weaponOverride:'arcane_cannon', weaponAngleDeg:40, weaponScale:1.8, weaponOffsetMult:1.5 },
-  guerreiro:{ item:'ombreira_metal', anchorAngleDeg:210,scale:0.60, microAnim:'sway_low',     palette:['#9BA4AE','#6B757F','#CACFD6'], weaponAngleDeg:15, weaponScale:3.5, weaponOffsetMult:2.8 }
+  barbaro:  { item:'saia_barbaro', scale:0.4, microAnim:'sway_low',   palette:[BARBARIAN_PALETTE.leatherBase,BARBARIAN_PALETTE.leatherLight,BARBARIAN_PALETTE.leatherStroke], weaponOverride:'axe_double_bit_v2', weaponAngleDeg:35 ,weaponOffsetMult:2.0, itemOffsetY:0.2, distanceFromCenter:0.82, internalRotationDeg:0 },
+  ranger:   { item:'aljava_pequena', anchorAngleDeg:45, scale:0.56, microAnim:'idle_breath', palette:['#4E6B3A','#B89B6B','#2E3B22'], weaponAngleDeg:-25, weaponScale:1.56, weaponOffsetMult:1.5, distanceFromCenter:0.82, internalRotationDeg:0 },
+  monge:    { item:'colar_monge',    scale:0.6, palette:[], distanceFromCenter:0.82, internalRotationDeg:0 },
+  paladino: { item:'insignia_escudo',anchorAngleDeg:20, scale:0.45, microAnim:'glint_slow',   palette:['#C9C9C9','#E6D27A','#7A6A3A'], weaponAngleDeg:-90, weaponScale:2.0, weaponOffsetMult:2.0, distanceFromCenter:0.82, internalRotationDeg:0 },
+  clerigo:  { item:'sigilo_sol',     anchorAngleDeg:330,scale:0.34, microAnim:'soft_glow',    palette:['#FFD67A','#F4B43A','#8A6A2A'], weaponAngleDeg:90, weaponScale:2.5, weaponOffsetMult:1.8, distanceFromCenter:0.82, internalRotationDeg:0 },
+  bruxo:    { item:'chifres_duplos', anchorAngleDeg:270,scale:0.18, microAnim:'idle_breath',  palette:['#7E57C2','#A586E8','#40345A'], weaponAngleDeg:-10, distanceFromCenter:0.82, internalRotationDeg:0 },
+  artifice: { item:'goggles',        anchorAngleDeg:270, scale:0.36, microAnim:'idle_breath',  palette:['#A6B1B8','#E0E7EA','#3B4A5A'], weaponOverride:'arcane_cannon', weaponAngleDeg:40, weaponScale:1.8, weaponOffsetMult:1.5, distanceFromCenter:0.82, internalRotationDeg:90 },
+  guerreiro:{ item:'ombreira_metal', anchorAngleDeg:210,scale:0.60, microAnim:'sway_low',     palette:['#9BA4AE','#6B757F','#CACFD6'], weaponAngleDeg:15, weaponScale:3.5, weaponOffsetMult:2.8, distanceFromCenter:0.82, internalRotationDeg:0 }
 };
 
 export const ITEM_ALIASES = {

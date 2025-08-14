@@ -68,11 +68,17 @@ tempo extra é definido por classe em `src/config/cfg.js` através do campo
 
 Cada classe pode exibir um pequeno item cosmético preso ao corpo do personagem
 para reforçar sua identidade. As definições estão em `src/config/cfg.js` no
-objeto `CLASS_VISUALS`, que indica o item, ângulo de ancoragem, escala e a
-microanimação utilizada. O tamanho padrão é dado por `CLASS_ITEM_SCALE_DEFAULT`
-com multiplicador global `GLOBAL_ITEM_SCALE_MULT` (160% por padrão), e os itens
-jamais ultrapassam o raio seguro `LEVEL_SAFE_RADIUS_MULT * BALL_RADIUS`, reservado ao texto de
-nível. Esses elementos são apenas visuais e não afetam colisões.
+objeto `CLASS_VISUALS`, que indica o item, ângulo de ancoragem, escala,
+rotação interna e a microanimação utilizada. O tamanho padrão é dado por
+`CLASS_ITEM_SCALE_DEFAULT` com multiplicador global `GLOBAL_ITEM_SCALE_MULT`
+(160% por padrão). O deslocamento radial pode ser ajustado por
+`distanceFromCenter` (padrão `0.82` × raio do corpo) e a rotação adicional por
+`internalRotationDeg` (padrão `0°`). Os itens jamais ultrapassam o raio seguro
+`LEVEL_SAFE_RADIUS_MULT * BALL_RADIUS`, reservado ao texto de nível. Esses
+elementos são apenas visuais e não afetam colisões.
+
+Exemplo: definir `internalRotationDeg: 180` inverte o sprite, enquanto
+`distanceFromCenter: 1.1` empurra o item para longe do corpo.
 
 Itens atuais (com micro‑animação):
 

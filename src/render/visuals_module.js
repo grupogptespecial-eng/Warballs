@@ -16,14 +16,14 @@ export const BARBARIAN_PALETTE = {
 };
 
 export const CLASS_VISUALS = {
-  barbaro:  { item:'saia_barbaro', scale:0.4, microAnim:'sway_low',   palette:[BARBARIAN_PALETTE.leatherBase,BARBARIAN_PALETTE.leatherLight,BARBARIAN_PALETTE.leatherStroke], weaponOverride:'axe_double_bit_v2', weaponAngleDeg:35 ,weaponOffsetMult:2.0, itemOffsetY:0.2},
-  ranger:   { item:'aljava_pequena', anchorAngleDeg:45, scale:0.56, microAnim:'idle_breath', palette:['#4E6B3A','#B89B6B','#2E3B22'], weaponAngleDeg:-25, weaponScale:1.56, weaponOffsetMult:1.5 },
-  monge:    { item:'colar_monge',    scale:0.6, palette:[] },
-  paladino: { item:'insignia_escudo',anchorAngleDeg:20, scale:0.45, microAnim:'glint_slow',   palette:['#C9C9C9','#E6D27A','#7A6A3A'], weaponAngleDeg:-90, weaponScale:2.0, weaponOffsetMult:2.0 },
-  clerigo:  { item:'sigilo_sol',     anchorAngleDeg:330,scale:0.34, microAnim:'soft_glow',    palette:['#FFD67A','#F4B43A','#8A6A2A'], weaponAngleDeg:90, weaponScale:2.5, weaponOffsetMult:1.8 },
-  bruxo:    { item:'chifres_duplos', anchorAngleDeg:270,scale:0.18, microAnim:'idle_breath',  palette:['#7E57C2','#A586E8','#40345A'], weaponAngleDeg:-10 },
-  artifice: { item:'goggles',        anchorAngleDeg:270, scale:0.16, microAnim:'idle_breath',  palette:['#A6B1B8','#E0E7EA','#3B4A5A'], weaponOverride:'arcane_cannon', weaponAngleDeg:40, weaponScale:1.8, weaponOffsetMult:1.5 },
-  guerreiro:{ item:'ombreira_metal', anchorAngleDeg:210,scale:0.60, microAnim:'sway_low',     palette:['#9BA4AE','#6B757F','#CACFD6'], weaponAngleDeg:15, weaponScale:3.5, weaponOffsetMult:2.8 }
+  barbaro:  { item:'saia_barbaro', scale:0.4, microAnim:'sway_low',   palette:[BARBARIAN_PALETTE.leatherBase,BARBARIAN_PALETTE.leatherLight,BARBARIAN_PALETTE.leatherStroke], weaponOverride:'axe_double_bit_v2', weaponAngleDeg:35 ,weaponOffsetMult:2.0, itemOffsetY:0.2, distanceFromCenter:0.82, internalRotationDeg:0 },
+  ranger:   { item:'aljava_pequena', anchorAngleDeg:45, scale:0.56, microAnim:'idle_breath', palette:['#4E6B3A','#B89B6B','#2E3B22'], weaponAngleDeg:-25, weaponScale:1.56, weaponOffsetMult:1.5, distanceFromCenter:0.82, internalRotationDeg:0 },
+  monge:    { item:'colar_monge',    scale:0.6, palette:[], distanceFromCenter:0.82, internalRotationDeg:0 },
+  paladino: { item:'insignia_escudo',anchorAngleDeg:20, scale:0.45, microAnim:'glint_slow',   palette:['#C9C9C9','#E6D27A','#7A6A3A'], weaponAngleDeg:-90, weaponScale:2.0, weaponOffsetMult:2.0, distanceFromCenter:0.82, internalRotationDeg:0 },
+  clerigo:  { item:'sigilo_sol',     anchorAngleDeg:330,scale:0.34, microAnim:'soft_glow',    palette:['#FFD67A','#F4B43A','#8A6A2A'], weaponAngleDeg:90, weaponScale:2.5, weaponOffsetMult:1.8, distanceFromCenter:0.82, internalRotationDeg:0 },
+  bruxo:    { item:'chifres_duplos', anchorAngleDeg:270,scale:0.18, microAnim:'idle_breath',  palette:['#7E57C2','#A586E8','#40345A'], weaponAngleDeg:-10, distanceFromCenter:0.82, internalRotationDeg:0 },
+  artifice: { item:'goggles',        anchorAngleDeg:270, scale:0.36, microAnim:'idle_breath',  palette:['#A6B1B8','#E0E7EA','#3B4A5A'], weaponOverride:'arcane_cannon', weaponAngleDeg:40, weaponScale:1.8, weaponOffsetMult:1.5, distanceFromCenter:0.82, internalRotationDeg:90 },
+  guerreiro:{ item:'ombreira_metal', anchorAngleDeg:210,scale:0.60, microAnim:'sway_low',     palette:['#9BA4AE','#6B757F','#CACFD6'], weaponAngleDeg:15, weaponScale:3.5, weaponOffsetMult:2.8, distanceFromCenter:0.82, internalRotationDeg:0 }
 };
 
 // Aliases (compat)
@@ -317,7 +317,38 @@ export function renderUnitPreview(ctx, unit, teamColor, now){
   ctx.fill();
   ctx.globalAlpha = 1;
   // 3) itens
-  const cfg=CLASS_VISUALS[unit.className]; if (cfg){ const pal=cfg.palette||[]; const baseScale=(cfg.scale ?? CLASS_ITEM_SCALE_DEFAULT)*(unit.bodyR*2)*GLOBAL_ITEM_SCALE_MULT; if (cfg.item==='chifres_duplos' || cfg.item==='colar_monge' || (ITEM_ALIASES[cfg.item]==='saia_barbaro')){ ctx.save(); ctx.translate(unit.pos.x,unit.pos.y); applyMicroAnim(ctx,cfg.microAnim,now); drawItemSprite(ctx,cfg.item, baseScale, pal, now); ctx.restore(); } else { const safeR=LEVEL_SAFE_RADIUS_MULT*unit.bodyR; const anchor=(cfg.anchorAngleDeg||0)*Math.PI/180; let dist=unit.bodyR*0.82; if(dist<safeR) dist=safeR; let x=unit.pos.x+Math.cos(anchor)*dist, y=unit.pos.y+Math.sin(anchor)*dist; ctx.save(); ctx.translate(x,y); ctx.rotate(anchor); applyMicroAnim(ctx,cfg.microAnim,now); drawItemSprite(ctx,cfg.item,baseScale,pal,now); ctx.restore(); } }
+  const cfg=CLASS_VISUALS[unit.className];
+  if (cfg){
+    const pal=cfg.palette||[];
+    const baseScale=(cfg.scale ?? CLASS_ITEM_SCALE_DEFAULT)*(unit.bodyR*2)*GLOBAL_ITEM_SCALE_MULT;
+    const iRot=(cfg.internalRotationDeg ?? 0)*Math.PI/180;
+    if (cfg.item==='chifres_duplos' || cfg.item==='colar_monge' || (ITEM_ALIASES[cfg.item]==='saia_barbaro')){
+      ctx.save();
+      const offX=unit.bodyR*(cfg.itemOffsetX ?? 0);
+      const offY=unit.bodyR*(cfg.itemOffsetY ?? 0);
+      ctx.translate(unit.pos.x+offX,unit.pos.y+offY);
+      ctx.rotate(iRot);
+      applyMicroAnim(ctx,cfg.microAnim,now);
+      drawItemSprite(ctx,cfg.item, baseScale, pal, now);
+      ctx.restore();
+    } else {
+      const safeR=LEVEL_SAFE_RADIUS_MULT*unit.bodyR;
+      const anchor=(cfg.anchorAngleDeg||0)*Math.PI/180;
+      let dist=unit.bodyR*(cfg.distanceFromCenter ?? 0.82);
+      if(dist<safeR) dist=safeR;
+      const offX=unit.bodyR*(cfg.itemOffsetX ?? 0);
+      const offY=unit.bodyR*(cfg.itemOffsetY ?? 0);
+      const x=unit.pos.x+Math.cos(anchor)*dist+offX;
+      const y=unit.pos.y+Math.sin(anchor)*dist+offY;
+      ctx.save();
+      ctx.translate(x,y);
+      ctx.rotate(anchor);
+      ctx.rotate(iRot);
+      applyMicroAnim(ctx,cfg.microAnim,now);
+      drawItemSprite(ctx,cfg.item,baseScale,pal,now);
+      ctx.restore();
+    }
+  }
   // 4) arma (omitida para classes sem arma, ex.: monge)
   if (unit.className !== 'monge') {
     ctx.save();

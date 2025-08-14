@@ -909,11 +909,13 @@ export class Unit {
     const now = performance.now();
     const pal = cfg.palette || [];
     const itemId = cfg.item;
+    const iRot = (cfg.internalRotationDeg ?? 0) * Math.PI / 180;
     if (itemId === 'chifres_duplos' || itemId === 'colar_monge' || ITEM_ALIASES[itemId] === 'saia_barbaro') {
       ctx.save();
       const offY = this.bodyR * (cfg.itemOffsetY ?? 0);
       const offX = this.bodyR * (cfg.itemOffsetX ?? 0);
       ctx.translate(this.pos.x + offX, this.pos.y + offY);
+      ctx.rotate(iRot);
       applyMicroAnim(ctx, cfg.microAnim, now);
       const scale = (cfg.scale ?? CLASS_ITEM_SCALE_DEFAULT) * (this.bodyR * 2) * GLOBAL_ITEM_SCALE_MULT;
       drawItemSprite(ctx, itemId, scale, pal, now);
@@ -923,7 +925,7 @@ export class Unit {
 
     const anchor = (cfg.anchorAngleDeg || 0) * Math.PI / 180;
     const safeR = LEVEL_SAFE_RADIUS_MULT * this.bodyR;
-    let dist = this.bodyR * 0.82;
+    let dist = this.bodyR * (cfg.distanceFromCenter ?? 0.82);
     if (dist < safeR) dist = safeR;
     const offX = this.bodyR * (cfg.itemOffsetX ?? 0);
     const offY = this.bodyR * (cfg.itemOffsetY ?? 0);
@@ -934,6 +936,7 @@ export class Unit {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(anchor);
+    ctx.rotate(iRot);
     applyMicroAnim(ctx, cfg.microAnim, now);
     drawItemSprite(ctx, itemId, scale, pal, now);
     ctx.restore();
