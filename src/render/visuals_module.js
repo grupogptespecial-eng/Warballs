@@ -16,10 +16,10 @@ export const BARBARIAN_PALETTE = {
 };
 
 export const CLASS_VISUALS = {
-  barbaro:  { item:'saia_barbaro', scale:0.45,anchorAngleDeg:100, microAnim:'sway_low',   palette:[BARBARIAN_PALETTE.leatherBase,BARBARIAN_PALETTE.leatherLight,BARBARIAN_PALETTE.leatherStroke], weaponOverride:'axe_double_bit_v2', weaponAngleDeg:35 ,weaponOffsetMult:2.0, itemOffsetY:0.0, distanceFromCenter:0.02, internalRotationDeg:-100 },
+  barbaro:  { item:'saia_barbaro', scale:0.45,anchorAngleDeg:100, microAnim:'sway_low',   palette:[BARBARIAN_PALETTE.leatherBase,BARBARIAN_PALETTE.leatherLight,BARBARIAN_PALETTE.leatherStroke], weaponOverride:'axe_double_bit_v2', weaponAngleDeg:35 ,weaponScale:1.25, weaponOffsetMult:2.0, itemOffsetY:0.0, distanceFromCenter:0.02, internalRotationDeg:-100 },
   ranger:   { item:'aljava_pequena', anchorAngleDeg:45, scale:0.56, microAnim:'idle_breath', palette:['#4E6B3A','#B89B6B','#2E3B22'], weaponAngleDeg:-25, weaponScale:1.56, weaponOffsetMult:1.5, distanceFromCenter:0.82, internalRotationDeg:0 },
   monge:    { item:'colar_monge',    scale:0.6, palette:[], distanceFromCenter:0.82, internalRotationDeg:0 },
-  paladino: { item:'insignia_escudo',anchorAngleDeg:20, scale:0.55, microAnim:'glint_slow',   palette:['#C9C9C9','#E6D27A','#7A6A3A'], weaponAngleDeg:-90, weaponScale:2.0, weaponOffsetMult:2.0, distanceFromCenter:0.62, internalRotationDeg:0 },
+  paladino: { item:'insignia_escudo',anchorAngleDeg:20, scale:0.55, microAnim:'glint_slow',   palette:['#C9C9C9','#E6D27A','#7A6A3A'], weaponAngleDeg:-90, weaponScale:1.6, weaponOffsetMult:2.0, distanceFromCenter:0.62, internalRotationDeg:0 },
   clerigo:  { item:'sigilo_sol',     anchorAngleDeg:330,scale:0.34, microAnim:'soft_glow',    palette:['#FFD67A','#F4B43A','#8A6A2A'], weaponAngleDeg:90, weaponScale:2.5, weaponOffsetMult:1.8, distanceFromCenter:0.72, internalRotationDeg:0 },
   bruxo:    {
     weaponAngleDeg:-10,
@@ -283,7 +283,7 @@ export function drawAxeDoubleBitV2(ctx, S){
 }
 
 export function drawSword(ctx,S,pal){ const [metal,gold]=pal||['#dfe5ee','#e6d27a']; rr(ctx,-S*0.04,-S*0.5,S*0.08,S*0.9,S*0.04); ctx.fillStyle=metal; ctx.fill(); rr(ctx,-S*0.18,-S*0.15,S*0.36,S*0.10,S*0.05); ctx.fillStyle=gold; ctx.fill(); rr(ctx,-S*0.04,S*0.4,S*0.08,S*0.2,S*0.04); ctx.fillStyle=shade(gold,-0.45); ctx.fill(); }
-export function drawMace(ctx,S,pal){ const [metal]=pal||['#cfd5dd']; rr(ctx,-S*0.04,-S*0.4,S*0.08,S*0.7,S*0.04); ctx.fillStyle=shade(metal,-0.2); ctx.fill(); ctx.beginPath(); ctx.arc(0,-S*0.45,S*0.12,0,TAU); ctx.fillStyle=metal; ctx.fill(); }
+export function drawMace(ctx,unit,S,pal){ const [metal]=pal||['#cfd5dd']; rr(ctx,-S*0.04,-S*0.4,S*0.08,S*0.7,S*0.04); ctx.fillStyle=shade(metal,-0.2); ctx.fill(); ctx.beginPath(); const headR = unit?.weaponTipR ?? S*0.12; ctx.arc(0,-S*0.45,headR,0,TAU); ctx.fillStyle=metal; ctx.fill(); }
 export function drawBow(ctx,S,pal){ const [wood,string]=pal||['#6e4a2b','#d9c7b0']; ctx.lineWidth=3; ctx.strokeStyle=shade(wood,-0.1); ctx.beginPath(); ctx.moveTo(-S*0.4,-S*0.4); ctx.quadraticCurveTo(0,0,-S*0.4,S*0.4); ctx.stroke(); ctx.lineWidth=1.6; ctx.strokeStyle=string; ctx.beginPath(); ctx.moveTo(-S*0.4,-S*0.4); ctx.lineTo(-S*0.4,S*0.4); ctx.stroke(); }
 export function drawBook(ctx,S,pal){ const [cover,spine]=pal||['#6f5aa3','#4d3f73']; rr(ctx,-S*0.22,-S*0.16,S*0.44,S*0.32,S*0.04); ctx.fillStyle=cover; ctx.fill(); rr(ctx,-S*0.22,-S*0.16,S*0.08,S*0.32,S*0.04); ctx.fillStyle=spine; ctx.fill(); }
 export function drawSpear(ctx,S,pal){ const [metal]=pal||['#dfe5ee']; rr(ctx,-S*0.48,-S*0.03,S*0.8,S*0.06,S*0.03); ctx.fillStyle=shade(metal,-0.35); ctx.fill(); ctx.beginPath(); ctx.moveTo(S*0.4,0); ctx.lineTo(S*0.24,-S*0.08); ctx.lineTo(S*0.24,S*0.08); ctx.closePath(); ctx.fillStyle='#e5e7eb'; ctx.fill(); }
@@ -291,7 +291,7 @@ export function drawSpear(ctx,S,pal){ const [metal]=pal||['#dfe5ee']; rr(ctx,-S*
 export function drawArcaneCannon(ctx,S,pal){ const [metal,energy,wood]=pal||['#A6B1B8','#7FDBFF','#7E572C']; rr(ctx,-S*0.25,-S*0.12,S*0.3,S*0.24,S*0.05); ctx.fillStyle=shade(wood,-0.2); ctx.fill(); ctx.lineWidth=1.2; ctx.strokeStyle='rgba(0,0,0,0.7)'; ctx.stroke(); ctx.beginPath(); ctx.rect(-S*0.05,-S*0.15,S*0.55,S*0.30); let g=ctx.createLinearGradient(-S*0.05,0,S*0.5,0); g.addColorStop(0,shade(metal,-0.2)); g.addColorStop(1,metal); ctx.fillStyle=g; ctx.fill(); ctx.strokeStyle='rgba(0,0,0,0.7)'; ctx.stroke(); ctx.beginPath(); ctx.arc(S*0.5,0,S*0.18,-Math.PI/2,Math.PI/2); ctx.fillStyle=energy; ctx.fill(); ctx.stroke(); }
 
 // ===== Escolha de arma por classe/override
-export function drawWeaponForUnit(ctx, unit, S){ const cfg = CLASS_VISUALS[unit.className] || {}; if (cfg.weaponOverride === 'axe_double_bit_v2') return drawAxeDoubleBitV2(ctx,S,cfg.palette); if (cfg.weaponOverride === 'arcane_cannon') return drawArcaneCannon(ctx,S,cfg.palette); switch(unit.className){ case 'ranger': return drawBow(ctx,S,cfg.palette); case 'paladino': return drawSword(ctx,S,cfg.palette); case 'clerigo': return drawMace(ctx,S,cfg.palette); case 'bruxo': return drawBook(ctx,S,cfg.palette); case 'guerreiro': return drawSpear(ctx,S,cfg.palette); case 'artifice': return drawArcaneCannon(ctx,S,cfg.palette); case 'monge': return; default: return drawMace(ctx,S,cfg.palette); } }
+export function drawWeaponForUnit(ctx, unit, S){ const cfg = CLASS_VISUALS[unit.className] || {}; if (cfg.weaponOverride === 'axe_double_bit_v2') return drawAxeDoubleBitV2(ctx,S,cfg.palette); if (cfg.weaponOverride === 'arcane_cannon') return drawArcaneCannon(ctx,S,cfg.palette); switch(unit.className){ case 'ranger': return drawBow(ctx,S,cfg.palette); case 'paladino': return drawSword(ctx,S,cfg.palette); case 'clerigo': return drawMace(ctx,unit,S,cfg.palette); case 'bruxo': return drawBook(ctx,S,cfg.palette); case 'guerreiro': return drawSpear(ctx,S,cfg.palette); case 'artifice': return drawArcaneCannon(ctx,S,cfg.palette); case 'monge': return; default: return drawMace(ctx,unit,S,cfg.palette); } }
 
 // ===== Render Unit (bola + item + arma + nível)
 export function renderUnitPreview(ctx, unit, teamColor, now){

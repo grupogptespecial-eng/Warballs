@@ -20,7 +20,7 @@ export const CLASSES = {
   barbaro:   { label: 'Bárbaro',   color: '#f97316', hasRanged: false, weaponLen: 40, tipRadius: 11, omega: 3.0 },
   paladino:  { label: 'Paladino',  color: '#fde047', hasRanged: false, weaponLen: 36, tipRadius: 10, omega: 3.6 },
   monge:     { label: 'Monge',     color: '#60a5fa', hasRanged: false, weaponLen: 0,  tipRadius: 0,  omega: 0.0 },
-  clerigo:   { label: 'Clérigo',   color: '#93c5fd', hasRanged: false, weaponLen: 36, tipRadius: 12, omega: 3.6 },
+  clerigo:   { label: 'Clérigo',   color: '#93c5fd', hasRanged: false, weaponLen: 36, tipRadius: 15.6, omega: 3.6 },
   ranger:    { label: 'Ranger',    color: '#34d399', hasRanged: true,  cooldownMiraPercent: 0.25, weaponLen: 36, tipRadius: 8,  omega: 3.6 },
   bruxo:     { label: 'Bruxo',     color: '#a78bfa', hasRanged: true,  cooldownMiraPercent: 0.10, weaponLen: 20, tipRadius: 6,  omega: 3.4 },
   artifice:  { label: 'Artífice',  color: '#7FDBFF', hasRanged: true,  cooldownMiraPercent: 0.20, weaponLen: 34, tipRadius: 8,  omega: 3.6 },
@@ -409,10 +409,10 @@ export const LEVEL_SAFE_RADIUS_MULT = 0.42;
 // Configuração visual por classe. Cada item é posicionado usando um ângulo fixo
 // e pode ajustar escala, animação e paleta de cores.
 export const CLASS_VISUALS = {
-  barbaro:  { item:'saia_barbaro', scale:0.45,anchorAngleDeg:100, microAnim:'sway_low',   palette:[BARBARIAN_PALETTE.leatherBase,BARBARIAN_PALETTE.leatherLight,BARBARIAN_PALETTE.leatherStroke], weaponOverride:'axe_double_bit_v2', weaponAngleDeg:35 ,weaponOffsetMult:2.0, itemOffsetY:0.0, distanceFromCenter:0.02, internalRotationDeg:-100 },
+  barbaro:  { item:'saia_barbaro', scale:0.45,anchorAngleDeg:100, microAnim:'sway_low',   palette:[BARBARIAN_PALETTE.leatherBase,BARBARIAN_PALETTE.leatherLight,BARBARIAN_PALETTE.leatherStroke], weaponOverride:'axe_double_bit_v2', weaponAngleDeg:35 ,weaponScale:1.25, weaponOffsetMult:2.0, itemOffsetY:0.0, distanceFromCenter:0.02, internalRotationDeg:-100 },
   ranger:   { item:'aljava_pequena', anchorAngleDeg:45, scale:0.56, microAnim:'idle_breath', palette:['#4E6B3A','#B89B6B','#2E3B22'], weaponAngleDeg:-25, weaponScale:1.56, weaponOffsetMult:1.5, distanceFromCenter:0.82, internalRotationDeg:0 },
   monge:    { item:'colar_monge',    scale:0.6, palette:[], distanceFromCenter:0.82, internalRotationDeg:0 },
-  paladino: { item:'insignia_escudo',anchorAngleDeg:20, scale:0.55, microAnim:'glint_slow',   palette:['#C9C9C9','#E6D27A','#7A6A3A'], weaponAngleDeg:-90, weaponScale:2.0, weaponOffsetMult:2.0, distanceFromCenter:0.62, internalRotationDeg:0 },
+  paladino: { item:'insignia_escudo',anchorAngleDeg:20, scale:0.55, microAnim:'glint_slow',   palette:['#C9C9C9','#E6D27A','#7A6A3A'], weaponAngleDeg:-90, weaponScale:1.6, weaponOffsetMult:2.0, distanceFromCenter:0.62, internalRotationDeg:0 },
   clerigo:  { item:'sigilo_sol',     anchorAngleDeg:330,scale:0.34, microAnim:'soft_glow',    palette:['#FFD67A','#F4B43A','#8A6A2A'], weaponAngleDeg:90, weaponScale:2.5, weaponOffsetMult:1.8, distanceFromCenter:0.72, internalRotationDeg:0 },
   bruxo:    {
     weaponAngleDeg:-10,
