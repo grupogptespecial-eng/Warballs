@@ -11,8 +11,7 @@ import { game } from '../core/game.js';
 export function rangerStats(level) {
   const L = Math.max(1, Math.min(level | 0, CFG.level.max));
   const cd = CFG.ranged.cooldown * (1 - 0.06 * Math.min(10, L - 1) / 10);
-  // dano base aumentado em 50%
-  const dmgBase = (10 + Math.floor((L - 1) * 1.2)) * 1.5;
+  const dmgBase = (10 + Math.floor((L - 1) * 1.2)) * 1.8 * 1.2 * 1.3;
   const numArrows = (L >= 12) ? 2 : 1;
   const spread = 0.18;
   const speed = CFG.ranger.arrow.baseSpeed + CFG.ranger.arrow.speedPerLevel * (L - 1);

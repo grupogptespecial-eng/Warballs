@@ -10,11 +10,11 @@ export function drawPreview(mode = 'padrao', params = {}){
   const w = previewCanvas.width, h = previewCanvas.height;
 
   // fundo
-  const grd = pctx.createLinearGradient(0,0,0,h);
-  grd.addColorStop(0,'#0f1622');
-  grd.addColorStop(1,'#0a111b');
+  const grd = pctx.createLinearGradient(0, 0, 0, h);
+  grd.addColorStop(0, CFG.theme.bg);
+  grd.addColorStop(1, CFG.theme.bg2);
   pctx.fillStyle = grd;
-  pctx.fillRect(0,0,w,h);
+  pctx.fillRect(0, 0, w, h);
 
   // grid
   pctx.save();

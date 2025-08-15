@@ -3,10 +3,16 @@ import { startLoop, stopLoop } from '../core/loop.js';
 import { addUnitRow, populateCratePanel, readCrateConfig } from '../ui/debugOverlay.js';
 import { unitListEl, btnAddUnit, arenaNameEl } from '../utils/misc.js';
 import { Unit } from '../unit/unit.js';
-import { TEAM, CFG } from '../config/cfg.js';
+import { TEAM, CFG, setTheme } from '../config/cfg.js';
 import { V } from '../math/vec.js';
 import { drawPreview } from '../render/preview.js';
 import { CrateSystem } from '../core/crateSystem.js';
+
+let paused = false;
+function updatePauseButton() {
+  const btnPause = document.getElementById('btnPause');
+  if (btnPause) btnPause.textContent = paused ? 'Retomar' : 'Pausar';
+}
 
 function gatherUnits() {
   const rows = unitListEl ? unitListEl.querySelectorAll('.unit-item') : [];
@@ -57,23 +63,26 @@ function startGame() {
   game.arena.update(0, { x: 0, y: 0, w: game.canvas.width, h: game.canvas.height });
   game.bounds = game.arena.bounds;
 
+  // reset arrays
   game.units = [];
   game.projectiles = [];
   game.effects = [];
   game.particles = [];
   game.summons = [];
+  game.restartTimer && clearTimeout(game.restartTimer);
+  game.restartTimer = null;
+
   const units = gatherUnits();
   units.forEach(u => game.spawnUnit(u));
+
+  paused = false;
+  updatePauseButton();
   startLoop();
 }
 
 function resetGame() {
   stopLoop();
-  game.units = [];
-  game.projectiles = [];
-  game.effects = [];
-  game.particles = [];
-  game.summons = [];
+  startGame();
 }
 
 export function boot() {
@@ -116,7 +125,38 @@ export function boot() {
   const btnStartOverlay = document.getElementById('btnStartOverlay');
   btnStartOverlay && (btnStartOverlay.onclick = startGame);
   const btnPause = document.getElementById('btnPause');
-  btnPause && (btnPause.onclick = () => stopLoop());
+  btnPause && (btnPause.onclick = () => {
+    if (paused) startLoop(); else stopLoop();
+    paused = !paused;
+    updatePauseButton();
+  });
+  updatePauseButton();
   const btnReset = document.getElementById('btnReset');
   btnReset && (btnReset.onclick = resetGame);
+
+  const btnTheme = document.getElementById('btnTheme');
+  const iconMoon = document.getElementById('iconMoon');
+  const iconSun = document.getElementById('iconSun');
+  function applyTheme(name) {
+    document.body.dataset.theme = name;
+    setTheme(name);
+    if (iconMoon && iconSun) {
+      iconMoon.style.display = name === 'light' ? 'none' : '';
+      iconSun.style.display = name === 'light' ? '' : 'none';
+    }
+    const mode = arenaSel?.value || 'padrao';
+    drawPreview(mode, getArenaParams(mode));
+  }
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  applyTheme(savedTheme);
+  btnTheme && (btnTheme.onclick = () => {
+    const next = document.body.dataset.theme === 'light' ? 'dark' : 'light';
+    applyTheme(next);
+    localStorage.setItem('theme', next);
+  });
+
+  if (typeof window !== 'undefined') {
+    window.startGame = startGame;
+    window.stopLoop = stopLoop;
+  }
 }

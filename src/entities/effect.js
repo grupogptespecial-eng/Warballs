@@ -18,6 +18,7 @@ export class Effect {
     if (this.type === 'expand') {
       const progress = 1 - (this.life / this.maxLife);
       this.radius = this.maxRadius * progress;
+      if (this.radius < 0) this.radius = 0;
     }
   }
 
@@ -25,6 +26,7 @@ export class Effect {
     if (!this.alive) return;
     const alpha = this.life / this.maxLife;
     ctx.save();
+    if (this.radius <= 0) { ctx.restore(); return; }
     ctx.globalAlpha = alpha * 0.8;
     ctx.strokeStyle = this.color;
     ctx.lineWidth = 4;

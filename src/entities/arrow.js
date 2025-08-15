@@ -53,26 +53,25 @@ export class Arrow extends Projectile {
       return;
     }
     // visual especial (perfect shot)
-    if (this.visual === 'perfect') {
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      if (this.trail.length > 1) {
-        ctx.lineWidth = 4;
-        ctx.lineCap = 'round';
-        ctx.strokeStyle = 'rgba(186,247,204,0.9)';
+      if (this.visual === 'perfect') {
+        ctx.save();
+        if (this.trail.length > 1) {
+          ctx.lineWidth = 4;
+          ctx.lineCap = 'round';
+          ctx.strokeStyle = '#059669';
+          ctx.beginPath();
+          ctx.moveTo(this.trail[0].x, this.trail[0].y);
+          for (const p of this.trail) ctx.lineTo(p.x, p.y);
+          ctx.stroke();
+        }
+        ctx.fillStyle = '#10b981';
+        ctx.shadowBlur = 8; ctx.shadowColor = '#059669';
         ctx.beginPath();
-        ctx.moveTo(this.trail[0].x, this.trail[0].y);
-        for (const p of this.trail) ctx.lineTo(p.x, p.y);
-        ctx.stroke();
+        ctx.arc(this.pos.x, this.pos.y, this.rad + 1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        return;
       }
-      ctx.shadowBlur = 12; ctx.shadowColor = '#baf7cc';
-      ctx.fillStyle = '#eafff3';
-      ctx.beginPath();
-      ctx.arc(this.pos.x, this.pos.y, this.rad + 1, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      return;
-    }
     // padrão
     ctx.save();
     ctx.globalAlpha = .95;

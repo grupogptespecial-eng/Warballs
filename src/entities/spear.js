@@ -1,28 +1,38 @@
 // Lança arremessada pelo Guerreiro
 
 import { CFG } from '../config/cfg.js';
-import { shade } from '../utils/misc.js';
-import { distPointToSegment } from '../utils/geometry.js';
+import { sweepSegmentCircle } from '../utils/geometry.js';
 import { randAng, rrand } from '../utils/rand.js';
 import { game } from '../core/game.js';
 import { Particle } from './particle.js';
 import { V } from '../math/vec.js';
 import { Projectile } from './projectile.js';
 import { spawnSpearTrail } from '../vfx/spear_trail.js';
+import { CLASS_VISUALS, CLASSES } from '../config/cfg.js';
+import { drawSpear } from '../render/visuals_module.js';
 
 export class SpearProjectile extends Projectile {
   constructor(owner, pos, dir) {
     super(owner, pos, dir);
     const T = CFG.guerreiro.throw;
-    const S = CFG.guerreiro.spear;
     this.speed = T.speed * CFG.body.radius;
     this.life = T.flightMaxTime;
-    this.rad = S.shaftThickness * CFG.body.radius;
+    // Derive physical dimensions from the same values used for the warrior's in-hand spear
+    // so the projectile mirrors the weapon visible on the unit and in previews.
+    const vis = CLASS_VISUALS.guerreiro || {};
+    const len = owner ? owner.weaponLen
+      : (CLASSES.guerreiro.weaponLen * (vis.weaponScale ?? 1));
+    const rad = owner ? owner.weaponTipR
+      : (CLASSES.guerreiro.tipRadius * (vis.weaponThickness ?? 1) * (vis.weaponScale ?? 1));
+    this.len = len;
+    this.rad = rad;
+    const pal = vis.palette;
+    this.color = pal ? pal[0] : '#9ca3af';
     this.dmgBase = CFG.guerreiro.damage.throwBase * (owner ? owner.dmgMult() : 1);
     this.knock = 260;
-    this.color = '#e5e7eb';
-    this.len = S.shaftLenFactor * CFG.body.radius;
+    this.finalDir = dir.clone();
     this.angle = Math.atan2(this.dir.y, this.dir.x);
+    this.attached = false;
     this.visual = 'spear';
   }
 
@@ -38,8 +48,25 @@ export class SpearProjectile extends Projectile {
   }
 
   update(dt, arena, units) {
+    if (this.attached && this.owner && this.owner.gw) {
+      const gw = this.owner.gw;
+      const base = this.owner.weaponBase();
+      const dir = V.fromAng(this.owner.angle);
+      const t = gw.releaseT / gw.releaseDur;
+      this.pos = base.add(dir.clone().mul(gw.baseWeaponLen * (1 - t)));
+      this.angle = this.owner.angle;
+      if (gw.releaseT <= 0) {
+        this.attached = false;
+        this.dir = this.finalDir.clone();
+        this.angle = Math.atan2(this.dir.y, this.dir.x);
+        for (let i = 0; i < 3; i++) spawnSpearTrail(this.pos.clone(), this.dir.clone());
+      } else {
+        return;
+      }
+    }
     this.life -= dt;
     if (this.life <= 0) { this.alive = false; return; }
+    const prev = this.segment();
     this.stepMove(dt);
     spawnSpearTrail(this.pos.clone(), this.dir.clone());
 
@@ -54,8 +81,7 @@ export class SpearProjectile extends Projectile {
     for (const u of units) {
       if (!u.alive || u === this.owner) continue;
       if (this.owner && u.team && this.owner.team && u.team === this.owner.team && !CFG.guerreiro.throw.friendlyFire) continue;
-      const d = distPointToSegment(u.pos, tail, tip);
-      if (d < u.bodyR + this.rad) {
+      if (sweepSegmentCircle(prev.tail, prev.tip, tail, tip, u.pos, u.bodyR + this.rad)) {
         let dmg = this.dmgBase;
         const proj = ((u.pos.x - tail.x) * this.dir.x + (u.pos.y - tail.y) * this.dir.y);
         if (proj > this.len * 0.8) dmg *= CFG.guerreiro.spear.tipBonus;
@@ -84,35 +110,13 @@ export class SpearProjectile extends Projectile {
   }
 
   draw(ctx) {
-    const shaft = 28;
     ctx.save();
     ctx.translate(this.pos.x, this.pos.y);
     ctx.rotate(this.angle);
-
-    // cabo
-    ctx.strokeStyle = shade(this.color, -0.25);
-    ctx.lineWidth = 3;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(-shaft, 0);
-    ctx.lineTo(this.rad + 8, 0);
-    ctx.stroke();
-
-    // contrapeso
-    ctx.beginPath();
-    ctx.arc(-shaft, 0, 3.5, 0, Math.PI * 2);
-    ctx.fillStyle = shade(this.color, -0.35);
-    ctx.fill();
-
-    // ponta triangular
-    ctx.beginPath();
-    ctx.moveTo(this.rad + 10, 0);
-    ctx.lineTo(this.rad - 4, -6);
-    ctx.lineTo(this.rad - 4, 6);
-    ctx.closePath();
-    ctx.fillStyle = '#e5e7eb';
-    ctx.fill();
-
+    const scale = this.len / 0.88;
+    ctx.translate(-0.4 * scale, 0);
+    const pal = CLASS_VISUALS.guerreiro?.palette;
+    drawSpear(ctx, scale, pal);
     ctx.restore();
   }
 }

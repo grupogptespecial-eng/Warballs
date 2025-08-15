@@ -58,7 +58,9 @@ export function tryUrro(dt) {
     const d = new V(o.pos.x - this.pos.x, o.pos.y - this.pos.y).len();
     if (d <= R.threatR) many++;
   }
-  const low = (this.hp / this.hpMax) < 0.35;
-  if (many >= R.need || low) { this.urroT = R.duration; this.urroCD = R.cd; }
+  if (many >= R.need) {
+    this.urroT = R.duration;
+    this.urroCD = R.cd;
+  }
 }
 

@@ -37,24 +37,11 @@ export class Mine {
       return;
     }
 
-    // arena bounds policy
+    // arena bounds: despawn if outside
     if (arena) {
       const inside = this.pos.x >= arena.x && this.pos.x <= arena.x + arena.w &&
                      this.pos.y >= arena.y && this.pos.y <= arena.y + arena.h;
-      if (!inside) {
-        const policy = this.owner.art?.cfg?.arenaBRPolicy || 'despawn';
-        if (policy === 'despawn') {
-          this.alive = false;
-          return;
-        } else if (policy === 'pushInwards') {
-          this.pos.x = clamp(this.pos.x, arena.x + this.bodyR, arena.x + arena.w - this.bodyR);
-          this.pos.y = clamp(this.pos.y, arena.y + this.bodyR, arena.y + arena.h - this.bodyR);
-        } else if (policy === 'disableOutside') {
-          this.disabled = true;
-          this.disableT = 3;
-          return;
-        }
-      }
+      if (!inside) { this.alive = false; return; }
     }
 
     // arming

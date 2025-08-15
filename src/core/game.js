@@ -24,6 +24,7 @@ export const game = {
   arena: new Arena('padrao'),
   bounds: { x: 0, y: 0, w: canvas ? canvas.width : 0, h: canvas ? canvas.height : 0 },
   debugHit: false,
+  restartTimer: null,
 
   init() {
     this.resize();
@@ -61,6 +62,13 @@ export const game = {
   // Hooks de gameplay (placeholders)
   onDeath(u) {},
   onDamage(d) {},
+  onFamiliarDeath(f) {
+    const owner = f.owner;
+    if (owner) {
+      owner.familiarRef = null;
+      owner.brxFamCD = CFG.bruxo.familiar.cdAfterDeath;
+    }
+  },
 
   paladinExplosion(owner, pos, radius, dmg) {
     this.spawnEffect(new Effect(pos.clone(), radius, 0.55, CFG.paladino.sacred.color));
@@ -112,6 +120,14 @@ export const game = {
     this.effects = this.effects.filter(e => e.alive !== false);
     this.particles = this.particles.filter(p => p.alive);
     this.summons = this.summons.filter(s => s.alive);
+
+    if (this.units.length <= 1 && !this.restartTimer && typeof window !== 'undefined') {
+      window.stopLoop?.();
+      this.restartTimer = setTimeout(() => {
+        this.restartTimer = null;
+        window.startGame?.();
+      }, 3000);
+    }
   },
 
   draw() {

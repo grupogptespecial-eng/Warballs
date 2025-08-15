@@ -1,13 +1,13 @@
-import { CFG, CLASSES, CLASS_VISUALS, CLASS_ITEM_SCALE_DEFAULT, GLOBAL_ITEM_SCALE_MULT, LEVEL_SAFE_RADIUS_MULT } from '../config/cfg.js';
+import { CFG, CLASSES, CLASS_VISUALS, CLASS_ITEM_SCALE_DEFAULT, GLOBAL_ITEM_SCALE_MULT, LEVEL_SAFE_RADIUS_MULT, ITEM_ALIASES } from '../config/cfg.js';
 import { V } from '../math/vec.js';
 import { clamp, shade } from '../utils/misc.js';
 import { randAng, rrand } from '../utils/rand.js';
-import { drawRoundedRect, distPointToSegment } from '../utils/geometry.js';
+import { drawRoundedRect, distPointToSegment, sweepSegmentCircle, distSegmentToSegment } from '../utils/geometry.js';
 import { Particle } from '../entities/particle.js';
 import { Effect } from '../entities/effect.js';
 import { Projectile } from '../entities/projectile.js';
 import { game } from '../core/game.js';
-import { drawItemSprite, drawWeaponForUnit, applyMicroAnim, ITEM_ALIASES } from '../render/visuals_module.js';
+import { drawItemSprite, drawWeaponForUnit, applyMicroAnim } from '../render/visuals_module.js';
 
 import {
   makeMonkState,
@@ -71,8 +71,17 @@ import {
 } from './bruxo.js';
 
 import {
+  fire as bardoFire,
+  inspire as bardoInspire,
+  startRitmoDeGuerra as bardoRitmo,
+  fireNotaCortante as bardoNotaCortante
+} from './bardo.js';
+
+import {
   updateGuerreiro,
-  guerreiroParryAgainst
+  guerreiroParryAgainst,
+  registerSwap,
+  fire as guerreiroFire
 } from './guerreiro.js';
 
 import {
@@ -114,8 +123,12 @@ export class Unit {
 
     this.weaponLen = CFG.weapon.length;
     this.weaponTipR = CFG.weapon.tipRadius;
+    this.weaponOffset = this.bodyR;
     this.omega = CFG.weapon.omega * (Math.random() < 0.5 ? -1 : 1);
     this.angle = randAng();
+
+    this.prevTip = new V(0, 0);
+    this.prevBase = new V(0, 0);
 
     this.hasRanged = false;
     this.cooldownMiraPercent = 0;
@@ -133,6 +146,12 @@ export class Unit {
     this.idleT = 0;
     this.stillT = 0;
     this.speedMult = 1.0;
+    this.baseSpeedMult = 1.0;
+    this.bardBuffT = 0;
+    this.bardDebuffT = 0;
+    this.bardInspire = null;
+    this.ritmoAura = false;
+    this.tempHP = 0;
 
     this.palShieldT = 0;
     this.palShieldCD = 0;
@@ -154,12 +173,29 @@ export class Unit {
 
     // Estado interno do Guerreiro
     this.gw = null;
+
+    this.prevTip = this.tip();
+    this.prevBase = this.weaponBase();
+  }
+
+  applyWeaponVisuals(cfg) {
+    const lenScale = cfg.weaponScale ?? 1;
+    const tipScale = (cfg.weaponThickness ?? 1) * lenScale;
+    this.weaponLen = cfg.weaponLen * lenScale;
+    this.weaponTipR = cfg.tipRadius * tipScale;
+    const offMult = cfg.weaponOffsetMult ?? 1;
+    this.weaponOffset = this.bodyR * offMult;
   }
 
   // === Inicialização e progressão ===
   applyClassDefaults() {
-    this.hasRanged = !!CLASSES[this.className]?.hasRanged;
-    this.cooldownMiraPercent = CLASSES[this.className]?.cooldownMiraPercent || 0;
+    const base = CLASSES[this.className] || {};
+    this.hasRanged = !!base.hasRanged;
+    this.cooldownMiraPercent = base.cooldownMiraPercent || 0;
+    if (base.weaponLen != null) this.weaponLen = base.weaponLen;
+    if (base.tipRadius != null) this.weaponTipR = base.tipRadius;
+    if (base.omega != null) this.omega = base.omega * (Math.random() < 0.5 ? -1 : 1);
+
     if (this.className === 'ranger') {
       this.baseHP = CFG.ranger.hpBase;
       this.hpMax = this.baseHP;
@@ -178,8 +214,6 @@ export class Unit {
       this.dashTarget = null;
       this.urroT = 0;
       this.urroCD = 0;
-      this.weaponLen = 40;
-      this.weaponTipR = 11;
 
     } else if (this.className === 'paladino') {
       this.baseHP = palHP(1);
@@ -203,6 +237,14 @@ export class Unit {
       this.clericFlameTimer = Math.max(0.2, first);
       this.beamT = 0;
       this._beamNext = 0;
+
+    } else if (this.className === 'bardo') {
+      this.baseHP = CFG.bardo.hpBase;
+      this.hpMax = this.baseHP;
+      this.hp = this.hpMax;
+      this.bardInspire = () => bardoInspire(this);
+      this.a1cd = CFG.bardo.ritmo.cooldown;
+      this.a2cd = CFG.bardo.cortante.cd;
 
     } else if (this.className === 'bruxo') {
       this.baseHP = CFG.bruxo.hpBase;
@@ -231,10 +273,7 @@ export class Unit {
         this.weaponTipR = S.shaftThickness * CFG.body.radius;
         this.gw = {
           state: 'IDLE',
-          meleeCD: 0,
-          throwCD: 0,
           disarmT: 0,
-          aimT: 0,
           maneuverCD: 0,
           lastAttackType: null,
           lastAttackTime: 0,
@@ -244,10 +283,29 @@ export class Unit {
           stanceActive: false,
           stanceGrace: 0,
           baseOmega: this.omega,
-          baseWeaponLen: this.weaponLen,
-          baseWeaponTipR: this.weaponTipR
+          baseWeaponLen: 0,
+          baseWeaponTipR: 0,
+          baseWeaponOffset: 0,
+          disableMelee: false
         };
       }
+
+    const vis = CLASS_VISUALS[this.className] || {};
+    this.applyWeaponVisuals({
+      weaponLen: this.weaponLen,
+      tipRadius: this.weaponTipR,
+      weaponScale: vis.weaponScale,
+      weaponOffsetMult: vis.weaponOffsetMult,
+      weaponThickness: vis.weaponThickness
+    });
+    if (this.className === 'guerreiro' && this.gw) {
+      this.gw.baseWeaponLen = this.weaponLen;
+      this.gw.baseWeaponTipR = this.weaponTipR;
+      this.gw.baseWeaponOffset = this.weaponOffset;
+    }
+    this.baseSpeedMult = this.speedMult;
+    this.prevTip = this.tip();
+    this.prevBase = this.weaponBase();
   }
 
   xpCost() { return CFG.xp.cost(this.level); }
@@ -271,6 +329,7 @@ export class Unit {
       this.hpMax = CFG.ranger.hpBase + CFG.ranger.hpPerLevel * (this.level - 1);
       this.hp = clamp(Math.round(this.hpMax * ratio), 1, this.hpMax);
       this.speedMult = rangerSpeedMult(this.level);
+      this.baseSpeedMult = this.speedMult;
     } else if (this.className === 'barbaro') {
       this.hpMax = barbHP(this.level);
       this.hp = clamp(Math.round(this.hpMax * ratio), 1, this.hpMax);
@@ -279,6 +338,10 @@ export class Unit {
     } else if (this.className === 'paladino') {
       this.hpMax = palHP(this.level);
       this.hp = clamp(Math.round(this.hpMax * ratio), 1, this.hpMax);
+    } else if (this.className === 'bardo') {
+      this.hpMax = CFG.bardo.hpBase + CFG.bardo.hpPerLevel * (this.level - 1);
+      this.hp = clamp(Math.round(this.hpMax * ratio), 1, this.hpMax);
+      this.baseSpeedMult = this.speedMult;
     } else if (this.className === 'bruxo') {
       this.hpMax = CFG.bruxo.hpBase + CFG.bruxo.hpPerLevel * (this.level - 1);
       this.hp = clamp(Math.round(this.hpMax * ratio), 1, this.hpMax);
@@ -300,6 +363,9 @@ export class Unit {
     if (this.className === 'monge' && CFG.monge.dmgMult) {
       baseMult *= CFG.monge.dmgMult;
     }
+    if (this.bardBuffT > 0) baseMult *= 1 + CFG.bardo.note.buffDmg;
+    if (this.bardDebuffT > 0) baseMult *= 1 - CFG.bardo.note.debuffDmg;
+    if (this.ritmoAura) baseMult *= 1 + CFG.bardo.ritmo.dmg;
     return baseMult;
   }
 
@@ -309,7 +375,10 @@ export class Unit {
     const v = CFG.xp.gain.hitDealtBase + dmg * CFG.xp.gain.hitDealtPerDmg;
     this.addXP(Math.round(v));
   }
-  gainXPKill() { this.addXP(CFG.xp.gain.kill); }
+  gainXPKill(enemyLevel = 1) {
+    const g = CFG.xp.gain;
+    this.addXP(g.killBase + g.killPerLevel * enemyLevel);
+  }
 
   canDamage(other) {
     return !(this.team && other.team && this.team === other.team);
@@ -332,17 +401,23 @@ export class Unit {
       amountMod *= CFG.barbaro.roar.dmgReduce;
       impulseMod = new V(0, 0);
     }
-    const before = this.hp;
+    const before = this.hp + (this.tempHP || 0);
     if (attacker && !attacker.canDamage(this)) return 0;
-    this.hp = clamp(this.hp - amountMod, 0, this.hpMax);
-    const dealt = before - this.hp;
+    let dmgLeft = amountMod;
+    if (this.tempHP > 0) {
+      const absorb = Math.min(this.tempHP, dmgLeft);
+      this.tempHP -= absorb;
+      dmgLeft -= absorb;
+    }
+    this.hp = clamp(this.hp - dmgLeft, 0, this.hpMax);
+    const dealt = before - (this.hp + (this.tempHP || 0));
     this.vel.add(impulseMod.clone().mul(1 / this.mass));
     if (this.className === 'artifice' && dealt > 0) this.artificeTookDamage();
     if (attacker && attacker !== this && attacker.canDamage(this)) this.gainXPDefense();
     if (this.hp <= 0 && !this.deadHandled) {
       this.alive = false;
       this.deadHandled = true;
-      if (attacker && attacker.canDamage(this)) attacker.gainXPKill();
+      if (attacker && attacker.canDamage(this)) attacker.gainXPKill(this.level);
       game.onDeath(this);
     }
     return dealt;
@@ -350,10 +425,27 @@ export class Unit {
 
   // === Física e colisão ===
   tip() {
+    const reach = this.weaponOffset + this.weaponLen;
     return new V(
-      this.pos.x + Math.cos(this.angle) * (this.bodyR + this.weaponLen),
-      this.pos.y + Math.sin(this.angle) * (this.bodyR + this.weaponLen)
+      this.pos.x + Math.cos(this.angle) * reach,
+      this.pos.y + Math.sin(this.angle) * reach
     );
+  }
+
+  weaponBase() {
+    return new V(
+      this.pos.x + Math.cos(this.angle) * this.weaponOffset,
+      this.pos.y + Math.sin(this.angle) * this.weaponOffset
+    );
+  }
+
+  weaponSweepHitsCircle(pos, r) {
+    if (this.gw && this.gw.disableMelee) return false;
+    const base = this.weaponBase();
+    const tip = this.tip();
+    const pb = this.prevBase || base;
+    const pt = this.prevTip || tip;
+    return sweepSegmentCircle(pb, pt, base, tip, pos, r);
   }
 
   enemyInLineOfSight(range) {
@@ -368,7 +460,7 @@ export class Unit {
         r = B.speed * B.life;
       } else if (this.className === 'guerreiro') {
         const T = CFG.guerreiro.throw;
-        r = (T.speed * CFG.body.radius) * T.flightMaxTime;
+        r = T.maxRange * CFG.body.radius;
       } else {
         r = CFG.ranged.speed * CFG.ranged.life;
       }
@@ -378,11 +470,16 @@ export class Unit {
       tip.x + Math.cos(this.angle) * r,
       tip.y + Math.sin(this.angle) * r
     );
+    const minThrow = this.className === 'guerreiro'
+      ? CFG.guerreiro.throw.minRange * CFG.body.radius
+      : 0;
     for (const u of game.units) {
       if (!u.alive || u === this) continue;
-      if (this.team && u.team && this.team === u.team) continue;
+      if (this.team && u.team && this.team === u.team && this.className !== 'bardo') continue;
       const d = distPointToSegment(u.pos, tip, end);
-      if (d < u.bodyR) return true;
+      if (d >= u.bodyR) continue;
+      const tipDist = new V(u.pos.x - tip.x, u.pos.y - tip.y).len();
+      if (tipDist >= minThrow) return true;
     }
     return false;
   }
@@ -407,6 +504,8 @@ export class Unit {
   }
 
   physics(dt, arena) {
+    this.prevTip = this.tip();
+    this.prevBase = this.weaponBase();
     const wasFrozen = this.freezeT > 0;
     if (!wasFrozen) {
       this.angle += this.omega * dt;
@@ -416,6 +515,12 @@ export class Unit {
       this.freezeT = Math.max(0, this.freezeT - dt);
     }
     this._lastDT = dt;
+
+    if (this.bardBuffT > 0) this.bardBuffT = Math.max(0, this.bardBuffT - dt);
+    if (this.bardDebuffT > 0) this.bardDebuffT = Math.max(0, this.bardDebuffT - dt);
+    this.speedMult = this.baseSpeedMult;
+    if (this.bardBuffT > 0) this.speedMult *= 1 + CFG.bardo.note.buffSpeed;
+    if (this.ritmoAura) this.speedMult *= 1 + CFG.bardo.ritmo.speed;
 
     if (this.weaponLockT > 0) this.weaponLockT -= dt;
 
@@ -445,13 +550,35 @@ export class Unit {
       this.a1cd -= dt;
       this.a2cd -= dt;
       if (this.beamT > 0) this.clericBeamTick(dt);
-      if (this.a1cd <= 0 && this.beamT <= 0) { this.clericStartBeam(); this.a1cd = CFG.clerigo.beam.cd; }
+      if (this.a1cd <= 0 && this.beamT <= 0) {
+        const B = CFG.clerigo.beam;
+        const fwd = V.fromAng(this.angle);
+        const a = this.tip();
+        const b = a.clone().add(fwd.clone().mul(this.weaponTipR + 2 + B.range));
+        let found = false;
+        for (const u of game.units) {
+          if (!u.alive || u === this) continue;
+          if (!this.canDamage(u)) continue;
+          const d = distPointToSegment(u.pos, a, b);
+          if (d <= (B.width * 0.5 + u.bodyR)) { found = true; break; }
+        }
+        if (found) { this.clericStartBeam(); this.a1cd = B.cd; }
+      }
       if (this.a2cd <= 0) { this.castPrayer(); this.a2cd = CFG.clerigo.prayer.cd; }
+    }
+
+    // Bardo
+    if (this.className === 'bardo') {
+      this.a1cd = Math.max(0, (this.a1cd || 0) - dt);
+      this.a2cd = Math.max(0, (this.a2cd || 0) - dt);
+      if (this.a1cd <= 0) { bardoRitmo.call(this); this.a1cd = CFG.bardo.ritmo.cooldown; }
+      if (this.a2cd <= 0) { bardoNotaCortante.call(this); this.a2cd = CFG.bardo.cortante.cd; }
     }
 
     // Bruxo
     if (this.className === 'bruxo') {
       this.brxHexCD = Math.max(0, (this.brxHexCD || 0) - dt);
+      this.brxFamCD = Math.max(0, (this.brxFamCD || 0) - dt);
       if (!this.familiarRef && this.brxFamCD <= 0) {
         this.castFamiliar();
       }
@@ -658,12 +785,8 @@ export class Unit {
     const t1 = this.tip();
     const t2 = other.tip();
     {
-      const d1 = new V(other.pos.x - t1.x, other.pos.y - t1.y).len();
-      const warriorThisMeleeBlocked =
-        (this.className === 'guerreiro' && this.gw && this.gw.state !== 'MELEE_ACTIVE');
       if (this.className !== 'ranger' && this.className !== 'monge'
-          && !warriorThisMeleeBlocked
-          && d1 < other.bodyR + this.weaponTipR
+          && this.weaponSweepHitsCircle(other.pos, other.bodyR + this.weaponTipR)
           && this.canDamage(other)
           && (this.weaponLockT || 0) <= 0
           && !parried) {
@@ -694,6 +817,7 @@ export class Unit {
         if (dealt > 0) {
           this.gainXPOffense(dealt);
           if (this.className === 'paladino') this.trySacredStrike(t1, dealt);
+          if (this.className === 'guerreiro' && this.gw) registerSwap(this, 'MELEE');
         }
         for (let i = 0; i < CFG.vfx.particlesOnHit; i++) {
           game.spawnParticle(new Particle(
@@ -708,12 +832,8 @@ export class Unit {
 
     // Colisão arma (other) vs corpo (this)
     {
-      const d2 = new V(this.pos.x - t2.x, this.pos.y - t2.y).len();
-      const warriorOtherMeleeBlocked =
-        (other.className === 'guerreiro' && other.gw && other.gw.state !== 'MELEE_ACTIVE');
       if (other.className !== 'ranger' && other.className !== 'monge'
-          && !warriorOtherMeleeBlocked
-          && d2 < this.bodyR + other.weaponTipR
+          && other.weaponSweepHitsCircle(this.pos, this.bodyR + other.weaponTipR)
           && other.canDamage(this)
           && (other.weaponLockT || 0) <= 0
           && !parried) {
@@ -744,6 +864,7 @@ export class Unit {
         if (dealt > 0) {
           other.gainXPOffense(dealt);
           if (other.className === 'paladino') other.trySacredStrike(t2, dealt);
+          if (other.className === 'guerreiro' && other.gw) registerSwap(other, 'MELEE');
         }
         for (let i = 0; i < CFG.vfx.particlesOnHit; i++) {
           game.spawnParticle(new Particle(
@@ -757,8 +878,10 @@ export class Unit {
     }
 
     // Colisão arma vs arma (inclui Parry do Guerreiro)
-    const tipDist = new V(t2.x - t1.x, t2.y - t1.y).len();
-    if (tipDist < this.weaponTipR + other.weaponTipR) {
+    const b1 = this.weaponBase();
+    const b2 = other.weaponBase();
+    const segDist = distSegmentToSegment(b1, t1, b2, t2);
+    if (segDist < this.weaponTipR + other.weaponTipR) {
       let handled = false;
       if (this.className === 'guerreiro') handled = this.guerreiroParryAgainst(other) || handled;
       if (other.className === 'guerreiro') handled = other.guerreiroParryAgainst(this) || handled;
@@ -788,12 +911,10 @@ export class Unit {
   }
 
   collideSummons(summons) {
-    const base = this.pos.clone();
-    const tip = this.tip();
     for (const s of summons) {
-      if (!s.alive || s.kind !== 'familiar') continue;
+      if (!s.alive || (s.kind !== 'familiar' && s.kind !== 'turret' && s.kind !== 'mine')) continue;
       if (this.team && s.team && this.team === s.team) continue;
-      if (distPointToSegment(s.pos, base, tip) >= s.bodyR + this.weaponTipR) continue;
+      if (!this.weaponSweepHitsCircle(s.pos, s.bodyR + this.weaponTipR)) continue;
       if ((this.weaponLockT || 0) > 0) continue;
 
       let tipBase;
@@ -819,16 +940,25 @@ export class Unit {
         this.isDashing = false;
         this.firstImpactDash = false;
       }
-      const dealt = s.hit(dmg, V.fromAng(this.angle, knockMag), this);
-      if (dealt > 0) this.gainXPOffense(dealt);
-      for (let i = 0; i < CFG.vfx.particlesOnHit; i++) {
-        game.spawnParticle(new Particle(
-          s.pos.clone(),
-          V.fromAng(randAng(), rrand(50, 220)),
-          rrand(0.2, 0.6),
-          '#e5e7eb'
-        ));
+
+      let dealt;
+      if (s.kind === 'familiar') {
+        const knock = V.fromAng(this.angle, knockMag);
+        dealt = s.hit(dmg, knock, this);
+        if (dealt > 0) {
+          for (let i = 0; i < CFG.vfx.particlesOnHit; i++) {
+            game.spawnParticle(new Particle(
+              s.pos.clone(),
+              V.fromAng(randAng(), rrand(50, 220)),
+              rrand(0.2, 0.6),
+              '#e5e7eb'
+            ));
+          }
+        }
+      } else {
+        dealt = s.hit(dmg, this);
       }
+      if (dealt > 0) this.gainXPOffense(dealt);
     }
   }
 
@@ -852,7 +982,9 @@ export class Unit {
   fire() {
     if (this.className === 'ranger') return rangerFire.call(this);
     if (this.className === 'bruxo') return bruxoFire.call(this);
+    if (this.className === 'bardo') return bardoFire.call(this);
     if (this.className === 'artifice') return artificeFire.call(this);
+    if (this.className === 'guerreiro') return guerreiroFire.call(this);
     const dir = new V(Math.cos(this.angle), Math.sin(this.angle));
     const p = this.tip().add(dir.clone().mul(this.weaponTipR + 2));
     game.spawnProjectile(new Projectile(this, p, dir));
@@ -874,6 +1006,15 @@ export class Unit {
     hpGrad.addColorStop(1, '#37d86b');
     ctx.fillStyle = hpGrad;
     ctx.fill();
+    if (this.tempHP > 0) {
+      const tempw = w * Math.min(this.tempHP / this.hpMax, 1);
+      drawRoundedRect(ctx, x + hpw, y, tempw, h, 3);
+      const tmpGrad = ctx.createLinearGradient(x, y, x + w, y);
+      tmpGrad.addColorStop(0, '#93c5fd');
+      tmpGrad.addColorStop(1, '#3b82f6');
+      ctx.fillStyle = tmpGrad;
+      ctx.fill();
+    }
     const y2 = y + h + pad;
     drawRoundedRect(ctx, x, y2, w, h - 2, 3);
     ctx.fillStyle = 'rgba(8,12,18,0.85)';
@@ -907,32 +1048,43 @@ export class Unit {
     if (!cfg) return;
 
     const now = performance.now();
-    const pal = cfg.palette || [];
-    const itemId = cfg.item;
-    if (itemId === 'chifres_duplos' || itemId === 'colar_monge' || ITEM_ALIASES[itemId] === 'saia_barbaro') {
-      ctx.save();
-      ctx.translate(this.pos.x, this.pos.y);
-      applyMicroAnim(ctx, cfg.microAnim, now);
-      const scale = (cfg.scale ?? CLASS_ITEM_SCALE_DEFAULT) * (this.bodyR * 2) * GLOBAL_ITEM_SCALE_MULT;
-      drawItemSprite(ctx, itemId, scale, pal, now);
-      ctx.restore();
-      return;
+    const items = cfg.items || [cfg];
+    for (const ic of items) {
+      const pal = ic.palette || [];
+      const itemId = ic.item;
+      const iRot = (ic.internalRotationDeg ?? 0) * Math.PI / 180;
+      if (itemId === 'colar_monge' || ITEM_ALIASES[itemId] === 'saia_barbaro') {
+        ctx.save();
+        const offY = this.bodyR * (ic.itemOffsetY ?? 0);
+        const offX = this.bodyR * (ic.itemOffsetX ?? 0);
+        ctx.translate(this.pos.x + offX, this.pos.y + offY);
+        ctx.rotate(iRot);
+        applyMicroAnim(ctx, ic.microAnim, now);
+        if (ic.flipX) ctx.scale(-1, 1);
+        const scale = (ic.scale ?? CLASS_ITEM_SCALE_DEFAULT) * (this.bodyR * 2) * GLOBAL_ITEM_SCALE_MULT;
+        drawItemSprite(ctx, itemId, scale, pal, now);
+        ctx.restore();
+      } else {
+        const anchor = (ic.anchorAngleDeg || 0) * Math.PI / 180;
+        const safeR = LEVEL_SAFE_RADIUS_MULT * this.bodyR;
+        let dist = this.bodyR * (ic.distanceFromCenter ?? 0.82);
+        if (dist < safeR) dist = safeR;
+        const offX = this.bodyR * (ic.itemOffsetX ?? 0);
+        const offY = this.bodyR * (ic.itemOffsetY ?? 0);
+        const x = this.pos.x + Math.cos(anchor) * dist + offX;
+        const y = this.pos.y + Math.sin(anchor) * dist + offY;
+        const scale = (ic.scale ?? CLASS_ITEM_SCALE_DEFAULT) * (this.bodyR * 2) * GLOBAL_ITEM_SCALE_MULT;
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(anchor);
+        ctx.rotate(iRot);
+        applyMicroAnim(ctx, ic.microAnim, now);
+        if (ic.flipX) ctx.scale(-1, 1);
+        drawItemSprite(ctx, itemId, scale, pal, now);
+        ctx.restore();
+      }
     }
-
-    const anchor = (cfg.anchorAngleDeg || 0) * Math.PI / 180;
-    const safeR = LEVEL_SAFE_RADIUS_MULT * this.bodyR;
-    let dist = this.bodyR * 0.82;
-    if (dist < safeR) dist = safeR;
-    const x = this.pos.x + Math.cos(anchor) * dist;
-    const y = this.pos.y + Math.sin(anchor) * dist;
-    const scale = (cfg.scale ?? CLASS_ITEM_SCALE_DEFAULT) * (this.bodyR * 2) * GLOBAL_ITEM_SCALE_MULT;
-
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(anchor);
-    applyMicroAnim(ctx, cfg.microAnim, now);
-    drawItemSprite(ctx, itemId, scale, pal, now);
-    ctx.restore();
   }
 
   draw(ctx) {
@@ -995,13 +1147,15 @@ export class Unit {
 
     if (this.className === 'clerigo' && this.beamT > 0) {
       const t = this.tip();
-      const len = CFG.clerigo.beam.range;
+      const B = CFG.clerigo.beam;
+      const end = this.weaponTipR + 2 + B.range;
       ctx.save();
-      ctx.strokeStyle = CFG.clerigo.beam.color;
-      ctx.lineWidth = CFG.clerigo.beam.width;
+      ctx.strokeStyle = B.color;
+      ctx.lineWidth = B.width;
+      ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(t.x, t.y);
-      ctx.lineTo(t.x + Math.cos(this.angle) * len, t.y + Math.sin(this.angle) * len);
+      ctx.lineTo(t.x + Math.cos(this.angle) * end, t.y + Math.sin(this.angle) * end);
       ctx.stroke();
       ctx.restore();
     }
@@ -1065,22 +1219,31 @@ export class Unit {
 
     const cfg = CLASS_VISUALS[this.className];
     const skipWeapon = (this.className === 'guerreiro' && this.gw &&
-      (this.gw.state === 'THROW_FLIGHT' || this.gw.state === 'DISARMED')) ||
+      (this.gw.state === 'THROW_FLIGHT' || this.gw.disarmT > 0)) ||
       this.className === 'monge';
     if (!skipWeapon) {
       ctx.save();
       ctx.translate(this.pos.x, this.pos.y);
       const off = (cfg?.weaponAngleDeg ?? 30) * Math.PI / 180;
-      const wScale = this.bodyR * 1.2 * (cfg?.weaponScale ?? 1);
-      const wOff = this.bodyR * (cfg?.weaponOffsetMult ?? 0.9);
-      if (this.className === 'paladino' || this.className === 'clerigo') {
-        ctx.rotate(this.angle);
-        ctx.translate(wOff, 0);
-        ctx.rotate(off);
-      } else {
+      let wScale, wOff;
+      if (this.className === 'guerreiro') {
+        wScale = this.weaponLen / 0.88;
+        wOff = this.weaponOffset;
         const ang = this.angle + off;
         ctx.rotate(ang);
-        ctx.translate(wOff, 0);
+        ctx.translate(wOff + 0.48 * wScale, 0);
+      } else {
+        wScale = this.bodyR * 1.2 * (cfg?.weaponScale ?? 1);
+        wOff = this.bodyR * (cfg?.weaponOffsetMult ?? 1.4);
+        if (this.className === 'paladino' || this.className === 'clerigo') {
+          ctx.rotate(this.angle);
+          ctx.translate(wOff, 0);
+          ctx.rotate(off);
+        } else {
+          const ang = this.angle + off;
+          ctx.rotate(ang);
+          ctx.translate(wOff, 0);
+        }
       }
       drawWeaponForUnit(ctx, this, wScale);
       ctx.restore();

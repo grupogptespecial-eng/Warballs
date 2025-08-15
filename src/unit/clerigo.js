@@ -71,8 +71,8 @@ export function clericBeamTick(dt) {
   const B = CFG.clerigo.beam;
   this.beamT = Math.max(0, this.beamT - dt);
   const fwd = new V(Math.cos(this.angle), Math.sin(this.angle));
-  const a = this.tip().add(fwd.clone().mul(this.weaponTipR + 2));
-  const b = a.clone().add(fwd.clone().mul(B.range));
+  const a = this.tip();
+  const b = this.tip().add(fwd.clone().mul(this.weaponTipR + 2 + B.range));
 
   this._beamNext += dt;
   while (this._beamNext >= B.tick) {

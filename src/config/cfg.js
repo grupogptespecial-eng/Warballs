@@ -16,14 +16,46 @@ export const TEAM = {
 
 // Atributos base de cada classe de unidade
 export const CLASSES = {
-  barbaro:   { label: 'Bárbaro',   color: '#f97316', hasRanged: false, weaponLen: 40, tipRadius: 11, omega: 3.0 },
-  paladino:  { label: 'Paladino',  color: '#fde047', hasRanged: false, weaponLen: 36, tipRadius: 10, omega: 3.6 },
+  barbaro:   { label: 'Bárbaro',   color: '#f97316', hasRanged: false, weaponLen: 40, tipRadius: 14, omega: 3.0 },
+  paladino:  { label: 'Paladino',  color: '#fde047', hasRanged: false, weaponLen: 36, tipRadius: 12, omega: 3.6 },
   monge:     { label: 'Monge',     color: '#60a5fa', hasRanged: false, weaponLen: 0,  tipRadius: 0,  omega: 0.0 },
-  clerigo:   { label: 'Clérigo',   color: '#93c5fd', hasRanged: false, weaponLen: 36, tipRadius: 12, omega: 3.6 },
-  ranger:    { label: 'Ranger',    color: '#34d399', hasRanged: true,  cooldownMiraPercent: 0.25, weaponLen: 36, tipRadius: 8,  omega: 3.6 },
+  clerigo:   { label: 'Clérigo',   color: '#93c5fd', hasRanged: false, weaponLen: 36, tipRadius: 8.4, omega: 3.6 },
+  ranger:    { label: 'Ranger',    color: '#34d399', hasRanged: true,  cooldownMiraPercent: 0.25, weaponLen: 36, tipRadius: 9,  omega: 3.6 },
   bruxo:     { label: 'Bruxo',     color: '#a78bfa', hasRanged: true,  cooldownMiraPercent: 0.10, weaponLen: 20, tipRadius: 6,  omega: 3.4 },
-  artifice:  { label: 'Artífice',  color: '#7FDBFF', hasRanged: true,  cooldownMiraPercent: 0.20, weaponLen: 34, tipRadius: 8,  omega: 3.6 },
-  guerreiro: { label: 'Guerreiro', color: '#f59e0b', hasRanged: false, weaponLen: 38, tipRadius: 10, omega: 3.6 }
+  bardo:     { label: 'Bardo',     color: '#f472b6', hasRanged: true,  cooldownMiraPercent: 0.15, weaponLen: 20, tipRadius: 5,  omega: 3.6 },
+  artifice:  { label: 'Artífice',  color: '#7FDBFF', hasRanged: true,  cooldownMiraPercent: 0.20, weaponLen: 34, tipRadius: 9,  omega: 3.6 },
+  guerreiro: { label: 'Guerreiro', color: '#f59e0b', hasRanged: true, cooldownMiraPercent: 0.10, weaponLen: 38, tipRadius: 5, omega: 3.6 }
+};
+
+// Paleta completa para os elementos do Bárbaro (couro, metal e madeira)
+export const BARBARIAN_PALETTE = {
+  leatherBase: '#8B4A2B',
+  leatherLight: '#C9935A',
+  leatherStroke: '#402A1C',
+  metal: '#D5D9DF',
+  metalStroke: '#848C96',
+  woodLight: '#A8743A',
+  woodDark: '#7E572C'
+};
+
+export const THEMES = {
+  dark: {
+    bg: '#0f1622',
+    bg2: '#0a111b',
+    grid: '#1f3046',
+    grid2: '#1a2640',
+    border: '#3b82f6',
+    glow: '#7dd3fc'
+  },
+  // Light theme uses softer tints to brighten the arena and canvas backgrounds
+  light: {
+    bg: '#f8fafc',
+    bg2: '#e5e7eb',
+    grid: '#94a3b8',
+    grid2: '#cbd5e1',
+    border: '#64748b',
+    glow: '#94a3b8'
+  }
 };
 
 // Objeto de configuração principal contendo parâmetros de gameplay
@@ -54,7 +86,7 @@ export const CFG = {
   },
 
   // Tema visual do jogo
-  theme: { grid: '#1f3046', grid2: '#1a2640', border: '#3b82f6', glow: '#7dd3fc' },
+  theme: { ...THEMES.dark },
 
   // Constantes de física
   physics: {
@@ -69,7 +101,7 @@ export const CFG = {
   },
 
   // Atributos do corpo da unidade
-  body: { radius: 26, mass: 1, baseHP: 100 },
+  body: { radius: 26, mass: 1, baseHP: 130 },
 
   // Arma corpo‑a‑corpo padrão
   weapon: { length: 36, tipRadius: 9, omega: 3.8 },
@@ -87,24 +119,25 @@ export const CFG = {
 
   // Configuração específica da classe Ranger
   ranger: {
-    hpBase: 120, hpPerLevel: 8,
+    hpBase: 156, hpPerLevel: 10.4,
     stillVel: 30, stillTime: 0.5, passiveDmgMult: 1.5,
-    arrow: { baseSpeed: 700, speedPerLevel: 15, gravity: 180, drag: 0.12, life: 3.0, radius: 5, color: '#96f2a2' },
+    arrow: { baseSpeed: 700, speedPerLevel: 15, gravity: 180, drag: 0.12, life: 3.0, radius: 5, color: '#16a34a' },
     // Perfect Shot: dano reduzido em 60%
     perfectShot: { cd: 5.0, dmgMult: 0.6 },
-    forestCall: { cd: 12.0, duration: 6.0, minions: { base: 1, lvl2: 8, lvl3: 14 }, dmgBase: 10, dmgPerLevelPct: 0.05 }
+    forestCall: { cd: 12.0, duration: 6.0, minions: { base: 1, lvl2: 8, lvl3: 14 }, dmgBase: 12, dmgPerLevelPct: 0.05 }
   },
 
   // Configuração da classe Bárbaro
   barbaro: {
-    hpBase: 180, tipDamageBase: 18, knockTipBase: 420,
+    hpBase: 234, // 30% mais vida
+    tipDamageBase: 18, knockTipBase: 420,
     dash: { detectR: 480, coneDeg: 70, accel: 1600, time: 0.35, dmgBonus: 1.3, knockBonus: 1.2, cd: 4.5 },
     roar: { threatR: 300, need: 2, dmgReduce: 0.65, duration: 1.2, cd: 8.0 }
   },
 
   // Configuração da classe Paladino
   paladino: {
-    hpBase: 160, hpPerLevel: 12, tipBase: 16,
+    hpBase: 208, hpPerLevel: 15.6, tipBase: 16,
     _forceSacredOnce: false,
     sacred: { baseChance: 0.08, chancePerLevel: 0.01, chanceMax: 0.35, radiusBase: 52, radiusPerLevel: 1.5, dmgMult: 1.65, knockPerDamage: 22, color: '#ffe28a' },
     shield: { dur: 4.0, cdBase: 10.0, cdMin: 4.5, cdPerLevel: 0.25, knockForce: 900 },
@@ -113,12 +146,12 @@ export const CFG = {
 
   // Configuração da classe Monge
   monge: {
-    hpBase: 120, hpPerLevel: 4,
-    // aumento de 30% no dano base
-    dmgMult: 1.95,
+    hpBase: 202.8, hpPerLevel: 6.76,
+    // aumento adicional de 20% no dano base
+    dmgMult: 2.34,
     vMinBonusPerLevel: 8,  vMaxBonusPerLevel: 14,
     vMinBonusCap: 160,      vMaxBonusCap: 360,
-    baseBodyDamageL1: 8, bodyDamagePerLvl: 0.6,
+    baseBodyDamageL1: 12.48, bodyDamagePerLvl: 0.936,
     impulseOnHit: 280,
     stacks: { time: 2.4, speed: 0.05, max: 6, k: 0.35, vRef: 500 },
     seek: { force: 120, maxDist: 600 },
@@ -126,7 +159,7 @@ export const CFG = {
     impactBurst: { speed: 320, wallSpeed: 260, grantStack: true },
     // "local" é usado no CD local do dano de corpo no collide()
     rajada: { dur: 0.45, interval: 0.15, hits: 3, bonus: 1.15, cd: 6, detectR: 160, coneDeg: 85, local: 0.12 },
-    deflect: { coneDeg: 110, rSense: 120, rHit: 50, dur: 1.2, cd: 5.5, dmgMult: 2.0, speedBoost: 1.1 },
+    deflect: { coneDeg: 150, rSense: 208, rHit: 84.5, dur: 1.6, cd: 4.0, dmgMult: 2.5, speedBoost: 1.3 },
     parry: {
       omegaMul: -1.1,
       tangentForce: 420,
@@ -137,7 +170,7 @@ export const CFG = {
 
   // Configuração da classe Clérigo
   clerigo: {
-    hpBase: 150, hpPerLevel: 10,
+    hpBase: 195, hpPerLevel: 13,
     // dano base reduzido em 20%
     tipBase: 11.2,
     knockBase: 340,
@@ -152,8 +185,8 @@ export const CFG = {
 
     beam: {
       cd: 18.0, dur: 1.6, range: 900, width: 26,
-      // dano do Sunbeam aumentado em 70%
-      dpsBase: 102, dpsPerLevel: 7.65, push: 900, tick: 0.06,
+      // dano do Sunbeam dobrado
+      dpsBase: 204, dpsPerLevel: 15.3, push: 900, tick: 0.06,
       color: '#ffe28a', edge: '#f59e0b'
     },
 
@@ -168,27 +201,66 @@ export const CFG = {
 
   // Configuração da classe Bruxo
   bruxo: {
-    hpBase: 110,
-    hpPerLevel: 6,
+    hpBase: 143,
+    hpPerLevel: 7.8,
     blast: { speed: 900, life: 1.4, rad: 6, dmg: 14, knock: 260 },
     hex:    { cd: 8, dur: 6, dmgMult: 2.5, color: '#b794f4' },
     link:   { leechPct: 0.20 },
     familiar: {
-      hpBase: 80, hpPerLevel: 8, bodyR: 14, color: '#c7b2ff',
+      hpBase: 40, hpPerLevel: 4, bodyR: 14, color: '#c7b2ff',
       fireCD: 1.2,
       bullet: { speed: 750, life: 1.2, rad: 5, dmg: 6, knock: 120, color: '#d6c7ff' },
-      cdAfterDeath: 10
+      cdAfterDeath: 7
+    }
+  },
+
+  // Configuração da classe Bardo
+  bardo: {
+    hpBase: 156, hpPerLevel: 10.4,
+    note: {
+      dmg: 11.232,
+      heal: 4,
+      buffDmg: 0.15,
+      buffSpeed: 0.15,
+      debuffDmg: 0.18,
+      duration: 2.0,
+      cooldown: 0.6,
+      speed: 600,
+      track: 4,
+      life: 1.12,
+      radius: 5,
+      knock: 120
+    },
+    inspire: { heal: 3, radius: 120 },
+    ritmo: {
+      radius: 180,
+      dmg: 0.2,
+      speed: 0.2,
+      tempHP: 20,
+      duration: 5.0,
+      cooldown: 12.0
+    },
+    cortante: {
+      cd: 8.0,
+      speed: 300,
+      life: 2.1,
+      radius: 5,
+      zigzagAmp: 100,
+      zigzagFreq: 20,
+      pierce: 2,
+      dmg: 13,
+      knock: 180
     }
   },
 
   // Configuração da classe Guerreiro
   guerreiro: {
-    hpBase: 150,
-    hpPerLevel: 10,
+    hpBase: 214.5,
+    hpPerLevel: 14.3,
 
     spear: {
-      shaftLenFactor: 1.65,
-      shaftThickness: 0.12,
+      shaftLenFactor: 3.6,
+      shaftThickness: 0.18,
       tipBonus: 1.25,
       meleeStartup: 0.085,
       meleeActive: 0.065,
@@ -200,15 +272,15 @@ export const CFG = {
 
     throw: {
       enabled: true,
-      minRange: 1.65,
-      maxRange: 5.8,
-      speed: 9.5,
-      flightMaxTime: 0.6,
+      // Warriors stop throwing when foes are within 65% of max range
+      minRange: 10.4,
+      maxRange: 16.0,
+      speed: 15.6 * 1.3 * 1.3,
+      flightMaxTime: (16.0 / 15.6 * 1.4) * 1.2,
       onHitStop: 0.06,
-      cooldown: 0.55,
+      cooldown: 20.4 * 0.8,
       returnMode: 'auto',
       friendlyFire: false,
-      miraCondPercent: 0.2,
       precisionErrDeg: 8,
       precisionErrPerLevel: -0.4,
       rangePerLevel: 0.08
@@ -229,47 +301,49 @@ export const CFG = {
         radial: 240,
         lockT: 0.22
       },
-      advance: {
-        vulnerableFOVDeg: 35,
-        dashSpeed: 8.0,
-        dashDuration: 0.12,
-        angAccel: 1800,
-        connectAngleDeg: 10,
-        cooldown: 0.5
+        advance: {
+          vulnerableFOVDeg: 35,
+          dashSpeed: 8.0,
+          dashDuration: 0.12,
+          angAccel: 1800,
+          connectAngleDeg: 10,
+          triggerRadius: 3.0,
+          cooldown: 0.75
+        },
+        dodge: {
+          ttiProjectile: 0.35,
+          sidestepDist: 0.6,
+          cooldown: 1.65
+        }
       },
-      dodge: {
-        ttiProjectile: 0.35,
-        sidestepDist: 0.6,
-        cooldown: 1.1
+
+      stance: {
+        threatRadius: 3.0,
+        atkRateBonus: 0.5,
+        knockbackRedBase: 0.2,
+        knockbackRedPer100HP: 0.2,
+        knockbackRedMax: 0.6,
+        exitGrace: 0.28
+      },
+
+      damage: {
+        meleeBase: 32.4,
+        throwBase: 109.7
       }
-    },
-
-    stance: {
-      threatRadius: 3.6,
-      atkRateBonus: 0.5,
-      knockbackRedBase: 0.2,
-      knockbackRedPer100HP: 0.2,
-      knockbackRedMax: 0.6,
-      exitGrace: 0.35
-    },
-
-    damage: {
-      meleeBase: 14,
-      throwBase: 11
-    }
   },
 
   // Configuração da classe Artífice
   artifice: {
     // Arma principal: Canhão Arcano
     cannon: {
-      baseDamage: 13,
-      knockback: 0.85,
+      baseDamage: 33.124,
+      knockback: 1.666,
+      selfKnockback: 12.0,
       // velocidade dobrada
       speed: 18.0,
       lifeTime: 0.9,
-      cooldown: 0.95,
-      radius: 6,
+      cooldown: 1.862,
+      radius: 8.4,
       pierce: 0,
       friendlyFire: false,
       miraCondPercent: 0.20,
@@ -278,7 +352,7 @@ export const CFG = {
 
     // Passiva Overclock
     overclock: {
-      tSemDano: 2.5,
+      tSemDano: 3.5,
       cdRateMult: 1.35,
       decayOnHit: true,
       minUptimeAfterStart: 1.0
@@ -296,7 +370,7 @@ export const CFG = {
       // dobro da velocidade anterior
       bulletSpeed: 16.0,
       bulletKnock: 0.5,
-      xpOnBump: 8,
+      xpOnBump: 10.4,
       xpToLevel: [12, 28, 52],
       perLevel: {
         HP: [0, 20, 35, 55],
@@ -330,7 +404,7 @@ export const CFG = {
       chainAffectsMines: true,
       friendlyFire: false,
       lifetime: 25,
-      cooldown: 0.35,
+      cooldown: 0.49,
       hitToDetonate: true
     },
 
@@ -347,10 +421,17 @@ export const CFG = {
   },
 
   // Sistema de níveis e experiência
-  level: { max: 20, hpPerLevelPct: 0.06, dmgPerLevelPct: 0.05 },
+  level: { max: 20, hpPerLevelPct: 0.1875, dmgPerLevelPct: 0.125 },
   xp: {
     cost(level) { return Math.floor(35 + level * 15 + Math.pow(level, 1.6) * 8); },
-    gain: { hitTaken: 5, weaponClash: 10, hitDealtBase: 18, hitDealtPerDmg: 1.2, kill: 60 }
+    gain: {
+      hitTaken: 5,
+      weaponClash: 10,
+      hitDealtBase: 18,
+      hitDealtPerDmg: 1.2,
+      killBase: 60,
+      killPerLevel: 10
+    }
   },
 
   // Engajamento da IA
@@ -400,81 +481,41 @@ export const CFG = {
 
 // Escalas globais para itens visuais presos às unidades
 // Tamanho padrão relativo ao diâmetro da bola e raio seguro para o texto do nível
-export const CLASS_ITEM_SCALE_DEFAULT = 0.15 * (CFG.body.radius * 2);
+export const CLASS_ITEM_SCALE_DEFAULT = 0.15;
 export const GLOBAL_ITEM_SCALE_MULT = 1.6;
 export const LEVEL_SAFE_RADIUS_MULT = 0.42;
 
 // Configuração visual por classe. Cada item é posicionado usando um ângulo fixo
 // e pode ajustar escala, animação e paleta de cores.
 export const CLASS_VISUALS = {
-  barbaro: {
-    item: 'saia_barbaro',
-    scale: 0.16,
-    microAnim: 'sway_low',
-    palette: ['#8B4A2B', '#C9935A', '#402A1C'],
-    weaponOverride: 'axe_double_bit_v2'
+  barbaro:  { item:'saia_barbaro', scale:0.45,anchorAngleDeg:100, microAnim:'sway_low',   palette:[BARBARIAN_PALETTE.leatherBase,BARBARIAN_PALETTE.leatherLight,BARBARIAN_PALETTE.leatherStroke], weaponOverride:'axe_double_bit_v2', weaponAngleDeg:35 ,weaponScale:1.25, weaponOffsetMult:2.0, itemOffsetY:0.0, distanceFromCenter:0.02, internalRotationDeg:-100 },
+  ranger:   { item:'aljava_pequena', anchorAngleDeg:45, scale:0.56, microAnim:'idle_breath', palette:['#4E6B3A','#B89B6B','#2E3B22'], weaponAngleDeg:-25, weaponScale:1.56, weaponOffsetMult:1.5, distanceFromCenter:0.82, internalRotationDeg:0 },
+  monge:    { item:'colar_monge',    scale:0.6, palette:[], distanceFromCenter:0.82, internalRotationDeg:0 },
+  paladino: { item:'insignia_escudo',anchorAngleDeg:20, scale:0.55, microAnim:'glint_slow',   palette:['#C9C9C9','#E6D27A','#7A6A3A'], weaponAngleDeg:-90, weaponScale:1.6, weaponOffsetMult:2.0, distanceFromCenter:0.62, internalRotationDeg:0 },
+  clerigo:  { item:'sigilo_sol',     anchorAngleDeg:330,scale:0.34, microAnim:'soft_glow',    palette:['#FFD67A','#F4B43A','#8A6A2A'], weaponAngleDeg:90, weaponScale:2.0, weaponOffsetMult:1.8, distanceFromCenter:0.72, internalRotationDeg:0 },
+  bruxo:    {
+    weaponAngleDeg:-10,
+    palette:['#7E57C2','#A586E8','#40345A'],
+    items: [
+      { item:'chifre_bruxo', anchorAngleDeg:220, scale:0.38, microAnim:'idle_breath', palette:['#7E57C2','#A586E8','#40345A'], distanceFromCenter:1.92, internalRotationDeg:-100 },
+      { item:'chifre_bruxo', anchorAngleDeg:320, scale:0.38, microAnim:'idle_breath', palette:['#7E57C2','#A586E8','#40345A'], distanceFromCenter:1.92, internalRotationDeg:280, flipX:true }
+    ]
   },
-  ranger: {
-    item: 'aljava_pequena',
-    anchorAngleDeg: 45,
-    scale: 0.56,
-    microAnim: 'idle_breath',
-    palette: ['#4E6B3A', '#B89B6B', '#2E3B22'],
-    weaponAngleDeg: -25,
-    weaponScale: 1.56,
-    weaponOffsetMult: 1.2
+  bardo:    {
+    item:'chapeu_bardo',
+    anchorAngleDeg:270,
+    scale:0.66,
+    microAnim:'idle_breath',
+    palette:['#11772a','#22a33a','#d7b193'],
+    distanceFromCenter:0.72,
+    internalRotationDeg:0,
+    weaponOverride:'flauta',
+    weaponAngleDeg:0,
+    weaponScale:1.5,
+    weaponOffsetMult:1.6
   },
-  monge: {
-    item: 'colar_monge',
-    scale: 0.16,
-    palette: []
-  },
-  paladino: {
-    item: 'insignia_escudo',
-    anchorAngleDeg: 20,
-    scale: 0.15,
-    microAnim: 'glint_slow',
-    palette: ['#C9C9C9', '#E6D27A', '#7A6A3A'],
-    weaponAngleDeg: -90,
-    weaponScale: 2.0,
-    weaponOffsetMult: 1.0
-  },
-  clerigo: {
-    item: 'sigilo_sol',
-    anchorAngleDeg: 330,
-    scale: 0.14,
-    microAnim: 'soft_glow',
-    palette: ['#FFD67A', '#F4B43A', '#8A6A2A'],
-    weaponAngleDeg: 90,
-    weaponScale: 2.0,
-    weaponOffsetMult: 1.0
-  },
-  bruxo: {
-    item: 'chifres_duplos',
-    anchorAngleDeg: 270,
-    scale: 0.18,
-    microAnim: 'idle_breath',
-    palette: ['#7E57C2', '#A586E8', '#40345A']
-  },
-  artifice: {
-    item: 'goggles',
-    anchorAngleDeg: 30,
-    scale: 0.16,
-    microAnim: 'idle_breath',
-    palette: ['#A6B1B8', '#E0E7EA', '#3B4A5A'],
-    weaponOverride: 'arcane_cannon',
-    weaponAngleDeg: 40,
-    weaponScale: 1.8
-  },
-  guerreiro: {
-    item: 'ombreira_metal',
-    anchorAngleDeg: 210,
-    scale: 0.60,
-    microAnim: 'sway_low',
-    palette: ['#9BA4AE', '#6B757F', '#CACFD6'],
-    weaponScale: 2.0,
-    weaponOffsetMult: 2.2
-  }
+  artifice: { item:'goggles',        anchorAngleDeg:270, scale:0.56, microAnim:'idle_breath',  palette:['#A6B1B8','#E0E7EA','#3B4A5A'], weaponOverride:'arcane_cannon', weaponAngleDeg:40, weaponScale:1.8, weaponOffsetMult:1.5, distanceFromCenter:0.52, internalRotationDeg:0 },
+  guerreiro:{ item:'ombreira_metal', anchorAngleDeg:210,scale:0.70, microAnim:'sway_low',     palette:['#9BA4AE','#6B757F','#CACFD6'], weaponAngleDeg:15, weaponScale:1, weaponOffsetMult:1.0, weaponThickness:1, distanceFromCenter:0.82, internalRotationDeg:0 }
 };
 
 export const ITEM_ALIASES = {
@@ -482,4 +523,9 @@ export const ITEM_ALIASES = {
   necklace_monge: 'colar_monge',
   rosario_monge: 'colar_monge'
 };
+
+export function setTheme(name) {
+  const t = THEMES[name] || THEMES.dark;
+  Object.assign(CFG.theme, t);
+}
 

@@ -4,17 +4,16 @@ import { V } from '../math/vec.js';
 import { CFG } from '../config/cfg.js';
 import { SpearProjectile } from '../entities/spear.js';
 import { Particle } from '../entities/particle.js';
-import { spawnSpearTrail } from '../vfx/spear_trail.js';
 import {
   spawnAdvanceVFX,
   spawnDodgeVFX,
   spawnParryVFX
 } from '../vfx/guerreiro_maneuver_vfx.js';
-import { distPointToSegment, projApproaching } from '../utils/geometry.js';
+import { projApproaching } from '../utils/geometry.js';
 import { randAng, rrand } from '../utils/rand.js';
 import { game } from '../core/game.js';
 
-function registerSwap(u, kind) {
+export function registerSwap(u, kind) {
   const D = CFG.guerreiro.discipline;
   const gw = u.gw;
   const now = game.time;
@@ -26,99 +25,62 @@ function registerSwap(u, kind) {
   }
   gw.lastAttackType = kind;
   gw.lastAttackTime = now;
+
 }
 
-function startMelee(u, target) {
-  const S = CFG.guerreiro.spear;
-  u.gw.state = 'MELEE_STARTUP';
-  u.gw.meleeT = 0;
-  u.gw.meleeTarget = target;
-   u.gw.meleeHit = false;
-  registerSwap(u, 'MELEE');
-  const ang = Math.atan2(target.pos.y - u.pos.y, target.pos.x - u.pos.x);
-  let diff = Math.atan2(Math.sin(ang - u.angle), Math.cos(ang - u.angle));
-  const maxSnap = S.aimSnapDeg * Math.PI / 180;
-  if (Math.abs(diff) <= maxSnap) u.angle = ang;
-}
-
-function tickMelee(u, dt) {
-  const S = CFG.guerreiro.spear;
-  u.gw.meleeT += dt;
-  if (u.gw.state === 'MELEE_STARTUP' && u.gw.meleeT >= S.meleeStartup) {
-    u.gw.state = 'MELEE_ACTIVE';
-  } else if (u.gw.state === 'MELEE_ACTIVE' && u.gw.meleeT >= S.meleeStartup + S.meleeActive) {
-    u.gw.state = 'MELEE_RECOVER';
-  } else if (u.gw.state === 'MELEE_RECOVER' && u.gw.meleeT >= S.meleeStartup + S.meleeActive + S.meleeRecover) {
-    u.gw.state = 'IDLE';
-    const mult = u.gw.stanceActive ? (1 - CFG.guerreiro.stance.atkRateBonus) : 1;
-    u.gw.meleeCD = S.meleeCooldown * mult;
-  }
-
-  if (u.gw.state === 'MELEE_ACTIVE' && !u.gw.meleeHit) {
-    const base = u.pos.clone();
-    const tip = u.tip();
-    for (const other of game.units) {
-      if (!other.alive || other === u) continue;
-      if (u.team && other.team && u.team === other.team) continue;
-      const d = distPointToSegment(other.pos, base, tip);
-      if (d < other.bodyR + u.weaponTipR) {
-        let dmg = CFG.guerreiro.damage.meleeBase;
-        const proj = ((other.pos.x - base.x) * Math.cos(u.angle) + (other.pos.y - base.y) * Math.sin(u.angle));
-        if (proj > u.weaponLen * 0.8) dmg *= CFG.guerreiro.spear.tipBonus;
-        if (u.gw.disciplineReady && u.gw.disciplineStacks > 0) {
-          dmg *= 1 + u.gw.disciplineStacks * CFG.guerreiro.discipline.nextHitBonus;
-          u.gw.disciplineReady = false;
-          u.gw.disciplineStacks = 0;
-        }
-        const dealt = other.hit(dmg, V.fromAng(u.angle, 220), u);
-        if (dealt > 0) u.gainXPOffense(dealt);
-        for (let i = 0; i < CFG.vfx.particlesOnHit; i++) {
-          game.spawnParticle(new Particle(
-            other.pos.clone(),
-            V.fromAng(randAng(), rrand(50, 220)),
-            rrand(.2, .6),
-            '#e5e7eb'
-          ));
-        }
-        u.gw.meleeHit = true;
-        break;
-      }
-    }
-  }
-}
-
-function startThrow(u, target) {
+function startThrow(u) {
   const T = CFG.guerreiro.throw;
   const err = (T.precisionErrDeg + T.precisionErrPerLevel * (u.level - 1)) * Math.PI / 180;
-  const ang = Math.atan2(target.pos.y - u.pos.y, target.pos.x - u.pos.x) + rrand(-err, err);
+  const ang = u.angle + rrand(-err, err);
   const dir = new V(Math.cos(ang), Math.sin(ang));
-  const p = u.tip().add(dir.clone().mul(u.weaponTipR + 2));
-  const proj = new SpearProjectile(u, p, dir);
+  const base = u.weaponBase();
+  const proj = new SpearProjectile(u, base.clone(), dir);
+  proj.attached = true;
   game.spawnProjectile(proj);
-  for (let i = 0; i < 3; i++) spawnSpearTrail(p, dir);
   u.gw.thrown = proj;
-  u.gw.state = 'THROW_FLIGHT';
+  u.gw.state = 'THROW_RELEASE';
+  u.gw.releaseDur = 0.08;
+  u.gw.releaseT = u.gw.releaseDur;
   u.gw.throwT = 0;
-  u.gw.throwCD = T.cooldown;
-  u.weaponLen = 0;
-  u.weaponTipR = 0;
+  u.gw.disableMelee = true;
   registerSwap(u, 'RANGED');
 }
 
 function tickThrow(u, dt) {
   const T = CFG.guerreiro.throw;
-  u.gw.throwT += dt;
-  if (u.gw.state === 'THROW_FLIGHT') {
-    if (!u.gw.thrown || !u.gw.thrown.alive || u.gw.throwT >= T.flightMaxTime) {
-      if (u.gw.thrown) u.gw.thrown.alive = false;
-      u.gw.thrown = null;
-      u.gw.state = 'DISARMED';
-      u.gw.disarmT = T.cooldown * 0.4;
-      u.gw.stanceActive = false;
-      u.omega = u.gw.baseOmega;
+  const gw = u.gw;
+  if (gw.state === 'THROW_RELEASE') {
+    gw.releaseT -= dt;
+    u.weaponLen = gw.baseWeaponLen * (gw.releaseT / gw.releaseDur);
+    if (gw.releaseT <= 0) {
+      gw.state = 'THROW_FLIGHT';
+      u.weaponLen = 0;
+      u.weaponTipR = 0;
+      u.weaponOffset = 0;
+      u.prevTip = u.tip();
+      u.prevBase = u.weaponBase();
+      }
+    return;
+  }
+  if (gw.state === 'THROW_FLIGHT') {
+    gw.throwT += dt;
+    if (!gw.thrown || !gw.thrown.alive || gw.throwT >= T.flightMaxTime) {
+      if (gw.thrown) gw.thrown.alive = false;
+      gw.thrown = null;
+      gw.state = 'DISARMED';
+      gw.disarmT = T.cooldown * 0.1;
+      gw.stanceActive = false;
+      u.omega = gw.baseOmega;
       u.knockResist = 0;
     }
   }
+}
+
+export function fire() {
+  if (this.className !== 'guerreiro' || !this.gw) return CFG.guerreiro.throw.cooldown;
+  if (this.gw.state !== 'IDLE') return null;
+  startThrow(this);
+  return CFG.guerreiro.throw.cooldown;
 }
 
 function triggerAdvance(u, target) {
@@ -166,25 +128,18 @@ export function updateGuerreiro(dt) {
   const gw = this.gw;
   const BR = CFG.body.radius;
 
-  if (gw.meleeCD > 0) gw.meleeCD -= dt;
-  if (gw.throwCD > 0) gw.throwCD -= dt;
   if (gw.disarmT > 0) gw.disarmT -= dt;
-  if (gw.aimT > 0) gw.aimT -= dt;
   if (gw.maneuverCD > 0) gw.maneuverCD -= dt;
   if (gw.disciplineReady && game.time > gw.disciplineExpire) {
     gw.disciplineReady = false;
     gw.disciplineStacks = 0;
   }
 
-  if (gw.state === 'MELEE_STARTUP' || gw.state === 'MELEE_ACTIVE' || gw.state === 'MELEE_RECOVER') {
-    tickMelee(this, dt);
-    return;
-  }
   if (gw.state === 'ADVANCE') {
     tickAdvance(this, dt);
     return;
   }
-  if (gw.state === 'THROW_FLIGHT') {
+  if (gw.state === 'THROW_RELEASE' || gw.state === 'THROW_FLIGHT') {
     tickThrow(this, dt);
     return;
   }
@@ -193,7 +148,33 @@ export function updateGuerreiro(dt) {
       gw.state = 'IDLE';
       this.weaponLen = gw.baseWeaponLen;
       this.weaponTipR = gw.baseWeaponTipR;
+      this.weaponOffset = gw.baseWeaponOffset;
+      this.prevTip = this.tip();
+      this.prevBase = this.weaponBase();
+      gw.disableMelee = false;
     } else return;
+  }
+
+  // Rotaciona em direção ao inimigo durante a janela de mira
+  if (this.cd === 0 && this.cdAim > 0 && gw.state === 'IDLE') {
+    const T = CFG.guerreiro.throw;
+    const min = T.minRange * BR;
+    const max = T.maxRange * BR;
+    let best = null, bestDist = Infinity;
+    for (const u of game.units) {
+      if (!u.alive || u === this) continue;
+      if (this.team && u.team && this.team === u.team) continue;
+      const to = new V(u.pos.x - this.pos.x, u.pos.y - this.pos.y);
+      const d = to.len();
+      if (d < min || d > max) continue;
+      if (d < bestDist) { bestDist = d; best = u; }
+    }
+    if (best) {
+      const ang = Math.atan2(best.pos.y - this.pos.y, best.pos.x - this.pos.x);
+      let diff = Math.atan2(Math.sin(ang - this.angle), Math.cos(ang - this.angle));
+      const turn = CFG.guerreiro.spear.maxAngVel * Math.PI / 180 * dt;
+      if (Math.abs(diff) <= turn) this.angle = ang; else this.angle += Math.sign(diff) * turn;
+    }
   }
 
   // Postura de guerra
@@ -223,16 +204,6 @@ export function updateGuerreiro(dt) {
       ST.knockbackRedBase + (this.hpMax / 100) * ST.knockbackRedPer100HP,
       ST.knockbackRedMax
     );
-    if (gw.state === 'THROW_FLIGHT' && gw.thrown) {
-      gw.thrown.alive = false;
-      gw.thrown = null;
-      gw.state = 'IDLE';
-      gw.disarmT = 0;
-      this.weaponLen = gw.baseWeaponLen;
-      this.weaponTipR = gw.baseWeaponTipR;
-    }
-    gw.aimT = 0;
-    gw.throwCD = CFG.guerreiro.throw.cooldown;
   } else if (gw.stanceActive) {
     gw.stanceGrace -= dt;
     if (gw.stanceGrace <= 0) {
@@ -270,6 +241,7 @@ export function updateGuerreiro(dt) {
       if (this.team && u.team && this.team === u.team) continue;
       const to = new V(u.pos.x - this.pos.x, u.pos.y - this.pos.y);
       const dist = to.len();
+      if (dist > A.triggerRadius * BR) continue;
       const ang = Math.atan2(to.y, to.x);
       const diff = Math.atan2(Math.sin(ang - this.angle), Math.cos(ang - this.angle));
       if (Math.abs(diff) > A.vulnerableFOVDeg * Math.PI / 180) continue;
@@ -289,38 +261,11 @@ export function updateGuerreiro(dt) {
       return;
     }
   }
-
-  // Seleção de ataque
-  let target = null, best = Infinity;
-  for (const u of game.units) {
-    if (!u.alive || u === this) continue;
-    if (this.team && u.team && this.team === u.team) continue;
-    const d = new V(u.pos.x - this.pos.x, u.pos.y - this.pos.y).len();
-    if (d < best) { best = d; target = u; }
-  }
-
-  const meleeRange = CFG.guerreiro.spear.shaftLenFactor * BR;
-  const minThrow = CFG.guerreiro.throw.minRange * BR;
-  const maxThrow = CFG.guerreiro.throw.maxRange * BR;
-
-  if (target && best <= meleeRange && gw.meleeCD <= 0) {
-    startMelee(this, target);
-  } else if (CFG.guerreiro.throw.enabled && target && best >= minThrow && best <= maxThrow) {
-    if (gw.throwCD <= 0) {
-      if (gw.aimT <= 0) {
-        gw.aimT = CFG.guerreiro.throw.cooldown * CFG.guerreiro.throw.miraCondPercent;
-      }
-      if (gw.aimT > 0 && this.enemyInLineOfSight()) {
-        startThrow(this, target);
-        gw.aimT = 0;
-      }
-    }
-  }
   }
 
 export function guerreiroParryAgainst(other) {
   if (this.className !== 'guerreiro' || !this.gw || this.gw.maneuverCD > 0) return false;
-  if (this.gw.state === 'THROW_FLIGHT' || this.gw.state === 'DISARMED') return false;
+  if (this.gw.state === 'THROW_RELEASE' || this.gw.state === 'THROW_FLIGHT' || this.gw.state === 'DISARMED') return false;
   if (!other || !other.weaponTipR || !other.weaponLen) return false;
   const P = CFG.guerreiro.maneuvers.parry;
   const t1 = this.tip();
@@ -340,10 +285,16 @@ export function guerreiroParryAgainst(other) {
   other.omega *= -0.8;
 
   this.gw.maneuverCD = P.disarmDuration;
-  startMelee(this, other);
-  const S = CFG.guerreiro.spear;
-  this.gw.meleeT = Math.max(0, S.meleeStartup - P.counterStartup);
-  if (this.canDamage(other)) { this.gainXPWeaponClash(); other.gainXPWeaponClash(); }
+  if (this.canDamage(other)) {
+    const dmg = CFG.guerreiro.damage.meleeBase;
+    const dealt = other.hit(dmg, V.fromAng(this.angle, 380), this);
+    if (dealt > 0) {
+      this.gainXPOffense(dealt);
+      registerSwap(this, 'MELEE');
+    }
+    this.gainXPWeaponClash();
+    other.gainXPWeaponClash();
+  }
 
   const mid = new V((t1.x + t2.x) / 2, (t1.y + t2.y) / 2);
   spawnParryVFX(mid);

@@ -49,8 +49,8 @@ export function drawArenaRect(bounds){
   const {x, y, w, h} = bounds;
 
   const bg = g.createLinearGradient(0, y, 0, y + h);
-  bg.addColorStop(0, '#0f1622');
-  bg.addColorStop(1, '#0a111b');
+  bg.addColorStop(0, CFG.theme.bg);
+  bg.addColorStop(1, CFG.theme.bg2);
   g.fillStyle = bg;
   g.fillRect(x, y, w, h);
 
@@ -81,8 +81,8 @@ export function drawBackground(w, h) {
     w*0.5, h*0.5, Math.min(w,h)*0.12,
     w*0.5, h*0.5, Math.min(w,h)*0.65
   );
-  rad.addColorStop(0, '#08121f');
-  rad.addColorStop(1, '#05080e');
+  rad.addColorStop(0, CFG.theme.bg);
+  rad.addColorStop(1, CFG.theme.bg2);
   g.fillStyle = rad;
   g.fillRect(0, 0, w, h);
 }

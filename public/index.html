@@ -20,6 +20,73 @@
     --p3: #8be9fd;
     --p4: #f1fa8c;
     --border-radius: 14px;
+    --bg-grad-start: #0d1724;
+    --bg-grad-end: #070a0e;
+    --toolbar-bg: rgba(15,21,32,0.85);
+    --toolbar-border: rgba(120,255,214,0.08);
+    --card-bg: linear-gradient(180deg, rgba(16,22,33,.9), rgba(12,17,26,.95));
+    --card-border: rgba(120,255,214,0.06);
+    --canvas-bg: #0a0f15;
+    --canvas-border: #162033;
+    --btn-bg: linear-gradient(180deg, #0f1624, #0c121d);
+    --btn-border: rgba(120,255,214,0.14);
+    --btn-primary-bg: linear-gradient(180deg, #122a1f, #0f201a);
+    --btn-primary-border: rgba(120,255,214,.4);
+    --btn-danger-bg: linear-gradient(180deg, #2a1616, #1c1111);
+    --btn-danger-border: rgba(255,107,107,.35);
+    --btn-ghost-border: rgba(120,255,214,0.12);
+    --unit-item-bg: rgba(7,10,14,.35);
+    --unit-item-border: rgba(120,255,214,.07);
+    --unit-pretty-bg: rgba(255,255,255,.03);
+    --unit-pretty-border: rgba(125,211,252,.15);
+    --unit-thumb-bg: #0b1220;
+    --unit-thumb-border: rgba(125,211,252,.25);
+    --input-bg: #0d1320;
+    --input-border: rgba(120,255,214,0.14);
+    --overlay-bg: rgba(11, 15, 20, 0.92);
+    --message-card-bg: rgba(15,21,32,0.95);
+    --message-card-border: rgba(120,255,214,0.12);
+  }
+
+  [data-theme="light"] {
+    --bg: #f3f4f6;
+    --bg2: #e5e7eb;
+    --panel: #ffffff;
+    --line: #d1d5db;
+    --text: #1f2937;
+    --muted: #4b5563;
+    --accent: #0ea5e9;
+    --accent-2:#0284c7;
+    --p1: #15803d;
+    --p2: #be123c;
+    --p3: #0369a1;
+    --p4: #ca8a04;
+    --bg-grad-start: #ffffff;
+    --bg-grad-end: #e5e7eb;
+    --toolbar-bg: rgba(255,255,255,0.85);
+    --toolbar-border: rgba(0,0,0,0.06);
+    --card-bg: #ffffff;
+    --card-border: rgba(0,0,0,0.06);
+    --canvas-bg: #f8fafc;
+    --canvas-border: #cbd5e1;
+    --btn-bg: linear-gradient(180deg, #f9fafb, #f3f4f6);
+    --btn-border: #d1d5db;
+    --btn-primary-bg: linear-gradient(180deg, #dbeafe, #bfdbfe);
+    --btn-primary-border: rgba(14,165,233,0.4);
+    --btn-danger-bg: linear-gradient(180deg, #fee2e2, #fecaca);
+    --btn-danger-border: rgba(190,18,60,0.35);
+    --btn-ghost-border: rgba(0,0,0,0.1);
+    --unit-item-bg: rgba(249,250,251,0.8);
+    --unit-item-border: rgba(0,0,0,0.06);
+    --unit-pretty-bg: rgba(0,0,0,0.03);
+    --unit-pretty-border: rgba(148,163,184,0.15);
+    --unit-thumb-bg: #ffffff;
+    --unit-thumb-border: rgba(148,163,184,0.25);
+    --input-bg: #ffffff;
+    --input-border: #d1d5db;
+    --overlay-bg: rgba(255,255,255,0.92);
+    --message-card-bg: rgba(255,255,255,0.95);
+    --message-card-border: rgba(0,0,0,0.12);
   }
 
   /* Reset básico */
@@ -27,7 +94,7 @@
 
   html, body { height: 100%; }
   body {
-    background: radial-gradient(1200px 800px at 20% -10%, #0d1724 0%, var(--bg) 35%, #070a0e 100%);
+    background: radial-gradient(1200px 800px at 20% -10%, var(--bg-grad-start) 0%, var(--bg) 35%, var(--bg-grad-end) 100%);
     color: var(--text);
     font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, sans-serif;
     line-height: 1.35;
@@ -38,9 +105,9 @@
   .toolbar {
     display:flex; align-items:center; gap:16px;
     padding: 10px 14px;
-    background: rgba(15,21,32,0.85);
+    background: var(--toolbar-bg);
     backdrop-filter: blur(6px);
-    border: 1px solid rgba(120,255,214,0.08);
+    border: 1px solid var(--toolbar-border);
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0,0,0,.35);
   }
@@ -59,8 +126,8 @@
 
   /* Cartões */
   .card {
-    background: linear-gradient(180deg, rgba(16,22,33,.9), rgba(12,17,26,.95));
-    border: 1px solid rgba(120,255,214,0.06);
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
     border-radius: var(--border-radius);
     box-shadow: 0 12px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03);
     padding: 14px;
@@ -75,12 +142,12 @@
   /* Palco */
   .stage { padding: 10px; }
   canvas {
-    background: #0a0f15;
+    background: var(--canvas-bg);
     border-radius: 12px;
     display: block;
     width: 100%;
     height: auto;
-    border: 1px solid #162033;
+    border: 1px solid var(--canvas-border);
     box-shadow: inset 0 0 0 1px rgba(120,255,214,0.03), 0 0 0 2px rgba(0,0,0,.25);
   }
 
@@ -97,8 +164,8 @@
 
   .btn {
     appearance: none;
-    border: 1px solid rgba(120,255,214,0.14);
-    background: linear-gradient(180deg, #0f1624, #0c121d);
+    border: 1px solid var(--btn-border);
+    background: var(--btn-bg);
     color: var(--text);
     padding: 10px 12px;
     border-radius: 12px;
@@ -109,18 +176,18 @@
   }
   .btn:hover { border-color: var(--accent-2); box-shadow: 0 10px 22px rgba(0,0,0,.35); }
   .btn:active { transform: translateY(1px) scale(.995); }
-  .btn.primary { background: linear-gradient(180deg, #122a1f, #0f201a); border-color: rgba(120,255,214,.4); }
-  .btn.danger  { background: linear-gradient(180deg, #2a1616, #1c1111); border-color: rgba(255,107,107,.35); }
-  .btn.ghost   { background: transparent; border-color: rgba(120,255,214,0.12); }
+  .btn.primary { background: var(--btn-primary-bg); border-color: var(--btn-primary-border); }
+  .btn.danger  { background: var(--btn-danger-bg); border-color: var(--btn-danger-border); }
+  .btn.ghost   { background: transparent; border-color: var(--btn-ghost-border); }
 
   .row { display: grid; grid-template-columns: 80px 1fr; align-items: center; gap: 10px; margin-top: 12px; }
   .label { color: var(--muted); font-size: .9rem; }
 
   .select, input[type="number"] {
     width: 100%;
-    background: #0d1320;
+    background: var(--input-bg);
     color: var(--text);
-    border: 1px solid rgba(120,255,214,0.14);
+    border: 1px solid var(--input-border);
     padding: 8px 10px;
     border-radius: 10px;
     outline: none;
@@ -139,8 +206,8 @@
     align-items: center;
     padding: 8px;
     border-radius: 10px;
-    background: rgba(7,10,14,.35);
-    border: 1px solid rgba(120,255,214,.07);
+    background: var(--unit-item-bg);
+    border: 1px solid var(--unit-item-border);
   }
   .unit-item button {
     padding: 8px;
@@ -152,8 +219,8 @@
     display:flex; gap:12px; align-items:center;
     padding:10px; margin:10px 0;
     border-radius:12px;
-    background:rgba(255,255,255,.03);
-    border:1px solid rgba(125,211,252,.15);
+    background:var(--unit-pretty-bg);
+    border:1px solid var(--unit-pretty-border);
     box-shadow: 0 6px 16px rgba(0,0,0,.25) inset, 0 1px 0 rgba(255,255,255,.04);
   }
 
@@ -161,8 +228,8 @@
   .unit-item.pretty .unit-thumb{
     width:120px; height:64px;
     border-radius:10px; overflow:hidden;
-    border:1px solid rgba(125,211,252,.25);
-    background:#0b1220;
+    border:1px solid var(--unit-thumb-border);
+    background:var(--unit-thumb-bg);
   }
 
   /* Campos */
@@ -173,8 +240,8 @@
   }
   .unit-item.pretty .unit-fields select,
   .unit-item.pretty .unit-fields input{
-    background:#0d1522; color:#e6edf7;
-    border:1px solid rgba(148,163,184,.25);
+    background:var(--input-bg); color:var(--text);
+    border:1px solid var(--input-border);
     border-radius:8px; padding:6px 8px; height:34px;
   }
   .unit-item.pretty .team-swatch{
@@ -193,7 +260,7 @@
   #overlay {
     position: fixed;
     inset: 0;
-    background: rgba(11, 15, 20, 0.92);
+    background: var(--overlay-bg);
     display: none; /* começa escondido; game.showMenu() mostra */
     align-items: center;
     justify-content: center;
@@ -217,8 +284,8 @@
     display: none;
   }
   .message-card {
-    background: rgba(15,21,32,0.95);
-    border: 1px solid rgba(120,255,214,0.12);
+    background: var(--message-card-bg);
+    border: 1px solid var(--message-card-border);
     border-radius: 12px;
     padding: 12px 14px;
     box-shadow: 0 10px 30px rgba(0,0,0,.4);
@@ -241,11 +308,15 @@
   ::-webkit-scrollbar-thumb:hover { background: #1e2a40; }
   </style>
 </head>
-<body>
+<body data-theme="dark">
 
   <!-- TOP BAR -->
   <div class="toolbar">
     <div class="brand">⚔️ Battle Balls</div>
+    <button id="btnTheme" class="btn ghost" aria-label="Alternar tema">
+      <svg id="iconMoon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+      <svg id="iconSun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2m11-11h-2M3 12H1m16.95 7.95l-1.41-1.41M6.46 6.46 5.05 5.05m12.9 0-1.41 1.41M6.46 17.54l-1.41 1.41"/></svg>
+    </button>
     <div class="spacer"></div>
     <div class="small muted">FPS:</div>
     <div id="fps" class="fps">—</div>

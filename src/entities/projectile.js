@@ -2,7 +2,7 @@
 
 import { CFG } from '../config/cfg.js';
 import { V } from '../math/vec.js';
-import { reflect, inFrontArc, projApproaching } from '../utils/geometry.js';
+import { reflect, inFrontArc, projApproaching, distPointToSegment } from '../utils/geometry.js';
 import { clamp } from '../utils/misc.js';
 import { randAng, rrand } from '../utils/rand.js';
 import { Particle } from './particle.js';
@@ -35,6 +35,7 @@ export class Projectile {
   update(dt, arena, units, pets) {
     this.life -= dt;
     if (this.life <= 0) { this.alive = false; return; }
+    const prevPos = this.pos.clone();
     this.stepMove(dt);
 
     // Colisão com paredes
@@ -102,7 +103,7 @@ export class Projectile {
         }
       }
 
-      const d = new V(u.pos.x - this.pos.x, u.pos.y - this.pos.y).len();
+      const d = distPointToSegment(u.pos, prevPos, this.pos);
       if (d < u.bodyR + this.rad) {
         const dealt = u.hit(this.dmg, this.dir.clone().mul(this.knock), this.owner);
         if (dealt > 0) {
@@ -127,7 +128,7 @@ export class Projectile {
       if (!s.alive) continue;
       if (s.kind === 'mine') {
         if (this.owner && s.team && this.owner.team && s.team === this.owner.team && !this.canHurtAllies) continue;
-        const d = new V(s.pos.x - this.pos.x, s.pos.y - this.pos.y).len();
+        const d = distPointToSegment(s.pos, prevPos, this.pos);
         if (d < s.bodyR + this.rad) {
           s.hit?.(this.dmg, this.owner);
           if (!this.penetration) this.alive = false;
@@ -136,12 +137,12 @@ export class Projectile {
       }
     }
 
-    // Familiar (projetis podem atingi-lo)
+    // Familiar (projéteis não causam dano em aliados)
     for (const s of game.summons) {
       if (!s.alive || s.kind !== 'familiar') continue;
-      if (this.owner && s.team && this.owner.team && s.team === this.owner.team && !this.canHurtAllies) continue;
+      if (this.owner && s.team && this.owner.team && s.team === this.owner.team) continue;
 
-      const d = new V(s.pos.x - this.pos.x, s.pos.y - this.pos.y).len();
+      const d = distPointToSegment(s.pos, prevPos, this.pos);
       if (d < s.bodyR + this.rad) {
         const dealt = s.hit(this.dmg, this.dir.clone().mul(this.knock), this.owner);
         if (dealt > 0) {
@@ -164,7 +165,7 @@ export class Projectile {
       if (!s.alive || s.kind !== 'turret') continue;
       if (this.owner && s.team && this.owner.team && s.team === this.owner.team && !this.canHurtAllies) continue;
 
-      const d = new V(s.pos.x - this.pos.x, s.pos.y - this.pos.y).len();
+      const d = distPointToSegment(s.pos, prevPos, this.pos);
       if (d < s.bodyR + this.rad) {
         const dealt = s.hit(this.dmg, this.owner);
         if (dealt > 0 && this.owner) this.owner.gainXPOffense?.(dealt);
