@@ -183,23 +183,27 @@ export class Projectile {
   }
 
   draw(ctx) {
+    const useImg = this.img && this.img.complete;
     ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalCompositeOperation = useImg ? 'source-over' : 'lighter';
     ctx.lineCap = 'round';
     ctx.globalAlpha = .9;
     ctx.strokeStyle = this.color;
     ctx.lineWidth = 2;
-    if (this.trail.length > 1) {
+    if (!useImg && this.trail.length > 1) {
       ctx.beginPath();
       ctx.moveTo(this.trail[0].x, this.trail[0].y);
       for (const p of this.trail) ctx.lineTo(p.x, p.y);
       ctx.stroke();
     }
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = useImg ? 0 : 10;
     ctx.shadowColor = this.color;
-    if (this.img && this.img.complete) {
-      const s = this.rad * 2;
-      ctx.drawImage(this.img, this.pos.x - s / 2, this.pos.y - s / 2, s, s);
+    if (useImg) {
+      const iw = this.img.naturalWidth || this.img.width;
+      const ih = this.img.naturalHeight || this.img.height;
+      const w = this.rad * 2;
+      const h = w * (ih / iw);
+      ctx.drawImage(this.img, this.pos.x - w / 2, this.pos.y - h / 2, w, h);
     } else {
       ctx.fillStyle = this.color;
       ctx.beginPath();
