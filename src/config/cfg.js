@@ -244,7 +244,7 @@ export const CFG = {
     cortante: {
       cd: 8.0,
       speed: 120,
-      life: 2.1,
+      life: 6.3,
       radius: 5,
       zigzagAmp: 100,
       zigzagFreq: 20,
