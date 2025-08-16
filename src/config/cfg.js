@@ -237,7 +237,7 @@ export const CFG = {
       radius: 180,
       dmg: 0.2,
       speed: 0.2,
-      tempHP: 20,
+      tempHP: 40,
       duration: 5.0,
       cooldown: 12.0
     },
