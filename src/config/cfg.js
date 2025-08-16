@@ -186,8 +186,8 @@ export const CFG = {
 
     beam: {
       cd: 18.0, dur: 1.6, range: 900, width: 26,
-      // dano do Sunbeam dobrado
-      dpsBase: 204, dpsPerLevel: 15.3, push: 900, tick: 0.06,
+      // dano do Sunbeam reduzido em 40%
+      dpsBase: 122.4, dpsPerLevel: 9.18, push: 900, tick: 0.06,
       color: '#ffe28a', edge: '#f59e0b'
     },
 
@@ -217,9 +217,9 @@ export const CFG = {
 
   // Configuração da classe Bardo
   bardo: {
-    hpBase: 156, hpPerLevel: 10.4,
+    hpBase: 187.2, hpPerLevel: 12.48,
     note: {
-      dmg: 11.232,
+      dmg: 14.602,
       heal: 4,
       buffDmg: 0.15,
       buffSpeed: 0.15,
@@ -243,7 +243,7 @@ export const CFG = {
     },
     cortante: {
       cd: 8.0,
-      speed: 300,
+      speed: 120,
       life: 2.1,
       radius: 5,
       zigzagAmp: 100,

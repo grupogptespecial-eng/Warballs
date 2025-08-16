@@ -6,6 +6,7 @@ import { randAng } from '../utils/rand.js';
 import { clamp } from '../utils/misc.js';
 import { Projectile } from './projectile.js';
 import { drawRoundedRect } from '../utils/geometry.js';
+import { drawItemSprite } from '../render/visuals_module.js';
 import { game } from '../core/game.js';
 
 export class Familiar {
@@ -85,6 +86,26 @@ export class Familiar {
     ctx.arc(this.pos.x, this.pos.y, this.bodyR * 0.9, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+
+    // chifres do familiar
+    const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    const pal = ['#7E57C2', '#A586E8', '#40345A'];
+    const scale = 0.38 * (this.bodyR * 2);
+    const dist = this.bodyR * 1.92;
+
+    const drawHorn = (angDeg, rotDeg, flipX = false) => {
+      const ang = angDeg * Math.PI / 180;
+      const rot = rotDeg * Math.PI / 180;
+      ctx.save();
+      ctx.translate(this.pos.x + Math.cos(ang) * dist, this.pos.y + Math.sin(ang) * dist);
+      ctx.rotate(ang + rot);
+      if (flipX) ctx.scale(-1, 1);
+      drawItemSprite(ctx, 'chifre_bruxo', scale, pal, now);
+      ctx.restore();
+    };
+
+    drawHorn(220, -100);
+    drawHorn(320, 280, true);
 
     const w = 36, h = 4, x = this.pos.x - w / 2, y = this.pos.y - this.bodyR - 10;
     drawRoundedRect(ctx, x, y, w, h, 3);
