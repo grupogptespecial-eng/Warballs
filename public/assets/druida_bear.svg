@@ -1,11 +1,213 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Cabeça estilizada de urso">
-  <circle cx="64" cy="72" r="40" fill="#7b4a1e"/>
-  <circle cx="32" cy="40" r="20" fill="#7b4a1e"/>
-  <circle cx="96" cy="40" r="20" fill="#7b4a1e"/>
-  <circle cx="32" cy="40" r="12" fill="#996237"/>
-  <circle cx="96" cy="40" r="12" fill="#996237"/>
-  <circle cx="48" cy="72" r="6" fill="#1b120b"/>
-  <circle cx="80" cy="72" r="6" fill="#1b120b"/>
-  <path d="M64 82c-8 0-14 6-14 12s6 10 14 10 14-4 14-10-6-12-14-12z" fill="#4f2e14"/>
-  <path d="M56 84c2 4 8 4 16 0" stroke="#1b120b" stroke-width="2" fill="none"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900" role="img" aria-label="Cabeça de urso rugindo estilizada, em vetor">
+  <title>Urso rugindo — ilustração vetorial</title>
+
+  <!-- ======== ESTILOS ======== -->
+  <style>
+    .outline{fill:#1a120c;}
+    .fur-mid{fill:url(#furMid);}
+    .fur-light{fill:url(#furLight);}
+    .nose{fill:#2c1d14;}
+    .gum{fill:url(#gumGrad);}
+    .mouth{fill:#0b0a0a;}
+    .tongue{fill:url(#tongueGrad);}
+    .tooth{fill:#f6f6f6;stroke:#cfcfcf;stroke-width:3;stroke-linejoin:round}
+    .shine{fill:#ffffff;opacity:.08}
+    .stroke-fur{fill:none;stroke:url(#furStroke);stroke-width:6;stroke-linecap:round;stroke-linejoin:round;opacity:.65}
+  </style>
+
+  <!-- ======== DEFS ======== -->
+  <defs>
+    <!-- pelagem -->
+    <radialGradient id="furMid" cx="50%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#6d4324"/>
+      <stop offset="55%" stop-color="#3b2617"/>
+      <stop offset="100%" stop-color="#23160f"/>
+    </radialGradient>
+
+    <linearGradient id="furLight" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#b27942"/>
+      <stop offset="40%" stop-color="#81502c"/>
+      <stop offset="100%" stop-color="#3a2618"/>
+    </linearGradient>
+
+    <linearGradient id="furStroke" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c08b59"/>
+      <stop offset="100%" stop-color="#5b3a22"/>
+    </linearGradient>
+
+    <!-- gengiva e língua -->
+    <linearGradient id="gumGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#dd5b4b"/>
+      <stop offset="100%" stop-color="#8d1e17"/>
+    </linearGradient>
+    <linearGradient id="tongueGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#db3b3f"/>
+      <stop offset="60%" stop-color="#9a1f23"/>
+      <stop offset="100%" stop-color="#4a0e12"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ======== BASE / SILHUETA ======== -->
+  <!-- silhueta externa em “V” ligeiro (rosto triangular agressivo) -->
+  <path class="outline" d="
+    M450,95
+    C395,105 360,135 330,170
+    C305,150 268,140 230,168
+    C205,186 197,215 202,245
+    C160,280 146,330 168,374
+    C120,430 120,510 186,555
+    C205,650 300,745 450,785
+    C600,745 695,650 714,555
+    C780,510 780,430 732,374
+    C754,330 740,280 698,245
+    C703,215 695,186 670,168
+    C632,140 595,150 570,170
+    C540,135 505,105 450,95
+    Z"/>
+
+  <!-- camada média da pelagem -->
+  <path class="fur-mid" d="
+    M450,130
+    C405,140 377,170 350,210
+    C320,193 285,197 256,220
+    C238,234 233,260 240,285
+    C205,318 198,355 212,390
+    C173,435 177,510 220,537
+    C232,620 315,710 450,744
+    C585,710 668,620 680,537
+    C723,510 727,435 688,390
+    C702,355 695,318 660,285
+    C667,260 662,234 644,220
+    C615,197 580,193 550,210
+    C523,170 495,140 450,130
+    Z"/>
+
+  <!-- luzes/chumaços mais claros (bochechas e queixo) -->
+  <path class="fur-light" d="
+    M450,610
+    C405,595 350,560 330,500
+    C310,520 280,535 265,560
+    C320,665 395,710 450,725
+    C505,710 580,665 635,560
+    C620,535 590,520 570,500
+    C550,560 495,595 450,610 Z"/>
+
+  <!-- riscas/tufo de pelos (algumas linhas) -->
+  <path class="stroke-fur" d="M220,540 C290,555 355,595 390,650" />
+  <path class="stroke-fur" d="M680,540 C610,555 545,595 510,650" />
+  <path class="stroke-fur" d="M260,280 C310,305 340,340 360,392" />
+  <path class="stroke-fur" d="M640,280 C590,305 560,340 540,392" />
+  <path class="stroke-fur" d="M450,160 C430,210 430,250 450,285" />
+  <path class="stroke-fur" d="M450,700 C425,680 410,655 400,630" />
+  <path class="stroke-fur" d="M450,700 C475,680 490,655 500,630" />
+
+  <!-- ======== ORELHAS ======== -->
+  <g>
+    <path class="fur-light" d="M302,192
+      C285,175 256,175 236,190
+      C225,198 218,212 220,230
+      C225,255 252,275 288,268
+      C312,263 323,230 302,192 Z"/>
+    <path class="fur-light" d="M598,192
+      C615,175 644,175 664,190
+      C675,198 682,212 680,230
+      C675,255 648,275 612,268
+      C588,263 577,230 598,192 Z"/>
+  </g>
+
+  <!-- ======== OLHOS ======== -->
+  <g>
+    <path fill="#f5f5f5" d="M350,310
+      C365,298 388,298 405,310
+      C388,320 365,320 350,310 Z"/>
+    <path fill="#f5f5f5" d="M550,310
+      C535,298 512,298 495,310
+      C512,320 535,320 550,310 Z"/>
+  </g>
+
+  <!-- ======== FOCINHO / NARIZ ======== -->
+  <g>
+    <path class="fur-light" d="
+      M450,300
+      C410,310 380,345 377,370
+      C420,380 480,380 523,370
+      C520,345 490,310 450,300 Z"/>
+    <path class="nose" d="
+      M450,320
+      C425,325 405,342 405,360
+      C405,372 417,382 450,382
+      C483,382 495,372 495,360
+      C495,342 475,325 450,320 Z"/>
+    <ellipse cx="433" cy="352" rx="10" ry="6" fill="#0e0d0d"/>
+    <ellipse cx="467" cy="352" rx="10" ry="6" fill="#0e0d0d"/>
+  </g>
+
+  <!-- ======== BOCA ABERTA ======== -->
+  <!-- cavidade -->
+  <path class="mouth" d="
+    M330,390
+    C330,360 380,350 450,350
+    C520,350 570,360 570,390
+    C570,455 540,540 450,560
+    C360,540 330,455 330,390 Z"/>
+
+  <!-- gengiva superior -->
+  <path class="gum" d="
+    M340,390
+    C340,370 390,362 450,362
+    C510,362 560,370 560,390
+    C520,395 480,398 450,398
+    C420,398 380,395 340,390 Z"/>
+
+  <!-- gengiva inferior -->
+  <path class="gum" d="
+    M355,540
+    C380,555 415,565 450,565
+    C485,565 520,555 545,540
+    C520,535 485,528 450,528
+    C415,528 380,535 355,540 Z"/>
+
+  <!-- língua -->
+  <path class="tongue" d="
+    M405,505
+    C405,535 425,555 450,555
+    C475,555 495,535 495,505
+    C480,498 465,494 450,494
+    C435,494 420,498 405,505 Z"/>
+
+  <!-- dentes superiores (incisivos e caninos) -->
+  <g>
+    <path class="tooth" d="M410,405 l15,0  -8,30 z"/>
+    <path class="tooth" d="M450,405 l15,0  -8,30 z"/>
+    <path class="tooth" d="M490,405 l15,0  -8,30 z"/>
+
+    <path class="tooth" d="M368,400
+      c8,-6 20,-6 28,0
+      l-14,55 z"/>
+    <path class="tooth" d="M532,400
+      c-8,-6 -20,-6 -28,0
+      l14,55 z"/>
+  </g>
+
+  <!-- dentes inferiores -->
+  <g>
+    <path class="tooth" d="M410,520 l15,0  -8,-28 z"/>
+    <path class="tooth" d="M450,520 l15,0  -8,-28 z"/>
+    <path class="tooth" d="M490,520 l15,0  -8,-28 z"/>
+    <path class="tooth" d="M372,520
+      c7,5 18,5 26,0
+      l-13,-45 z"/>
+    <path class="tooth" d="M528,520
+      c-7,5 -18,5 -26,0
+      l13,-45 z"/>
+  </g>
+
+  <!-- brilho leve da boca -->
+  <ellipse class="shine" cx="450" cy="470" rx="130" ry="85"/>
+
+  <!-- ======== DETALHES FINAIS DE PELOS (tufo central/queixo) ======== -->
+  <path class="stroke-fur" d="M450,585 C430,610 420,640 420,660" />
+  <path class="stroke-fur" d="M450,585 C470,610 480,640 480,660" />
+  <path class="stroke-fur" d="M300,455 C340,485 360,515 370,545" />
+  <path class="stroke-fur" d="M600,455 C560,485 540,515 530,545" />
 </svg>
