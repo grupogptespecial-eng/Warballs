@@ -10,7 +10,7 @@ import { game } from '../core/game.js';
 import { drawItemSprite, drawWeaponForUnit, applyMicroAnim } from '../render/visuals_module.js';
 
 const bearImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
-if (bearImg.src !== undefined) bearImg.src = '../../public/assets/druida_bear.svg';
+if (bearImg.src !== undefined) bearImg.src = 'assets/druida_bear.svg';
 
 import {
   makeMonkState,
