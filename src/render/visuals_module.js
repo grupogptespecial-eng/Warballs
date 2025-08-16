@@ -522,24 +522,26 @@ export function renderUnitPreview(ctx, unit, teamColor, now){
     ctx.save();
     ctx.translate(unit.pos.x, unit.pos.y);
     const wAng = (cfg?.weaponAngleDeg ?? 30) * Math.PI / 180;
-    let wScale, wOff;
+    let wScale, wOff, anchor;
     if (unit.className === 'guerreiro') {
       const base = CLASSES[unit.className] || {};
       const wLen = (base.weaponLen || 0) * (cfg?.weaponScale ?? 1);
       wScale = wLen / 0.88;
       wOff = unit.bodyR * (cfg?.weaponOffsetMult ?? 1.4);
+      anchor = (cfg?.weaponAnchor ?? 0) * wScale;
       ctx.rotate(wAng);
-      ctx.translate(wOff + 0.48 * wScale, 0);
+      ctx.translate(wOff + anchor, 0);
     } else {
       wScale = unit.bodyR * 1.2 * (cfg?.weaponScale ?? 1);
       wOff = unit.bodyR * (cfg?.weaponOffsetMult ?? 1.4);
+      anchor = (cfg?.weaponAnchor ?? 0) * wScale;
       if (unit.className === 'paladino' || unit.className === 'clerigo') {
         ctx.rotate(0);
-        ctx.translate(wOff, 0);
+        ctx.translate(wOff + anchor, 0);
         ctx.rotate(wAng);
       } else {
         ctx.rotate(wAng);
-        ctx.translate(wOff, 0);
+        ctx.translate(wOff + anchor, 0);
       }
     }
     drawWeaponForUnit(ctx, unit, wScale);

@@ -518,48 +518,151 @@ export const LEVEL_SAFE_RADIUS_MULT = 0.42;
 // Configuração visual por classe. Cada item é posicionado usando um ângulo fixo
 // e pode ajustar escala, animação e paleta de cores.
 export const CLASS_VISUALS = {
-  barbaro:  { item:'saia_barbaro', scale:0.45,anchorAngleDeg:100, microAnim:'sway_low',   palette:[BARBARIAN_PALETTE.leatherBase,BARBARIAN_PALETTE.leatherLight,BARBARIAN_PALETTE.leatherStroke], weaponOverride:'axe_double_bit_v2', weaponAngleDeg:35 ,weaponScale:1.25, weaponOffsetMult:2.0, itemOffsetY:0.0, distanceFromCenter:0.02, internalRotationDeg:-100 },
-  ranger:   { item:'aljava_pequena', anchorAngleDeg:45, scale:0.56, microAnim:'idle_breath', palette:['#4E6B3A','#B89B6B','#2E3B22'], weaponAngleDeg:-25, weaponScale:1.56, weaponOffsetMult:1.5, distanceFromCenter:0.82, internalRotationDeg:0 },
-  monge:    { item:'colar_monge',    scale:0.6, palette:[], distanceFromCenter:0.82, internalRotationDeg:0 },
-  paladino: { item:'insignia_escudo',anchorAngleDeg:20, scale:0.55, microAnim:'glint_slow',   palette:['#C9C9C9','#E6D27A','#7A6A3A'], weaponAngleDeg:-90, weaponScale:1.6, weaponOffsetMult:2.0, distanceFromCenter:0.62, internalRotationDeg:0 },
-  clerigo:  { item:'sigilo_sol',     anchorAngleDeg:330,scale:0.34, microAnim:'soft_glow',    palette:['#FFD67A','#F4B43A','#8A6A2A'], weaponAngleDeg:90, weaponScale:2.0, weaponOffsetMult:1.8, distanceFromCenter:0.72, internalRotationDeg:0 },
-  bruxo:    {
-    weaponAngleDeg:-10,
-    palette:['#7E57C2','#A586E8','#40345A'],
+  barbaro: {
+    // item
+    item: 'saia_barbaro',
+    anchorAngleDeg: 100,
+    scale: 0.45,
+    microAnim: 'sway_low',
+    palette: [BARBARIAN_PALETTE.leatherBase, BARBARIAN_PALETTE.leatherLight, BARBARIAN_PALETTE.leatherStroke],
+    distanceFromCenter: 0.02,
+    internalRotationDeg: -100,
+    itemOffsetY: 0.0,
+    // weapon
+    weaponOverride: 'axe_double_bit_v2',
+    weaponAngleDeg: 35,
+    weaponScale: 1.25,
+    weaponOffsetMult: 2.0,
+    weaponAnchor: 0
+  },
+  ranger: {
+    // item
+    item: 'aljava_pequena',
+    anchorAngleDeg: 45,
+    scale: 0.56,
+    microAnim: 'idle_breath',
+    palette: ['#4E6B3A', '#B89B6B', '#2E3B22'],
+    distanceFromCenter: 0.82,
+    internalRotationDeg: 0,
+    // weapon
+    weaponAngleDeg: -25,
+    weaponScale: 1.56,
+    weaponOffsetMult: 1.5,
+    weaponAnchor: 0
+  },
+  monge: {
+    // item
+    item: 'colar_monge',
+    scale: 0.6,
+    palette: [],
+    distanceFromCenter: 0.82,
+    internalRotationDeg: 0
+  },
+  paladino: {
+    // item
+    item: 'insignia_escudo',
+    anchorAngleDeg: 20,
+    scale: 0.55,
+    microAnim: 'glint_slow',
+    palette: ['#C9C9C9', '#E6D27A', '#7A6A3A'],
+    distanceFromCenter: 0.62,
+    internalRotationDeg: 0,
+    // weapon
+    weaponAngleDeg: -90,
+    weaponScale: 1.6,
+    weaponOffsetMult: 2.0,
+    weaponAnchor: 0
+  },
+  clerigo: {
+    // item
+    item: 'sigilo_sol',
+    anchorAngleDeg: 330,
+    scale: 0.34,
+    microAnim: 'soft_glow',
+    palette: ['#FFD67A', '#F4B43A', '#8A6A2A'],
+    distanceFromCenter: 0.72,
+    internalRotationDeg: 0,
+    // weapon
+    weaponAngleDeg: 90,
+    weaponScale: 2.0,
+    weaponOffsetMult: 1.8,
+    weaponAnchor: 0
+  },
+  bruxo: {
+    // weapon
+    weaponAngleDeg: -10,
+    weaponAnchor: 0,
+    palette: ['#7E57C2', '#A586E8', '#40345A'],
     items: [
-      { item:'chifre_bruxo', anchorAngleDeg:220, scale:0.38, microAnim:'idle_breath', palette:['#7E57C2','#A586E8','#40345A'], distanceFromCenter:1.92, internalRotationDeg:-100 },
-      { item:'chifre_bruxo', anchorAngleDeg:320, scale:0.38, microAnim:'idle_breath', palette:['#7E57C2','#A586E8','#40345A'], distanceFromCenter:1.92, internalRotationDeg:280, flipX:true }
+      { item: 'chifre_bruxo', anchorAngleDeg: 220, scale: 0.38, microAnim: 'idle_breath', palette: ['#7E57C2', '#A586E8', '#40345A'], distanceFromCenter: 1.92, internalRotationDeg: -100 },
+      { item: 'chifre_bruxo', anchorAngleDeg: 320, scale: 0.38, microAnim: 'idle_breath', palette: ['#7E57C2', '#A586E8', '#40345A'], distanceFromCenter: 1.92, internalRotationDeg: 280, flipX: true }
     ]
   },
-  bardo:    {
-    item:'chapeu_bardo',
-    anchorAngleDeg:270,
-    scale:0.66,
-    microAnim:'idle_breath',
-    palette:['#11772a','#22a33a','#d7b193'],
-    distanceFromCenter:0.72,
-    internalRotationDeg:0,
-    weaponOverride:'flauta',
-    weaponAngleDeg:0,
-    weaponScale:1.5,
-    weaponOffsetMult:1.6
+  bardo: {
+    // item
+    item: 'chapeu_bardo',
+    anchorAngleDeg: 270,
+    scale: 0.66,
+    microAnim: 'idle_breath',
+    palette: ['#11772a', '#22a33a', '#d7b193'],
+    distanceFromCenter: 0.72,
+    internalRotationDeg: 0,
+    // weapon
+    weaponOverride: 'flauta',
+    weaponAngleDeg: 0,
+    weaponScale: 1.5,
+    weaponOffsetMult: 1.6,
+    weaponAnchor: 0
   },
-  artifice: { item:'goggles',        anchorAngleDeg:270, scale:0.56, microAnim:'idle_breath',  palette:['#A6B1B8','#E0E7EA','#3B4A5A'], weaponOverride:'arcane_cannon', weaponAngleDeg:40, weaponScale:1.8, weaponOffsetMult:1.5, distanceFromCenter:0.52, internalRotationDeg:0 },
-    guerreiro:{ item:'ombreira_metal', anchorAngleDeg:210,scale:0.70, microAnim:'sway_low',     palette:['#9BA4AE','#6B757F','#CACFD6'], weaponAngleDeg:15, weaponScale:1, weaponOffsetMult:1.0, weaponThickness:1, distanceFromCenter:0.82, internalRotationDeg:0 },
-    druida:   {
-      item:'druida_horns',
-      anchorAngleDeg:270,
-      scale:0.66,
-      microAnim:'idle_breath',
-      palette:['#6E4A2F','#C9A17B','#E9D7C1'],
-      distanceFromCenter:0.72,
-      internalRotationDeg:0,
-      weaponOverride:'druida_staff',
-      weaponAngleDeg:0,
-      weaponScale:1.5,
-      weaponOffsetMult:1.6
-    }
-  };
+  artifice: {
+    // item
+    item: 'goggles',
+    anchorAngleDeg: 270,
+    scale: 0.56,
+    microAnim: 'idle_breath',
+    palette: ['#A6B1B8', '#E0E7EA', '#3B4A5A'],
+    distanceFromCenter: 0.52,
+    internalRotationDeg: 0,
+    // weapon
+    weaponOverride: 'arcane_cannon',
+    weaponAngleDeg: 40,
+    weaponScale: 1.8,
+    weaponOffsetMult: 1.5,
+    weaponAnchor: 0
+  },
+  guerreiro: {
+    // item
+    item: 'ombreira_metal',
+    anchorAngleDeg: 210,
+    scale: 0.70,
+    microAnim: 'sway_low',
+    palette: ['#9BA4AE', '#6B757F', '#CACFD6'],
+    distanceFromCenter: 0.82,
+    internalRotationDeg: 0,
+    // weapon
+    weaponAngleDeg: 15,
+    weaponScale: 1,
+    weaponOffsetMult: 1.0,
+    weaponThickness: 1,
+    weaponAnchor: 0.48
+  },
+  druida: {
+    // item
+    item: 'druida_horns',
+    anchorAngleDeg: 270,
+    scale: 1.5,
+    microAnim: 'idle_breath',
+    palette: ['#6E4A2F', '#C9A17B', '#E9D7C1'],
+    distanceFromCenter: 0.72,
+    internalRotationDeg: 90,
+    // weapon
+    weaponOverride: 'druida_staff',
+    weaponAngleDeg: 90,
+    weaponScale: 1.5,
+    weaponOffsetMult: 1.6,
+    weaponAnchor: 0
+  }
+};
 
 export const ITEM_ALIASES = {
   tanga_barbaro: 'saia_barbaro',

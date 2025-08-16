@@ -1316,24 +1316,26 @@ export class Unit {
       ctx.save();
       ctx.translate(this.pos.x, this.pos.y);
       const off = (cfg?.weaponAngleDeg ?? 30) * Math.PI / 180;
-      let wScale, wOff;
+      let wScale, wOff, anchor;
       if (this.className === 'guerreiro') {
         wScale = this.weaponLen / 0.88;
         wOff = this.weaponOffset;
+        anchor = (cfg?.weaponAnchor ?? 0) * wScale;
         const ang = this.angle + off;
         ctx.rotate(ang);
-        ctx.translate(wOff + 0.48 * wScale, 0);
+        ctx.translate(wOff + anchor, 0);
       } else {
         wScale = this.bodyR * 1.2 * (cfg?.weaponScale ?? 1);
         wOff = this.bodyR * (cfg?.weaponOffsetMult ?? 1.4);
+        anchor = (cfg?.weaponAnchor ?? 0) * wScale;
         if (this.className === 'paladino' || this.className === 'clerigo') {
           ctx.rotate(this.angle);
-          ctx.translate(wOff, 0);
+          ctx.translate(wOff + anchor, 0);
           ctx.rotate(off);
         } else {
           const ang = this.angle + off;
           ctx.rotate(ang);
-          ctx.translate(wOff, 0);
+          ctx.translate(wOff + anchor, 0);
         }
       }
       drawWeaponForUnit(ctx, this, wScale);
