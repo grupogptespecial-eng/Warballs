@@ -546,7 +546,19 @@ export const CLASS_VISUALS = {
   },
   artifice: { item:'goggles',        anchorAngleDeg:270, scale:0.56, microAnim:'idle_breath',  palette:['#A6B1B8','#E0E7EA','#3B4A5A'], weaponOverride:'arcane_cannon', weaponAngleDeg:40, weaponScale:1.8, weaponOffsetMult:1.5, distanceFromCenter:0.52, internalRotationDeg:0 },
     guerreiro:{ item:'ombreira_metal', anchorAngleDeg:210,scale:0.70, microAnim:'sway_low',     palette:['#9BA4AE','#6B757F','#CACFD6'], weaponAngleDeg:15, weaponScale:1, weaponOffsetMult:1.0, weaponThickness:1, distanceFromCenter:0.82, internalRotationDeg:0 },
-    druida:   { }
+    druida:   {
+      item:'druida_horns',
+      anchorAngleDeg:270,
+      scale:0.66,
+      microAnim:'idle_breath',
+      palette:['#6E4A2F','#C9A17B','#E9D7C1'],
+      distanceFromCenter:0.72,
+      internalRotationDeg:0,
+      weaponOverride:'druida_staff',
+      weaponAngleDeg:0,
+      weaponScale:1.5,
+      weaponOffsetMult:1.6
+    }
   };
 
 export const ITEM_ALIASES = {

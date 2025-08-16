@@ -4,6 +4,9 @@ import { V } from '../math/vec.js';
 import { CFG } from '../config/cfg.js';
 import { spawnRootBurst } from '../vfx/druida_vfx.js';
 
+const rootImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
+if (rootImg.src !== undefined) rootImg.src = 'assets/druida_root.svg';
+
 // Simple nodule used by Druida's root ability
 export class DruidRoot {
   constructor(owner, pos, level = 1) {
@@ -95,6 +98,19 @@ export class DruidRoot {
 
   draw(ctx) {
     if (!ctx) return;
+
+    // vine to target
+    if (this.target && this.target.alive) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(this.pos.x, this.pos.y);
+      ctx.lineTo(this.target.pos.x, this.target.pos.y);
+      ctx.strokeStyle = '#15803d';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      ctx.restore();
+    }
+
     ctx.save();
     ctx.translate(this.pos.x, this.pos.y);
 
@@ -105,14 +121,19 @@ export class DruidRoot {
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // core
-    ctx.beginPath();
-    ctx.arc(0, 0, this.bodyR, 0, Math.PI * 2);
-    ctx.fillStyle = '#14532d';
-    ctx.strokeStyle = '#4ade80';
-    ctx.lineWidth = 3;
-    ctx.fill();
-    ctx.stroke();
+    // core image
+    const size = this.bodyR * 2;
+    if (rootImg && rootImg.complete) {
+      ctx.drawImage(rootImg, -size / 2, -size / 2, size, size);
+    } else {
+      ctx.beginPath();
+      ctx.arc(0, 0, this.bodyR, 0, Math.PI * 2);
+      ctx.fillStyle = '#14532d';
+      ctx.strokeStyle = '#4ade80';
+      ctx.lineWidth = 3;
+      ctx.fill();
+      ctx.stroke();
+    }
 
     ctx.restore();
   }

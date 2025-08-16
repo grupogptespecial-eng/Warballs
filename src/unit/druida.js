@@ -16,6 +16,19 @@ const COLORS = {
   earth: '#a3e635'
 };
 
+// Elemental rune images for projectile visuals
+const elementImgs = {};
+if (typeof Image !== 'undefined') {
+  elementImgs.fire = new Image();
+  elementImgs.fire.src = 'assets/druida_proj_fire.svg';
+  elementImgs.ice = new Image();
+  elementImgs.ice.src = 'assets/druida_proj_ice.svg';
+  elementImgs.lightning = new Image();
+  elementImgs.lightning.src = 'assets/druida_proj_lightning.svg';
+  elementImgs.earth = new Image();
+  elementImgs.earth.src = 'assets/druida_proj_earth.svg';
+}
+
 export function makeDruidaState() {
   return {
     elemIdx: 0,
@@ -43,6 +56,7 @@ export function fireDruida() {
   proj.dmg = (S.dmgBase + S.dmgPerLevel * (this.level - 1)) * this.dmgMult();
   proj.rad = S.radiusBase + S.radiusPerLevel * (this.level - 1);
   proj.color = COLORS[elem];
+  proj.img = elementImgs[elem];
   proj.element = elem;
   if (elem === 'fire') {
     proj.onHit = (u, p) => { u.applyBurn(S.fire.dot, S.fire.duration, this); spawnElementBurst('fire', p); };

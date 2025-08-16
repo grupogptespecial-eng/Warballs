@@ -197,10 +197,15 @@ export class Projectile {
     }
     ctx.shadowBlur = 10;
     ctx.shadowColor = this.color;
-    ctx.fillStyle = this.color;
-    ctx.beginPath();
-    ctx.arc(this.pos.x, this.pos.y, this.rad, 0, Math.PI * 2);
-    ctx.fill();
+    if (this.img && this.img.complete) {
+      const s = this.rad * 2;
+      ctx.drawImage(this.img, this.pos.x - s / 2, this.pos.y - s / 2, s, s);
+    } else {
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(this.pos.x, this.pos.y, this.rad, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
   }
 }

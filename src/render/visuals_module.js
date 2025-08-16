@@ -33,6 +33,11 @@ function initMonkBeadGrad(ctx) {
   MONK_BEAD_GRAD.addColorStop(1, '#4a2416');
 }
 
+const druidHornsImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
+if (druidHornsImg.src !== undefined) druidHornsImg.src = 'assets/druida_horns.svg';
+const druidStaffImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
+if (druidStaffImg.src !== undefined) druidStaffImg.src = 'assets/druida_staff.svg';
+
 // ===== Helpers
 export const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export const hexToRgb=hex=>{const m=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)||[];return{r:parseInt(m[1]||'ff',16),g:parseInt(m[2]||'ff',16),b:parseInt(m[3]||'ff',16)}};
@@ -260,6 +265,18 @@ export function drawItemSprite(ctx, id, scale, pal, now){
     ctx.stroke();
     return;
   }
+
+  if (useId === 'druida_horns') {
+    const w = 900, h = 360;
+    const s = scale / w;
+    ctx.save();
+    ctx.scale(s, s);
+    if (druidHornsImg && druidHornsImg.complete) {
+      ctx.drawImage(druidHornsImg, -w / 2, -h / 2, w, h);
+    }
+    ctx.restore();
+    return;
+  }
 }
 
 // ===== Armas
@@ -412,12 +429,23 @@ export function drawFlute(ctx,S,pal){
   for(const x of holes){ ctx.beginPath(); ctx.arc(x,0,S*0.05,0,TAU); ctx.fill(); }
 }
 
+export function drawDruidaStaff(ctx,S){
+  if (!druidStaffImg || !druidStaffImg.complete) return;
+  const w = 260, h = 520;
+  const s = S / h;
+  ctx.save();
+  ctx.scale(s, s);
+  ctx.drawImage(druidStaffImg, -w / 2, -h / 2, w, h);
+  ctx.restore();
+}
+
 // ===== Escolha de arma por classe/override
 export function drawWeaponForUnit(ctx, unit, S){
   const cfg = CLASS_VISUALS[unit.className] || {};
   if (cfg.weaponOverride === 'axe_double_bit_v2') return drawAxeDoubleBitV2(ctx,S,cfg.palette);
   if (cfg.weaponOverride === 'arcane_cannon') return drawArcaneCannon(ctx,S,cfg.palette);
   if (cfg.weaponOverride === 'flauta') return drawFlute(ctx,S,cfg.palette);
+  if (cfg.weaponOverride === 'druida_staff') return drawDruidaStaff(ctx,S,cfg.palette);
   switch(unit.className){
     case 'ranger': return drawBow(ctx,S,cfg.palette);
     case 'paladino': return drawSword(ctx,S,cfg.palette);
