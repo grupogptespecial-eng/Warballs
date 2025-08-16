@@ -436,11 +436,16 @@ export const CFG = {
     root: {
       radius: 220,
       pullSpeed: 160,
-      dmgCenter: 18,
-      dmgEscape: 60,
       limitFactor: 0.5,
       cooldown: 8,
-      bodyRadius: 18
+      bodyRadius: 18,
+      baseHP: 90,
+      pulse: { dmg: 5, radius: 60, interval: 1.4 },
+      xpToLevel: [18, 36, 60],
+      perLevel: {
+        hp: [0, 20, 30],
+        pulseDmg: [0, 2, 3]
+      }
     },
     bear: {
       hpBase: 260,

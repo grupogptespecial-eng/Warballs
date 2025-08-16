@@ -995,7 +995,7 @@ export class Unit {
 
   collideSummons(summons) {
     for (const s of summons) {
-      if (!s.alive || (s.kind !== 'familiar' && s.kind !== 'turret' && s.kind !== 'mine')) continue;
+      if (!s.alive || (s.kind !== 'familiar' && s.kind !== 'turret' && s.kind !== 'mine' && s.kind !== 'druidRoot')) continue;
       if (this.team && s.team && this.team === s.team) continue;
       if (!this.weaponSweepHitsCircle(s.pos, s.bodyR + this.weaponTipR)) continue;
       if ((this.weaponLockT || 0) > 0) continue;
