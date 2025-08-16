@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Cabeça estilizada de urso">
+  <circle cx="64" cy="72" r="40" fill="#7b4a1e"/>
+  <circle cx="32" cy="40" r="20" fill="#7b4a1e"/>
+  <circle cx="96" cy="40" r="20" fill="#7b4a1e"/>
+  <circle cx="32" cy="40" r="12" fill="#996237"/>
+  <circle cx="96" cy="40" r="12" fill="#996237"/>
+  <circle cx="48" cy="72" r="6" fill="#1b120b"/>
+  <circle cx="80" cy="72" r="6" fill="#1b120b"/>
+  <path d="M64 82c-8 0-14 6-14 12s6 10 14 10 14-4 14-10-6-12-14-12z" fill="#4f2e14"/>
+  <path d="M56 84c2 4 8 4 16 0" stroke="#1b120b" stroke-width="2" fill="none"/>
+</svg>

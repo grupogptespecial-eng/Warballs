@@ -9,6 +9,9 @@ import { Projectile } from '../entities/projectile.js';
 import { game } from '../core/game.js';
 import { drawItemSprite, drawWeaponForUnit, applyMicroAnim } from '../render/visuals_module.js';
 
+const bearImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
+if (bearImg.src !== undefined) bearImg.src = '../../public/assets/druida_bear.svg';
+
 import {
   makeMonkState,
   monkHP,
@@ -93,6 +96,13 @@ import {
   artificeTookDamage
 } from './artifice.js';
 
+import {
+  makeDruidaState,
+  fireDruida,
+  updateDruida,
+  druidaRegisterCombat
+} from './druida.js';
+
 // Busca o inimigo vivo mais próximo de uma unidade
 export function nearestEnemyOf(self) {
   let best = null, bestD = 1e9;
@@ -170,6 +180,11 @@ export class Unit {
     this.freezeT = 0;
     this.freezeReason = null;
     this.monk = makeMonkState();
+
+    // Efeitos gerais
+    this.burn = null;
+    this.slowT = 0;
+    this.slowPct = 0;
 
     // Estado interno do Guerreiro
     this.gw = null;
@@ -263,6 +278,11 @@ export class Unit {
       this.art = makeArtificeState();
       this.a1cd = 0;
       this.a2cd = 0;
+    } else if (this.className === 'druida') {
+      this.baseHP = CFG.body.baseHP;
+      this.hpMax = this.baseHP;
+      this.hp = this.hpMax;
+      this.dru = makeDruidaState();
 
     } else if (this.className === 'guerreiro') {
         this.baseHP = CFG.guerreiro.hpBase;
@@ -373,7 +393,11 @@ export class Unit {
   gainXPWeaponClash() { this.addXP(CFG.xp.gain.weaponClash); }
   gainXPOffense(dmg) {
     const v = CFG.xp.gain.hitDealtBase + dmg * CFG.xp.gain.hitDealtPerDmg;
-    this.addXP(Math.round(v));
+    const xp = Math.round(v);
+    this.addXP(xp);
+    if (this.className === 'druida' && this.dru?.roots) {
+      for (const r of this.dru.roots) if (r.alive) r.gainXP(xp);
+    }
   }
   gainXPKill(enemyLevel = 1) {
     const g = CFG.xp.gain;
@@ -411,9 +435,17 @@ export class Unit {
     }
     this.hp = clamp(this.hp - dmgLeft, 0, this.hpMax);
     const dealt = before - (this.hp + (this.tempHP || 0));
+    if (dealt > 0) {
+      if (this.className === 'druida') this.druidaRegisterCombat();
+      if (attacker && attacker.className === 'druida') attacker.druidaRegisterCombat();
+    }
     this.vel.add(impulseMod.clone().mul(1 / this.mass));
     if (this.className === 'artifice' && dealt > 0) this.artificeTookDamage();
     if (attacker && attacker !== this && attacker.canDamage(this)) this.gainXPDefense();
+    if (this.className === 'druida' && this.dru?.bear.active && this.hp <= 0) {
+      this.dru.bear.t = 0;
+      return dealt;
+    }
     if (this.hp <= 0 && !this.deadHandled) {
       this.alive = false;
       this.deadHandled = true;
@@ -421,6 +453,15 @@ export class Unit {
       game.onDeath(this);
     }
     return dealt;
+  }
+
+  applyBurn(dps, duration, owner) {
+    this.burn = { dps, t: duration, owner };
+  }
+
+  applySlow(pct, duration) {
+    if (pct > this.slowPct) this.slowPct = pct;
+    this.slowT = Math.max(this.slowT, duration);
   }
 
   // === Física e colisão ===
@@ -516,11 +557,28 @@ export class Unit {
     }
     this._lastDT = dt;
 
+    if (this.burn) {
+      const dmg = this.burn.dps * dt;
+      const dealt = this.hit(dmg, new V(0, 0), this.burn.owner);
+      if (dealt > 0) {
+        game.onDamage(dealt);
+        this.burn.owner?.gainXPOffense?.(dealt);
+      }
+      this.burn.t -= dt;
+      if (this.burn.t <= 0) this.burn = null;
+    }
+
+    if (this.slowT > 0) {
+      this.slowT = Math.max(0, this.slowT - dt);
+      if (this.slowT <= 0) this.slowPct = 0;
+    }
+
     if (this.bardBuffT > 0) this.bardBuffT = Math.max(0, this.bardBuffT - dt);
     if (this.bardDebuffT > 0) this.bardDebuffT = Math.max(0, this.bardDebuffT - dt);
     this.speedMult = this.baseSpeedMult;
     if (this.bardBuffT > 0) this.speedMult *= 1 + CFG.bardo.note.buffSpeed;
     if (this.ritmoAura) this.speedMult *= 1 + CFG.bardo.ritmo.speed;
+    if (this.slowT > 0) this.speedMult *= Math.max(0, 1 - this.slowPct);
 
     if (this.weaponLockT > 0) this.weaponLockT -= dt;
 
@@ -596,6 +654,11 @@ export class Unit {
       this.updateArtifice(dt);
       if (this.art.a1cd <= 0) this.castTurret();
       if (this.art.a2cd <= 0) this.castMine();
+    }
+
+    // Druida
+    if (this.className === 'druida') {
+      this.updateDruida(dt);
     }
 
     // Ranger (tempo parado)
@@ -772,6 +835,26 @@ export class Unit {
             }
             other.monk.localHitT = localCD;
           }
+        }
+      }
+
+      // Dano de corpo do Druida em forma de urso (this)
+      if (this.className === 'druida' && this.dru?.bear.active && this.canDamage(other)) {
+        if ((this.dru.bear.hitCD || 0) <= 0) {
+          const dmg = CFG.druida.bear.impactDmg * this.dmgMult();
+          const dealt = other.hit(dmg, new V(0, 0), this);
+          if (dealt > 0) this.gainXPOffense(dealt);
+          this.dru.bear.hitCD = 0.25;
+        }
+      }
+
+      // Dano de corpo do Druida em forma de urso (other)
+      if (other.className === 'druida' && other.dru?.bear.active && other.canDamage(this)) {
+        if ((other.dru.bear.hitCD || 0) <= 0) {
+          const dmg = CFG.druida.bear.impactDmg * other.dmgMult();
+          const dealt = this.hit(dmg, new V(0, 0), other);
+          if (dealt > 0) other.gainXPOffense(dealt);
+          other.dru.bear.hitCD = 0.25;
         }
       }
     }
@@ -983,6 +1066,7 @@ export class Unit {
     if (this.className === 'ranger') return rangerFire.call(this);
     if (this.className === 'bruxo') return bruxoFire.call(this);
     if (this.className === 'bardo') return bardoFire.call(this);
+    if (this.className === 'druida') return fireDruida.call(this);
     if (this.className === 'artifice') return artificeFire.call(this);
     if (this.className === 'guerreiro') return guerreiroFire.call(this);
     const dir = new V(Math.cos(this.angle), Math.sin(this.angle));
@@ -1216,6 +1300,13 @@ export class Unit {
 
     // Desenha itens visuais sutis da classe antes das armas
     this.drawClassItem(ctx);
+    if (this.className === 'druida' && this.dru?.bear.active && bearImg.complete) {
+      const s = this.bodyR * 2.2;
+      ctx.save();
+      ctx.globalAlpha = 0.9;
+      ctx.drawImage(bearImg, this.pos.x - s / 2, this.pos.y - s / 2, s, s);
+      ctx.restore();
+    }
 
     const cfg = CLASS_VISUALS[this.className];
     const skipWeapon = (this.className === 'guerreiro' && this.gw &&
@@ -1282,13 +1373,15 @@ Object.assign(Unit.prototype, {
   clericStartBeam,
   clericBeamTick,
   castPrayer,
-  castHex,
-  castFamiliar,
-  updateGuerreiro,
-  guerreiroParryAgainst,
-  castTurret,
-  castMine,
-  updateArtifice,
-  artificeTookDamage
-});
+    castHex,
+    castFamiliar,
+    updateGuerreiro,
+    guerreiroParryAgainst,
+    castTurret,
+    castMine,
+    updateArtifice,
+    artificeTookDamage,
+    updateDruida,
+    druidaRegisterCombat
+  });
 

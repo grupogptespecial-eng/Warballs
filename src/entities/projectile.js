@@ -114,6 +114,7 @@ export class Projectile {
             this.owner.hp = clamp(this.owner.hp + heal, 0, this.owner.hpMax);
             game.spawnParticle(new Particle(this.owner.pos.clone(), V.fromAng(randAng(), rrand(40,120)), .25, CFG.bruxo.hex.color));
           }
+          if (this.onHit) this.onHit(u, this.pos.clone());
         }
         if (!this.penetration) { this.alive = false; }
         for (let i = 0; i < CFG.vfx.particlesOnHit; i++) {

@@ -74,6 +74,7 @@ símbolos e o destino correspondente em arquivos separados.
 | **Ranger** | `rangerSpeedMult` passivo, `fire` (flechas), `castPerfectShot`, `castForestCall` (invoca `Summon`) |
 | **Bruxo** | `fire` usa `CFG.bruxo.blast`, `castHex`, `link` (roubo de vida), `castFamiliar` |
 | **Guerreiro** | `fire` lança `SpearProjectile`, `parry` (contra-golpe), `war` (postura de guerra), passiva `discipline` após alternar modo |
+| **Druida** | Bastão Natural (projéteis elementais cíclicos), Respiro da Terra (regeneração), Raízes Prendentes (nódulo que puxa) e Forma de Urso (transformação com HP próprio) |
 | **Artífice** | Canhão Arcano, Overclock, Torreta Móvel, Campo de Mineração |
 
 ### Projetis, summons e efeitos

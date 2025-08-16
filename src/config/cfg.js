@@ -24,7 +24,8 @@ export const CLASSES = {
   bruxo:     { label: 'Bruxo',     color: '#a78bfa', hasRanged: true,  cooldownMiraPercent: 0.10, weaponLen: 20, tipRadius: 6,  omega: 3.4 },
   bardo:     { label: 'Bardo',     color: '#f472b6', hasRanged: true,  cooldownMiraPercent: 0.15, weaponLen: 20, tipRadius: 5,  omega: 3.6 },
   artifice:  { label: 'Artífice',  color: '#7FDBFF', hasRanged: true,  cooldownMiraPercent: 0.20, weaponLen: 34, tipRadius: 9,  omega: 3.6 },
-  guerreiro: { label: 'Guerreiro', color: '#f59e0b', hasRanged: true, cooldownMiraPercent: 0.10, weaponLen: 38, tipRadius: 5, omega: 3.6 }
+  guerreiro: { label: 'Guerreiro', color: '#f59e0b', hasRanged: true, cooldownMiraPercent: 0.10, weaponLen: 38, tipRadius: 5, omega: 3.6 },
+  druida:   { label: 'Druida',   color: '#22c55e', hasRanged: true, cooldownMiraPercent: 0.0, weaponLen: 32, tipRadius: 8, omega: 3.2 }
 };
 
 // Paleta completa para os elementos do Bárbaro (couro, metal e madeira)
@@ -420,6 +421,35 @@ export const CFG = {
     }
   },
 
+  // Configuração da classe Druida
+  druida: {
+    staff: {
+      dmgBase: 15, dmgPerLevel: 1.5,
+      cooldown: 1.8,
+      radiusBase: 28, radiusPerLevel: 2,
+      fire: { dot: 5, duration: 3 },
+      ice: { slowPct: 0.35, duration: 1.6 },
+      lightning: { stunChance: 0.18, duration: 0.8 },
+      earth: { knock: 380 }
+    },
+    passive: { regenPerSec: 4, delay: 5.0 },
+    root: {
+      radius: 220,
+      pullSpeed: 160,
+      dmgCenter: 18,
+      dmgEscape: 60,
+      limitFactor: 0.5,
+      cooldown: 8,
+      bodyRadius: 18
+    },
+    bear: {
+      hpBase: 260,
+      duration: 20,
+      radiusMult: 1.3,
+      impactDmg: 22
+    }
+  },
+
   // Sistema de níveis e experiência
   level: { max: 20, hpPerLevelPct: 0.1875, dmgPerLevelPct: 0.125 },
   xp: {
@@ -515,8 +545,9 @@ export const CLASS_VISUALS = {
     weaponOffsetMult:1.6
   },
   artifice: { item:'goggles',        anchorAngleDeg:270, scale:0.56, microAnim:'idle_breath',  palette:['#A6B1B8','#E0E7EA','#3B4A5A'], weaponOverride:'arcane_cannon', weaponAngleDeg:40, weaponScale:1.8, weaponOffsetMult:1.5, distanceFromCenter:0.52, internalRotationDeg:0 },
-  guerreiro:{ item:'ombreira_metal', anchorAngleDeg:210,scale:0.70, microAnim:'sway_low',     palette:['#9BA4AE','#6B757F','#CACFD6'], weaponAngleDeg:15, weaponScale:1, weaponOffsetMult:1.0, weaponThickness:1, distanceFromCenter:0.82, internalRotationDeg:0 }
-};
+    guerreiro:{ item:'ombreira_metal', anchorAngleDeg:210,scale:0.70, microAnim:'sway_low',     palette:['#9BA4AE','#6B757F','#CACFD6'], weaponAngleDeg:15, weaponScale:1, weaponOffsetMult:1.0, weaponThickness:1, distanceFromCenter:0.82, internalRotationDeg:0 },
+    druida:   { }
+  };
 
 export const ITEM_ALIASES = {
   tanga_barbaro: 'saia_barbaro',

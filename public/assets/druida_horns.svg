@@ -1,0 +1,89 @@
+<svg width="900" height="360" viewBox="0 0 900 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Par de chifres de cervo estilizados com brilho e textura">
+  <title>Chifres de cervo</title>
+
+  <defs>
+    <!-- Gradiente principal do osso -->
+    <linearGradient id="boneGrad" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%"  stop-color="#6E4A2F"/>
+      <stop offset="40%" stop-color="#9C714B"/>
+      <stop offset="70%" stop-color="#C9A17B"/>
+      <stop offset="100%" stop-color="#E9D7C1"/>
+    </linearGradient>
+
+    <!-- Brilho lateral -->
+    <linearGradient id="rimGrad" gradientUnits="userSpaceOnUse" x1="460" y1="0" x2="300" y2="0">
+      <stop offset="0%"   stop-color="#FFFFFF" stop-opacity="0.65"/>
+      <stop offset="60%"  stop-color="#FFFFFF" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Textura leve -->
+    <pattern id="boneTex" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(22)">
+      <path d="M0 0 V8" stroke="#000" stroke-opacity=".08" stroke-width=".6"/>
+    </pattern>
+
+    <!-- Pedículo -->
+    <radialGradient id="burrGrad" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#D4B48E"/>
+      <stop offset="55%" stop-color="#A3825E"/>
+      <stop offset="100%" stop-color="#5A4635"/>
+    </radialGradient>
+  </defs>
+
+  <style>
+    .beam, .tine, .outline, .texture {
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
+    .beam { stroke: url(#boneGrad); stroke-width: 18; }
+    .tine { stroke: url(#boneGrad); stroke-width: 11; }
+    .outline { stroke: #3F2A1D; stroke-opacity: .35; }
+    .outline.beam { stroke-width: 22; }
+    .outline.tine { stroke-width: 14; }
+    .texture { stroke: url(#boneTex); opacity: .12; }
+    .texture.beam { stroke-width: 18; }
+    .texture.tine { stroke-width: 11; }
+    .hi { stroke: url(#rimGrad); stroke-width: 3; fill: none; }
+    .burr { fill: url(#burrGrad); stroke: #5A4635; stroke-width: 2; }
+    .burrOutline { fill: none; stroke: #2D1C12; stroke-opacity: .5; stroke-width: 5; }
+  </style>
+
+  <!-- Chifre esquerdo -->
+  <symbol id="antlerL" overflow="visible">
+    <!-- Beam -->
+    <path class="outline beam" d="M440 248 C395 225 352 195 322 154 S298 94 336 76 S280 72 238 96 S198 145 201 170 S220 199 242 208"/>
+    <path class="beam" d="M440 248 C395 225 352 195 322 154 S298 94 336 76 S280 72 238 96 S198 145 201 170 S220 199 242 208"/>
+    <path class="texture beam" d="M440 248 C395 225 352 195 322 154 S298 94 336 76 S280 72 238 96 S198 145 201 170 S220 199 242 208"/>
+    <path class="hi" d="M440 248 C395 225 352 195 322 154 S298 94 336 76 S280 72 238 96 S198 145 201 170 S220 199 242 208"/>
+
+    <!-- Tines -->
+    <path class="outline tine" d="M410 230 C388 202 370 190 355 188"/>
+    <path class="tine" d="M410 230 C388 202 370 190 355 188"/>
+    <path class="texture tine" d="M410 230 C388 202 370 190 355 188"/>
+
+    <path class="outline tine" d="M380 205 C355 180 340 165 325 160"/>
+    <path class="tine" d="M380 205 C355 180 340 165 325 160"/>
+    <path class="texture tine" d="M380 205 C355 180 340 165 325 160"/>
+
+    <path class="outline tine" d="M345 180 C330 150 318 135 308 128"/>
+    <path class="tine" d="M345 180 C330 150 318 135 308 128"/>
+    <path class="texture tine" d="M345 180 C330 150 318 135 308 128"/>
+
+    <path class="outline tine" d="M318 150 C300 125 292 108 288 98"/>
+    <path class="tine" d="M318 150 C300 125 292 108 288 98"/>
+    <path class="texture tine" d="M318 150 C300 125 292 108 288 98"/>
+
+    <path class="outline tine" d="M300 112 C285 96 280 88 276 82"/>
+    <path class="tine" d="M300 112 C285 96 280 88 276 82"/>
+    <path class="texture tine" d="M300 112 C285 96 280 88 276 82"/>
+
+    <!-- Burr -->
+    <ellipse class="burrOutline" cx="440" cy="248" rx="24" ry="17"/>
+    <ellipse class="burr" cx="440" cy="248" rx="20" ry="14"/>
+  </symbol>
+
+  <!-- Renderização dos dois chifres -->
+  <use href="#antlerL"/>
+  <use href="#antlerL" transform="translate(880,0) scale(-1,1)"/>
+</svg>
