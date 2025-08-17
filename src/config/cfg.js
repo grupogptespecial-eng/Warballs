@@ -219,9 +219,10 @@ export const CFG = {
   bardo: {
     hpBase: 187.2, hpPerLevel: 12.48,
     note: {
-      dmg: 14.602,
-      heal: 4,
-      buffDmg: 0.15,
+      dmg: 29.204,
+      heal: 6,
+      selfHeal: 4,
+      buffDmg: 0.3,
       buffSpeed: 0.15,
       debuffDmg: 0.18,
       duration: 2.0,
@@ -234,7 +235,7 @@ export const CFG = {
     },
     inspire: { heal: 3, radius: 120 },
     ritmo: {
-      radius: 180,
+      radius: 270,
       dmg: 0.2,
       speed: 0.2,
       tempHP: 40,

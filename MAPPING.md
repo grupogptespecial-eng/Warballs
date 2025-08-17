@@ -67,6 +67,7 @@ símbolos e o destino correspondente em arquivos separados.
 
 | Classe | Passivas / Ativos |
 | --- | --- |
+| **Bardo** | Nota musical que causa dano, cura aliados e concede bônus; Ritmo de Guerra amplia aliados com escudo temporário |
 | **Barbaro** | `barbApplyPassiveDamage` (dano escala com HP faltante), `tryInvestida`/`updateInvestida` (Dash), `tryUrro` (Roar) |
 | **Paladino** | `trySacredStrike` (chance de golpe sagrado), `castPalHeal` (cura), `palShieldT`/`shield` (escudo bloqueia e empurra) |
 | **Monge** | Bônus de velocidade (`monkVMinBonus`/`VMaxBonus`), `monkSeek`, `monkImpactBurst`, `monkTryRajada` (Rajada), `monkTryDeflect`, `monkParryAgainst` |
