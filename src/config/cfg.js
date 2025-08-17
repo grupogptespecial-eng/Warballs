@@ -534,7 +534,8 @@ export const CLASS_VISUALS = {
     palette: [BARBARIAN_PALETTE.leatherBase, BARBARIAN_PALETTE.leatherLight, BARBARIAN_PALETTE.leatherStroke],
     distanceFromCenter: 0.02,
     internalRotationDeg: -100,
-    itemOffsetY: 0.0
+    itemOffsetY: 0.0,
+    weapon: { draw: 'axe', angleDeg: 35, scale: 1.25, distanceFromCenter: 2.0 }
   },
   ranger: {
     // item
@@ -545,6 +546,7 @@ export const CLASS_VISUALS = {
     palette: ['#4E6B3A', '#B89B6B', '#2E3B22'],
     distanceFromCenter: 0.82,
     internalRotationDeg: 0,
+    weapon: { draw: 'bow', angleDeg: -25, scale: 1.56, distanceFromCenter: 1.5 }
   },
   monge: {
     // item
@@ -563,7 +565,7 @@ export const CLASS_VISUALS = {
     palette: ['#C9C9C9', '#E6D27A', '#7A6A3A'],
     distanceFromCenter: 0.62,
     internalRotationDeg: 0,
-    
+    weapon: { draw: 'sword', angleDeg: -90, scale: 1.6, distanceFromCenter: 2.0 }
   },
   clerigo: {
     // item
@@ -574,14 +576,15 @@ export const CLASS_VISUALS = {
     palette: ['#FFD67A', '#F4B43A', '#8A6A2A'],
     distanceFromCenter: 0.72,
     internalRotationDeg: 0,
-    
+    weapon: { draw: 'mace', angleDeg: 90, scale: 2.0, distanceFromCenter: 1.8 }
   },
   bruxo: {
     palette: ['#7E57C2', '#A586E8', '#40345A'],
     items: [
       { item: 'chifre_bruxo', anchorAngleDeg: 220, scale: 0.38, microAnim: 'idle_breath', palette: ['#7E57C2', '#A586E8', '#40345A'], distanceFromCenter: 1.92, internalRotationDeg: -100 },
       { item: 'chifre_bruxo', anchorAngleDeg: 320, scale: 0.38, microAnim: 'idle_breath', palette: ['#7E57C2', '#A586E8', '#40345A'], distanceFromCenter: 1.92, internalRotationDeg: 280, flipX: true }
-    ]
+    ],
+    weapon: { draw: 'book', angleDeg: -10, scale: 1.0, distanceFromCenter: 1.0 }
   },
   bardo: {
     // item
@@ -592,7 +595,7 @@ export const CLASS_VISUALS = {
     palette: ['#11772a', '#22a33a', '#d7b193'],
     distanceFromCenter: 0.72,
     internalRotationDeg: 0,
-    
+    weapon: { draw: 'flute', scale: 1.5, distanceFromCenter: 1.6 }
   },
   artifice: {
     // item
@@ -603,7 +606,7 @@ export const CLASS_VISUALS = {
     palette: ['#A6B1B8', '#E0E7EA', '#3B4A5A'],
     distanceFromCenter: 0.52,
     internalRotationDeg: 0,
-    
+    weapon: { draw: 'arcaneCannon', angleDeg: 40, scale: 1.8, distanceFromCenter: 1.5 }
   },
   guerreiro: {
     // item
@@ -614,7 +617,7 @@ export const CLASS_VISUALS = {
     palette: ['#9BA4AE', '#6B757F', '#CACFD6'],
     distanceFromCenter: 0.82,
     internalRotationDeg: 0,
-    
+    weapon: { draw: 'spear', angleDeg: 15, distanceFromCenter: 1.0, weaponAnchor: [0.48, 0] }
   },
   druida: {
     // item
@@ -625,7 +628,7 @@ export const CLASS_VISUALS = {
     palette: ['#6E4A2F', '#C9A17B', '#E9D7C1'],
     distanceFromCenter: 0.72,
     internalRotationDeg: 90,
-    
+    weapon: { draw: 'druidaStaff', scale: 1.5, distanceFromCenter: 1.6 }
   }
 };
 
