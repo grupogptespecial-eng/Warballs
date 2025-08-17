@@ -427,7 +427,7 @@ export const CFG = {
     staff: {
       dmgBase: 15, dmgPerLevel: 1.5,
       cooldown: 1.8,
-      radiusBase: 28, radiusPerLevel: 2,
+      radiusBase: 8.4, radiusPerLevel: 0.4,
       fire: { dot: 5, duration: 3 },
       ice: { slowPct: 0.35, duration: 1.6 },
       lightning: { stunChance: 0.18, duration: 0.8 },
