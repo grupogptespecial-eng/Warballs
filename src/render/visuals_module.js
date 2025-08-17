@@ -483,7 +483,7 @@ export function drawWeapon(ctx, unit){
   ctx.translate(x, y);
   ctx.rotate(ang + internal);
   if (flip) ctx.scale(-1, 1);
-  ctx.translate(anchor, 0);
+  ctx.translate(-anchor, 0);
   drawWeaponForUnit(ctx, unit, wScale);
   ctx.restore();
 }

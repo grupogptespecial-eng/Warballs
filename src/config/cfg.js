@@ -651,7 +651,7 @@ export const CLASS_VISUALS = {
     weaponScale: 1,
     weaponDistanceFromCenter: 1.0,
     weaponThickness: 1,
-    weaponAnchor: 0.48
+    weaponAnchor: -0.48
   },
   druida: {
     // item
