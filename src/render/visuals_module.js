@@ -439,6 +439,42 @@ export function drawDruidaStaff(ctx,S){
   ctx.restore();
 }
 
+// Mapa para renderização de armas por chave textual
+export const WEAPON_DRAWERS = {
+  axe: (ctx,S,p,u)=>drawAxeDoubleBitV2(ctx,S,p),
+  bow: (ctx,S,p,u)=>drawBow(ctx,S,p),
+  sword: (ctx,S,p,u)=>drawSword(ctx,S,p),
+  mace: (ctx,S,p,u)=>drawMace(ctx,u,S,p),
+  book: (ctx,S,p,u)=>drawBook(ctx,S,p),
+  flute: (ctx,S,p,u)=>drawFlute(ctx,S,p),
+  arcaneCannon: (ctx,S,p,u)=>drawArcaneCannon(ctx,S,p),
+  spear: (ctx,S,p,u)=>drawSpear(ctx,S,p),
+  druidaStaff: (ctx,S,p,u)=>drawDruidaStaff(ctx,S,p)
+};
+
+// Helper para desenhar a arma de uma unidade a partir de CLASS_VISUALS
+export function drawWeapon(ctx, unit){
+  const vis = CLASS_VISUALS[unit.className];
+  const wv = vis?.weapon;
+  if (!wv) return;
+  const pal = wv.palette || vis.palette;
+  const base = unit.bodyR * 1.2;
+  const ang = (unit.angle ?? 0) + (wv.angleDeg ?? 0) * Math.PI / 180;
+  const dist = unit.weaponOffset !== undefined ? unit.weaponOffset : unit.bodyR * (wv.distanceFromCenter ?? 1);
+  const scale = base * (wv.scale ?? 1);
+  const anchor = wv.weaponAnchor || [0,0];
+  const key = wv.draw || 'mace';
+  const drawFn = WEAPON_DRAWERS[key] || WEAPON_DRAWERS.mace;
+  const x = unit.pos.x + Math.cos(ang) * dist;
+  const y = unit.pos.y + Math.sin(ang) * dist;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(ang);
+  if (anchor[0] || anchor[1]) ctx.translate(-scale*anchor[0], -scale*anchor[1]);
+  drawFn(ctx, scale, pal, unit);
+  ctx.restore();
+}
+
 // ===== Render Unit (bola + item + arma + nível)
 export function renderUnitPreview(ctx, unit, teamColor, now){
   // 1) sombra
@@ -497,78 +533,8 @@ export function renderUnitPreview(ctx, unit, teamColor, now){
       }
     }
   }
-  // 4) arma (omitida para classes sem arma, ex.: monge)
-  if (unit.className !== 'monge') {
-    const pal = CLASS_VISUALS[unit.className]?.palette;
-    const base = unit.bodyR * 1.2;
-    let ang = unit.angle;
-    let dist = unit.bodyR;
-    let scale = base;
-    let drawFn = null;
-    switch(unit.className){
-      case 'barbaro':
-        ang += 35 * Math.PI / 180;
-        scale = base * 1.25;
-        dist = unit.bodyR * 2.0;
-        drawFn = drawAxeDoubleBitV2;
-        break;
-      case 'ranger':
-        ang += -25 * Math.PI / 180;
-        scale = base * 1.56;
-        dist = unit.bodyR * 1.5;
-        drawFn = drawBow;
-        break;
-      case 'paladino':
-        ang += -90 * Math.PI / 180;
-        scale = base * 1.6;
-        dist = unit.bodyR * 2.0;
-        drawFn = drawSword;
-        break;
-      case 'clerigo':
-        ang += 90 * Math.PI / 180;
-        scale = base * 2.0;
-        dist = unit.bodyR * 1.8;
-        drawFn = (ctx2,S,p)=>drawMace(ctx2,unit,S,p);
-        break;
-      case 'bruxo':
-        ang += -10 * Math.PI / 180;
-        drawFn = drawBook;
-        break;
-      case 'bardo':
-        scale = base * 1.5;
-        dist = unit.bodyR * 1.6;
-        drawFn = drawFlute;
-        break;
-      case 'artifice':
-        ang += 40 * Math.PI / 180;
-        scale = base * 1.8;
-        dist = unit.bodyR * 1.5;
-        drawFn = drawArcaneCannon;
-        break;
-      case 'guerreiro':
-        ang += 15 * Math.PI / 180;
-        dist = unit.bodyR * 1.0;
-        drawFn = drawSpear;
-        break;
-      case 'druida':
-        scale = base * 1.5;
-        dist = unit.bodyR * 1.6;
-        drawFn = drawDruidaStaff;
-        break;
-      default:
-        drawFn = (ctx2,S,p)=>drawMace(ctx2,unit,S,p);
-    }
-    if (drawFn){
-      const x = unit.pos.x + Math.cos(ang) * dist;
-      const y = unit.pos.y + Math.sin(ang) * dist;
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(ang);
-      if (unit.className === 'guerreiro') ctx.translate(-scale * 0.48, 0);
-      drawFn(ctx, scale, pal);
-      ctx.restore();
-    }
-  }
+  // 4) arma (omitida para classes sem arma)
+  drawWeapon(ctx, unit);
   // 5) destaque
   ctx.save(); ctx.globalAlpha=0.25; ctx.beginPath(); ctx.arc(unit.pos.x-unit.bodyR*0.35, unit.pos.y-unit.bodyR*0.35, unit.bodyR*0.45, 0, TAU); ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.fill(); ctx.restore();
 }

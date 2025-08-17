@@ -47,7 +47,7 @@ export function drawUnitThumb(ctx, klass, color, level){
   const base = color || (CLASSES[klass]?.color || '#7dd3fc');
   const cx = W*0.38, cy = H*0.58;
   const r = 16;
-  const unit = { className: klass, pos:{x:cx, y:cy}, bodyR:r, level }; 
+  const unit = { className: klass, pos:{x:cx, y:cy}, bodyR:r, level, angle: 0 };
   renderUnitPreview(ctx, unit, base, performance.now());
 
   ctx.save();
