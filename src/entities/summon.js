@@ -3,6 +3,23 @@
 import { V } from '../math/vec.js';
 import { randAng } from '../utils/rand.js';
 
+const spiritFaceImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
+let spiritFaceCanvas = null;
+if (spiritFaceImg.src !== undefined) {
+  spiritFaceImg.onload = () => {
+    if (typeof document === 'undefined') return;
+    spiritFaceCanvas = document.createElement('canvas');
+    spiritFaceCanvas.width = spiritFaceImg.naturalWidth;
+    spiritFaceCanvas.height = spiritFaceImg.naturalHeight;
+    const sctx = spiritFaceCanvas.getContext('2d');
+    sctx.drawImage(spiritFaceImg, 0, 0);
+    sctx.globalCompositeOperation = 'source-atop';
+    sctx.fillStyle = 'rgba(124,255,176,0.6)';
+    sctx.fillRect(0, 0, spiritFaceCanvas.width, spiritFaceCanvas.height);
+  };
+  spiritFaceImg.src = 'assets/ranger_spirit.svg';
+}
+
 export class Summon {
   constructor(owner, pos, dmg, duration) {
     this.owner = owner;
@@ -46,7 +63,7 @@ export class Summon {
 
   draw(ctx) {
     ctx.save();
-    ctx.globalAlpha = .9;
+    ctx.globalAlpha = 0.9;
     ctx.fillStyle = 'rgba(124,255,176,0.85)';
     ctx.shadowColor = '#7cffb0';
     ctx.shadowBlur = 12;
@@ -54,6 +71,16 @@ export class Summon {
     ctx.arc(this.pos.x, this.pos.y, this.bodyR * 0.8, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+
+    if (spiritFaceCanvas) {
+      const size = this.bodyR * 2.2;
+      const x = this.pos.x - size * 0.5;
+      const y = this.pos.y - size * 0.5;
+      ctx.save();
+      ctx.globalAlpha = 0.4;
+      ctx.drawImage(spiritFaceCanvas, x, y, size, size);
+      ctx.restore();
+    }
   }
 }
 

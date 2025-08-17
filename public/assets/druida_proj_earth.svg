@@ -1,0 +1,144 @@
+<svg width="320" height="420" viewBox="0 0 320 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pedra de runas de terra">
+  <defs>
+    <!-- Pedra terrosa -->
+    <linearGradient id="stoneGradEarth" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#86765F"/>
+      <stop offset="55%" stop-color="#5A4E3E"/>
+      <stop offset="100%" stop-color="#32291F"/>
+    </linearGradient>
+    <radialGradient id="stoneHiEarth" cx="32%" cy="20%" r="60%">
+      <stop offset="0%"  stop-color="#B6A488" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#B6A488" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Musgo -->
+    <linearGradient id="mossGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"  stop-color="#6DBA5A"/>
+      <stop offset="100%" stop-color="#2E6B33"/>
+    </linearGradient>
+
+    <!-- Runa (terra) -->
+    <linearGradient id="earthFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#F0E4C2"/>
+      <stop offset="55%"  stop-color="#C49A5F"/>
+      <stop offset="100%" stop-color="#7C562E"/>
+    </linearGradient>
+
+    <!-- Brilho terroso (suave, não corta) -->
+    <filter id="earthGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Realce interno (gravado) -->
+    <filter id="innerCarve" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1.4" result="g"/>
+      <feBlend in="SourceGraphic" in2="g" mode="screen"/>
+    </filter>
+  </defs>
+
+  <!-- ===== Pedra ===== -->
+  <g id="stone">
+    <!-- corpo -->
+    <path d="M170 35
+             C122 44, 80 78, 66 124
+             C52 170, 60 232, 84 284
+             C106 330, 142 360, 184 360
+             C220 360, 256 336, 274 300
+             C292 264, 298 214, 288 168
+             C276 114, 232 46, 170 35 Z"
+          fill="url(#stoneGradEarth)"/>
+    <!-- brilho da rocha -->
+    <path d="M170 35
+             C122 44, 80 78, 66 124
+             C52 170, 60 232, 84 284
+             C106 330, 142 360, 184 360
+             C220 360, 256 336, 274 300
+             C292 264, 298 214, 288 168
+             C276 114, 232 46, 170 35 Z"
+          fill="url(#stoneHiEarth)"/>
+
+    <!-- linhas sedimentares -->
+    <g stroke="#C4B397" stroke-opacity="0.18" stroke-width="4" fill="none" stroke-linecap="round">
+      <path d="M88 128 C120 110, 160 108, 206 124"/>
+      <path d="M78 200 C118 188, 168 190, 226 206"/>
+      <path d="M92 262 C130 250, 176 254, 230 270"/>
+    </g>
+
+    <!-- rachaduras secas -->
+    <g stroke="#6B5A48" stroke-opacity="0.45" stroke-width="2" fill="none" stroke-linecap="round">
+      <path d="M116 140 C108 158, 108 176, 118 190
+               C126 202, 124 214, 112 228"/>
+      <path d="M210 128 C222 146, 224 166, 212 180
+               C204 188, 206 204, 220 218"/>
+      <path d="M160 252 C150 266, 150 280, 160 292"/>
+    </g>
+
+    <!-- manchas de musgo -->
+    <g opacity="0.55">
+      <path d="M92 150 C86 160, 88 176, 104 182
+               C120 188, 132 176, 128 164
+               C122 152, 106 144, 92 150 Z"
+            fill="url(#mossGrad)"/>
+      <path d="M216 228 C206 234, 204 248, 214 256
+               C226 266, 246 260, 246 246
+               C246 236, 232 222, 216 228 Z"
+            fill="url(#mossGrad)"/>
+      <path d="M150 96 C140 98, 134 110, 140 118
+               C148 128, 166 124, 170 112
+               C172 102, 162 94, 150 96 Z"
+            fill="url(#mossGrad)"/>
+    </g>
+
+    <!-- pequenos brotos -->
+    <g stroke="#2E6B33" stroke-width="2.4" fill="none" stroke-linecap="round" opacity="0.9">
+      <path d="M104 292 C106 284, 112 280, 118 278"/>
+      <path d="M208 292 C206 284, 200 280, 194 278"/>
+    </g>
+    <g fill="#49A35A" opacity="0.9">
+      <ellipse cx="118" cy="276" rx="4.6" ry="3.2"/>
+      <ellipse cx="194" cy="276" rx="4.6" ry="3.2"/>
+    </g>
+  </g>
+
+  <!-- ===== Runa de Terra: Jera (ᛃ) — ciclos/colheita ===== -->
+  <g id="rune" filter="url(#earthGlow)" opacity="0.98">
+    <!-- dois traços angulados que se perseguem, com “entalhe” -->
+    <!-- chevron superior (↗) -->
+    <path d="M135 165 L175 125 L190 150"
+          stroke="url(#earthFill)" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"
+          filter="url(#innerCarve)"/>
+    <!-- chevron inferior (↙) -->
+    <path d="M185 215 L145 255 L130 230"
+          stroke="url(#earthFill)" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"
+          filter="url(#innerCarve)"/>
+    <!-- liguinha opcional para fechar o ciclo (bem sutil) -->
+    <path d="M175 150 L145 190"
+          stroke="url(#earthFill)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="0.65"
+          filter="url(#innerCarve)"/>
+  </g>
+
+  <!-- ===== Poeira (partículas) ===== -->
+  <g id="dust" fill="#D7C29E" opacity="0.7">
+    <circle cx="120" cy="208" r="2">
+      <animate attributeName="opacity" values="0.2;0.8;0.2" dur="2.2s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="208;196;208" dur="2.2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="206" cy="228" r="2">
+      <animate attributeName="opacity" values="0.2;0.9;0.2" dur="2.6s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="228;214;228" dur="2.6s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="164" cy="246" r="1.8">
+      <animate attributeName="opacity" values="0.2;0.85;0.2" dur="2s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="246;234;246" dur="2s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <!-- Reflexo seco discreto -->
+  <path d="M122 96 C140 82, 166 80, 184 88
+           C168 88, 150 92, 136 100 Z"
+        fill="#FFF2D8" opacity="0.06"/>
+</svg>

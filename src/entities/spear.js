@@ -20,10 +20,8 @@ export class SpearProjectile extends Projectile {
     // Derive physical dimensions from the same values used for the warrior's in-hand spear
     // so the projectile mirrors the weapon visible on the unit and in previews.
     const vis = CLASS_VISUALS.guerreiro || {};
-    const len = owner ? owner.weaponLen
-      : (CLASSES.guerreiro.weaponLen * (vis.weaponScale ?? 1));
-    const rad = owner ? owner.weaponTipR
-      : (CLASSES.guerreiro.tipRadius * (vis.weaponThickness ?? 1) * (vis.weaponScale ?? 1));
+    const len = owner ? owner.weaponLen : CLASSES.guerreiro.weaponLen;
+    const rad = owner ? owner.weaponTipR : CLASSES.guerreiro.tipRadius;
     this.len = len;
     this.rad = rad;
     const pal = vis.palette;

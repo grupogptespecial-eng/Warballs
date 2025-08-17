@@ -26,6 +26,8 @@ export class Projectile {
     this.bounces = 0;
     this.penetration = false;
     this.canHurtAllies = true;
+    this.scale = CFG.ranged.scale ?? 1;
+    this.internalRotation = CFG.ranged.internalRotation ?? 0; // degrees
   }
 
   stepMove(dt) {
@@ -114,6 +116,7 @@ export class Projectile {
             this.owner.hp = clamp(this.owner.hp + heal, 0, this.owner.hpMax);
             game.spawnParticle(new Particle(this.owner.pos.clone(), V.fromAng(randAng(), rrand(40,120)), .25, CFG.bruxo.hex.color));
           }
+          if (this.onHit) this.onHit(u, this.pos.clone());
         }
         if (!this.penetration) { this.alive = false; }
         for (let i = 0; i < CFG.vfx.particlesOnHit; i++) {
@@ -177,29 +180,64 @@ export class Projectile {
       }
     }
 
+    // Druid roots can take damage from projectiles
+    for (const s of game.summons) {
+      if (!s.alive || s.kind !== 'druidRoot') continue;
+      if (this.owner && s.team && this.owner.team && s.team === this.owner.team && !this.canHurtAllies) continue;
+
+      const d = distPointToSegment(s.pos, prevPos, this.pos);
+      if (d < s.bodyR + this.rad) {
+        const dealt = s.hit(this.dmg, this.owner);
+        if (dealt > 0 && this.owner) this.owner.gainXPOffense?.(dealt);
+        if (!this.penetration) this.alive = false;
+        for (let i = 0; i < CFG.vfx.particlesOnHit; i++) {
+          game.spawnParticle(new Particle(this.pos.clone(), V.fromAng(rrand(0, Math.PI * 2), rrand(50, 220)), rrand(.2, .6), this.color));
+        }
+        if (!this.alive) break;
+      }
+    }
+
     this.trail.push(this.pos.clone());
     if (this.trail.length > CFG.ranged.trail) this.trail.shift();
   }
 
   draw(ctx) {
+    const useImg = this.img && this.img.complete;
+    const scale = this.scale ?? 1;
+    const rot = (this.internalRotation ?? 0) * Math.PI / 180;
     ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
     ctx.lineCap = 'round';
     ctx.globalAlpha = .9;
-    ctx.strokeStyle = this.color;
-    ctx.lineWidth = 2;
-    if (this.trail.length > 1) {
+
+    // draw elemental trail (even when using image)
+    const trailCol = this.trailColor || (!useImg ? this.color : null);
+    if (trailCol && this.trail.length > 1) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = trailCol;
+      ctx.lineWidth = this.trailWidth || 2;
       ctx.beginPath();
       ctx.moveTo(this.trail[0].x, this.trail[0].y);
       for (const p of this.trail) ctx.lineTo(p.x, p.y);
       ctx.stroke();
     }
-    ctx.shadowBlur = 10;
+
+    ctx.globalCompositeOperation = useImg ? 'source-over' : 'lighter';
+    ctx.shadowBlur = useImg ? 0 : 10;
     ctx.shadowColor = this.color;
-    ctx.fillStyle = this.color;
-    ctx.beginPath();
-    ctx.arc(this.pos.x, this.pos.y, this.rad, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.translate(this.pos.x, this.pos.y);
+    ctx.rotate(rot);
+    if (useImg) {
+      const iw = this.img.naturalWidth || this.img.width;
+      const ih = this.img.naturalHeight || this.img.height;
+      const w = this.rad * 2 * scale;
+      const h = w * (ih / iw);
+      ctx.drawImage(this.img, -w / 2, -h / 2, w, h);
+    } else {
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.rad * scale, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
   }
 }
