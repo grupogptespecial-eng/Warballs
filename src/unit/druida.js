@@ -16,6 +16,13 @@ const COLORS = {
   earth: '#a3e635'
 };
 
+const TRAILS = {
+  fire:  { color: '#fb923c', width: 3 },
+  ice:   { color: '#93c5fd', width: 3 },
+  lightning: { color: '#fde68a', width: 2 },
+  earth: { color: '#a3e635', width: 3 }
+};
+
 // Elemental rune images for projectile visuals
 const elementImgs = {};
 if (typeof Image !== 'undefined') {
@@ -54,10 +61,13 @@ export function fireDruida() {
   const off = this.tip().add(dir.clone().mul(2));
   const proj = new Projectile(this, off, dir);
   proj.dmg = (S.dmgBase + S.dmgPerLevel * (this.level - 1)) * this.dmgMult();
-  proj.rad = S.radiusBase + S.radiusPerLevel * (this.level - 1);
+  proj.rad = (S.radiusBase + S.radiusPerLevel * (this.level - 1)) * 0.2;
   proj.color = COLORS[elem];
   proj.img = elementImgs[elem];
   proj.element = elem;
+  const trail = TRAILS[elem];
+  proj.trailColor = trail.color;
+  proj.trailWidth = trail.width;
   if (elem === 'fire') {
     proj.onHit = (u, p) => { u.applyBurn(S.fire.dot, S.fire.duration, this); spawnElementBurst('fire', p); };
   } else if (elem === 'ice') {

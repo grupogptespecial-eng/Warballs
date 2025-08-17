@@ -202,17 +202,22 @@ export class Projectile {
   draw(ctx) {
     const useImg = this.img && this.img.complete;
     ctx.save();
-    ctx.globalCompositeOperation = useImg ? 'source-over' : 'lighter';
     ctx.lineCap = 'round';
     ctx.globalAlpha = .9;
-    ctx.strokeStyle = this.color;
-    ctx.lineWidth = 2;
-    if (!useImg && this.trail.length > 1) {
+
+    // draw elemental trail (even when using image)
+    const trailCol = this.trailColor || (!useImg ? this.color : null);
+    if (trailCol && this.trail.length > 1) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = trailCol;
+      ctx.lineWidth = this.trailWidth || 2;
       ctx.beginPath();
       ctx.moveTo(this.trail[0].x, this.trail[0].y);
       for (const p of this.trail) ctx.lineTo(p.x, p.y);
       ctx.stroke();
     }
+
+    ctx.globalCompositeOperation = useImg ? 'source-over' : 'lighter';
     ctx.shadowBlur = useImg ? 0 : 10;
     ctx.shadowColor = this.color;
     if (useImg) {
