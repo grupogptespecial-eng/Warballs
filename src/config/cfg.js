@@ -534,13 +534,7 @@ export const CLASS_VISUALS = {
     palette: [BARBARIAN_PALETTE.leatherBase, BARBARIAN_PALETTE.leatherLight, BARBARIAN_PALETTE.leatherStroke],
     distanceFromCenter: 0.02,
     internalRotationDeg: -100,
-    itemOffsetY: 0.0,
-    // weapon
-    weaponOverride: 'axe_double_bit_v2',
-    weaponAngleDeg: 35,
-    weaponScale: 1.25,
-    weaponDistanceFromCenter: 2.0,
-    weaponAnchor: 0
+    itemOffsetY: 0.0
   },
   ranger: {
     // item
@@ -551,11 +545,6 @@ export const CLASS_VISUALS = {
     palette: ['#4E6B3A', '#B89B6B', '#2E3B22'],
     distanceFromCenter: 0.82,
     internalRotationDeg: 0,
-    // weapon
-    weaponAngleDeg: -25,
-    weaponScale: 1.56,
-    weaponDistanceFromCenter: 1.5,
-    weaponAnchor: 0
   },
   monge: {
     // item
@@ -574,11 +563,7 @@ export const CLASS_VISUALS = {
     palette: ['#C9C9C9', '#E6D27A', '#7A6A3A'],
     distanceFromCenter: 0.62,
     internalRotationDeg: 0,
-    // weapon
-    weaponAngleDeg: -90,
-    weaponScale: 1.6,
-    weaponDistanceFromCenter: 2.0,
-    weaponAnchor: 0
+    
   },
   clerigo: {
     // item
@@ -589,16 +574,9 @@ export const CLASS_VISUALS = {
     palette: ['#FFD67A', '#F4B43A', '#8A6A2A'],
     distanceFromCenter: 0.72,
     internalRotationDeg: 0,
-    // weapon
-    weaponAngleDeg: 90,
-    weaponScale: 2.0,
-    weaponDistanceFromCenter: 1.8,
-    weaponAnchor: 0
+    
   },
   bruxo: {
-    // weapon
-    weaponAngleDeg: -10,
-    weaponAnchor: 0,
     palette: ['#7E57C2', '#A586E8', '#40345A'],
     items: [
       { item: 'chifre_bruxo', anchorAngleDeg: 220, scale: 0.38, microAnim: 'idle_breath', palette: ['#7E57C2', '#A586E8', '#40345A'], distanceFromCenter: 1.92, internalRotationDeg: -100 },
@@ -614,12 +592,7 @@ export const CLASS_VISUALS = {
     palette: ['#11772a', '#22a33a', '#d7b193'],
     distanceFromCenter: 0.72,
     internalRotationDeg: 0,
-    // weapon
-    weaponOverride: 'flauta',
-    weaponAngleDeg: 0,
-    weaponScale: 1.5,
-    weaponDistanceFromCenter: 1.6,
-    weaponAnchor: 0
+    
   },
   artifice: {
     // item
@@ -630,12 +603,7 @@ export const CLASS_VISUALS = {
     palette: ['#A6B1B8', '#E0E7EA', '#3B4A5A'],
     distanceFromCenter: 0.52,
     internalRotationDeg: 0,
-    // weapon
-    weaponOverride: 'arcane_cannon',
-    weaponAngleDeg: 40,
-    weaponScale: 1.8,
-    weaponDistanceFromCenter: 1.5,
-    weaponAnchor: 0
+    
   },
   guerreiro: {
     // item
@@ -646,12 +614,7 @@ export const CLASS_VISUALS = {
     palette: ['#9BA4AE', '#6B757F', '#CACFD6'],
     distanceFromCenter: 0.82,
     internalRotationDeg: 0,
-    // weapon
-    weaponAngleDeg: 15,
-    weaponScale: 1,
-    weaponDistanceFromCenter: 1.0,
-    weaponThickness: 1,
-    weaponAnchor: -0.48
+    
   },
   druida: {
     // item
@@ -662,12 +625,7 @@ export const CLASS_VISUALS = {
     palette: ['#6E4A2F', '#C9A17B', '#E9D7C1'],
     distanceFromCenter: 0.72,
     internalRotationDeg: 90,
-    // weapon
-    weaponOverride: 'druida_staff',
-    weaponAngleDeg: 0,
-    weaponScale: 1.5,
-    weaponDistanceFromCenter: 1.6,
-    weaponAnchor: 0
+    
   }
 };
 

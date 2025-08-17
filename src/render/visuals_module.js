@@ -439,55 +439,6 @@ export function drawDruidaStaff(ctx,S){
   ctx.restore();
 }
 
-// ===== Escolha de arma por classe/override
-export function drawWeaponForUnit(ctx, unit, S){
-  const cfg = CLASS_VISUALS[unit.className] || {};
-  if (cfg.weaponOverride === 'axe_double_bit_v2') return drawAxeDoubleBitV2(ctx,S,cfg.palette);
-  if (cfg.weaponOverride === 'arcane_cannon') return drawArcaneCannon(ctx,S,cfg.palette);
-  if (cfg.weaponOverride === 'flauta') return drawFlute(ctx,S,cfg.palette);
-  if (cfg.weaponOverride === 'druida_staff') return drawDruidaStaff(ctx,S,cfg.palette);
-  switch(unit.className){
-    case 'ranger': return drawBow(ctx,S,cfg.palette);
-    case 'paladino': return drawSword(ctx,S,cfg.palette);
-    case 'clerigo': return drawMace(ctx,unit,S,cfg.palette);
-    case 'bruxo': return drawBook(ctx,S,cfg.palette);
-    case 'guerreiro': return drawSpear(ctx,S,cfg.palette);
-    case 'artifice': return drawArcaneCannon(ctx,S,cfg.palette);
-    case 'bardo': return drawFlute(ctx,S,cfg.palette);
-    case 'monge': return;
-    default: return drawMace(ctx,unit,S,cfg.palette);
-  }
-}
-
-export function drawWeapon(ctx, unit){
-  const cfg = CLASS_VISUALS[unit.className] || {};
-  const off = (cfg.weaponAngleDeg ?? 0) * Math.PI / 180;
-  const internal = (cfg.weaponInternalRotationDeg ?? 0) * Math.PI / 180;
-  const flip = cfg.weaponFlipX;
-  const offX = unit.bodyR * (cfg.weaponOffsetX ?? 0);
-  const offY = unit.bodyR * (cfg.weaponOffsetY ?? 0);
-  const dist = unit.weaponOffset;
-  const ang = unit.angle + off;
-  let wScale;
-  if (unit.className === 'guerreiro') {
-    const base = CLASSES[unit.className] || {};
-    const wLen = (base.weaponLen || 0) * (cfg.weaponScale ?? 1);
-    wScale = wLen / 0.88;
-  } else {
-    wScale = unit.bodyR * 1.2 * (cfg.weaponScale ?? 1);
-  }
-  const anchor = (cfg.weaponAnchor ?? 0) * wScale;
-  const x = unit.pos.x + Math.cos(ang) * dist + offX;
-  const y = unit.pos.y + Math.sin(ang) * dist + offY;
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(ang + internal);
-  if (flip) ctx.scale(-1, 1);
-  ctx.translate(-anchor, 0);
-  drawWeaponForUnit(ctx, unit, wScale);
-  ctx.restore();
-}
-
 // ===== Render Unit (bola + item + arma + nível)
 export function renderUnitPreview(ctx, unit, teamColor, now){
   // 1) sombra
@@ -548,7 +499,75 @@ export function renderUnitPreview(ctx, unit, teamColor, now){
   }
   // 4) arma (omitida para classes sem arma, ex.: monge)
   if (unit.className !== 'monge') {
-    drawWeapon(ctx, unit);
+    const pal = CLASS_VISUALS[unit.className]?.palette;
+    const base = unit.bodyR * 1.2;
+    let ang = unit.angle;
+    let dist = unit.bodyR;
+    let scale = base;
+    let drawFn = null;
+    switch(unit.className){
+      case 'barbaro':
+        ang += 35 * Math.PI / 180;
+        scale = base * 1.25;
+        dist = unit.bodyR * 2.0;
+        drawFn = drawAxeDoubleBitV2;
+        break;
+      case 'ranger':
+        ang += -25 * Math.PI / 180;
+        scale = base * 1.56;
+        dist = unit.bodyR * 1.5;
+        drawFn = drawBow;
+        break;
+      case 'paladino':
+        ang += -90 * Math.PI / 180;
+        scale = base * 1.6;
+        dist = unit.bodyR * 2.0;
+        drawFn = drawSword;
+        break;
+      case 'clerigo':
+        ang += 90 * Math.PI / 180;
+        scale = base * 2.0;
+        dist = unit.bodyR * 1.8;
+        drawFn = (ctx2,S,p)=>drawMace(ctx2,unit,S,p);
+        break;
+      case 'bruxo':
+        ang += -10 * Math.PI / 180;
+        drawFn = drawBook;
+        break;
+      case 'bardo':
+        scale = base * 1.5;
+        dist = unit.bodyR * 1.6;
+        drawFn = drawFlute;
+        break;
+      case 'artifice':
+        ang += 40 * Math.PI / 180;
+        scale = base * 1.8;
+        dist = unit.bodyR * 1.5;
+        drawFn = drawArcaneCannon;
+        break;
+      case 'guerreiro':
+        ang += 15 * Math.PI / 180;
+        dist = unit.bodyR * 1.0;
+        drawFn = drawSpear;
+        break;
+      case 'druida':
+        scale = base * 1.5;
+        dist = unit.bodyR * 1.6;
+        drawFn = drawDruidaStaff;
+        break;
+      default:
+        drawFn = (ctx2,S,p)=>drawMace(ctx2,unit,S,p);
+    }
+    if (drawFn){
+      const x = unit.pos.x + Math.cos(ang) * dist;
+      const y = unit.pos.y + Math.sin(ang) * dist;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(ang);
+      if (unit.className === 'guerreiro') ctx.translate(-scale * 0.48, 0);
+      drawFn(ctx, scale, pal);
+      ctx.restore();
+    }
   }
   // 5) destaque
   ctx.save(); ctx.globalAlpha=0.25; ctx.beginPath(); ctx.arc(unit.pos.x-unit.bodyR*0.35, unit.pos.y-unit.bodyR*0.35, unit.bodyR*0.45, 0, TAU); ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.fill(); ctx.restore();

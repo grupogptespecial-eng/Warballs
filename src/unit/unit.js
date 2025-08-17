@@ -7,7 +7,19 @@ import { Particle } from '../entities/particle.js';
 import { Effect } from '../entities/effect.js';
 import { Projectile } from '../entities/projectile.js';
 import { game } from '../core/game.js';
-import { drawItemSprite, drawWeapon, applyMicroAnim } from '../render/visuals_module.js';
+import {
+  drawItemSprite,
+  drawSword,
+  drawMace,
+  drawBow,
+  drawBook,
+  drawSpear,
+  drawArcaneCannon,
+  drawFlute,
+  drawAxeDoubleBitV2,
+  drawDruidaStaff,
+  applyMicroAnim
+} from '../render/visuals_module.js';
 
 const bearImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
 if (bearImg.src !== undefined) bearImg.src = 'assets/druida_bear.svg';
@@ -193,15 +205,6 @@ export class Unit {
     this.prevBase = this.weaponBase();
   }
 
-  applyWeaponVisuals(cfg) {
-    const lenScale = cfg.weaponScale ?? 1;
-    const tipScale = (cfg.weaponThickness ?? 1) * lenScale;
-    this.weaponLen = cfg.weaponLen * lenScale;
-    this.weaponTipR = cfg.tipRadius * tipScale;
-    const offMult = cfg.weaponDistanceFromCenter ?? cfg.weaponOffsetMult ?? 1;
-    this.weaponOffset = this.bodyR * offMult;
-  }
-
   // === Inicialização e progressão ===
   applyClassDefaults() {
     const base = CLASSES[this.className] || {};
@@ -310,18 +313,39 @@ export class Unit {
         };
       }
 
-    const vis = CLASS_VISUALS[this.className] || {};
-    this.applyWeaponVisuals({
-      weaponLen: this.weaponLen,
-      tipRadius: this.weaponTipR,
-      weaponScale: vis.weaponScale,
-      weaponDistanceFromCenter: vis.weaponDistanceFromCenter ?? vis.weaponOffsetMult,
-      weaponThickness: vis.weaponThickness
-    });
     if (this.className === 'guerreiro' && this.gw) {
       this.gw.baseWeaponLen = this.weaponLen;
       this.gw.baseWeaponTipR = this.weaponTipR;
       this.gw.baseWeaponOffset = this.weaponOffset;
+    }
+
+    switch(this.className){
+      case 'barbaro':
+        this.weaponOffset = this.bodyR * 2.0;
+        break;
+      case 'ranger':
+        this.weaponOffset = this.bodyR * 1.5;
+        break;
+      case 'paladino':
+        this.weaponOffset = this.bodyR * 2.0;
+        break;
+      case 'clerigo':
+        this.weaponOffset = this.bodyR * 1.8;
+        break;
+      case 'bardo':
+        this.weaponOffset = this.bodyR * 1.6;
+        break;
+      case 'artifice':
+        this.weaponOffset = this.bodyR * 1.5;
+        break;
+      case 'guerreiro':
+        this.weaponOffset = this.bodyR * 1.0;
+        break;
+      case 'druida':
+        this.weaponOffset = this.bodyR * 1.6;
+        break;
+      default:
+        break;
     }
     this.baseSpeedMult = this.speedMult;
     this.prevTip = this.tip();
@@ -1317,7 +1341,75 @@ export class Unit {
       this.className === 'monge' ||
       isBear;
     if (!skipWeapon) {
-      drawWeapon(ctx, this);
+      const pal = CLASS_VISUALS[this.className]?.palette;
+      const base = this.bodyR * 1.2;
+      let ang = this.angle;
+      let dist = this.weaponOffset;
+      let scale = base;
+      let drawFn = null;
+      switch(this.className){
+        case 'barbaro':
+          ang += 35 * Math.PI / 180;
+          scale = base * 1.25;
+          dist = this.bodyR * 2.0;
+          drawFn = drawAxeDoubleBitV2;
+          break;
+        case 'ranger':
+          ang += -25 * Math.PI / 180;
+          scale = base * 1.56;
+          dist = this.bodyR * 1.5;
+          drawFn = drawBow;
+          break;
+        case 'paladino':
+          ang += -90 * Math.PI / 180;
+          scale = base * 1.6;
+          dist = this.bodyR * 2.0;
+          drawFn = drawSword;
+          break;
+        case 'clerigo':
+          ang += 90 * Math.PI / 180;
+          scale = base * 2.0;
+          dist = this.bodyR * 1.8;
+          drawFn = (ctx2,S,p)=>drawMace(ctx2,this,S,p);
+          break;
+        case 'bruxo':
+          ang += -10 * Math.PI / 180;
+          drawFn = drawBook;
+          break;
+        case 'bardo':
+          scale = base * 1.5;
+          dist = this.bodyR * 1.6;
+          drawFn = drawFlute;
+          break;
+        case 'artifice':
+          ang += 40 * Math.PI / 180;
+          scale = base * 1.8;
+          dist = this.bodyR * 1.5;
+          drawFn = drawArcaneCannon;
+          break;
+        case 'guerreiro':
+          ang += 15 * Math.PI / 180;
+          dist = this.bodyR * 1.0;
+          drawFn = drawSpear;
+          break;
+        case 'druida':
+          scale = base * 1.5;
+          dist = this.bodyR * 1.6;
+          drawFn = drawDruidaStaff;
+          break;
+        default:
+          drawFn = (ctx2,S,p)=>drawMace(ctx2,this,S,p);
+      }
+      if (drawFn){
+        const x = this.pos.x + Math.cos(ang) * dist;
+        const y = this.pos.y + Math.sin(ang) * dist;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(ang);
+        if (this.className === 'guerreiro') ctx.translate(-scale * 0.48, 0);
+        drawFn(ctx, scale, pal);
+        ctx.restore();
+      }
     }
     if (game.debugHit) {
       ctx.globalAlpha = 0.3;
