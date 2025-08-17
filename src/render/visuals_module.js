@@ -36,6 +36,8 @@ function initMonkBeadGrad(ctx) {
 const druidHornsImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
 if (druidHornsImg.src !== undefined) druidHornsImg.src = 'assets/druida_horns.svg';
 const druidStaffImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
+const paladinHelmImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
+if (paladinHelmImg.src !== undefined) paladinHelmImg.src = 'assets/capacete_paladino.svg';
 if (druidStaffImg.src !== undefined) druidStaffImg.src = 'assets/druida_staff.svg';
 
 // ===== Helpers
@@ -273,6 +275,17 @@ export function drawItemSprite(ctx, id, scale, pal, now){
     ctx.scale(s, s);
     if (druidHornsImg && druidHornsImg.complete) {
       ctx.drawImage(druidHornsImg, -w / 2, -h / 2, w, h);
+    }
+    ctx.restore();
+    return;
+  }
+  if (useId === 'capacete_paladino') {
+    const w = 900, h = 900;
+    const s = scale / w;
+    ctx.save();
+    ctx.scale(s, s);
+    if (paladinHelmImg && paladinHelmImg.complete && paladinHelmImg.naturalWidth) {
+      ctx.drawImage(paladinHelmImg, -w / 2, -h / 2, w, h);
     }
     ctx.restore();
     return;

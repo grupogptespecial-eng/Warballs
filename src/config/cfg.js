@@ -558,13 +558,13 @@ export const CLASS_VISUALS = {
   },
   paladino: {
     // item
-    item: 'insignia_escudo',
-    anchorAngleDeg: 20,
-    scale: 0.55,
+    item: 'capacete_paladino',
+    anchorAngleDeg: 270,
+    scale: 0.7,
     microAnim: 'glint_slow',
-    palette: ['#C9C9C9', '#E6D27A', '#7A6A3A'],
-    distanceFromCenter: 0.62,
-    internalRotationDeg: 0,
+    palette: ['#f4f6f8', '#ffefad', '#b68a34'],
+    distanceFromCenter: 0.72,
+    internalRotationDeg: 90,
     weapon: { draw: 'sword', angleDeg: -90, scale: 1.6, distanceFromCenter: 2.0 }
   },
   clerigo: {
