@@ -39,6 +39,8 @@ const druidStaffImg = (typeof Image !== 'undefined') ? new Image() : { complete:
 const paladinHelmImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
 if (paladinHelmImg.src !== undefined) paladinHelmImg.src = 'assets/capacete_paladino.svg';
 if (druidStaffImg.src !== undefined) druidStaffImg.src = 'assets/druida_staff.svg';
+const warriorShoulderImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
+if (warriorShoulderImg.src !== undefined) warriorShoulderImg.src = 'assets/ombreira_couro.svg';
 
 // ===== Helpers
 export const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -275,6 +277,17 @@ export function drawItemSprite(ctx, id, scale, pal, now){
     ctx.scale(s, s);
     if (druidHornsImg && druidHornsImg.complete) {
       ctx.drawImage(druidHornsImg, -w / 2, -h / 2, w, h);
+    }
+    ctx.restore();
+    return;
+  }
+  if (useId === 'ombreira_couro') {
+    const w = 900, h = 900;
+    const s = scale / w;
+    ctx.save();
+    ctx.scale(s, s);
+    if (warriorShoulderImg && warriorShoulderImg.complete && warriorShoulderImg.naturalWidth) {
+      ctx.drawImage(warriorShoulderImg, -w / 2, -h / 2, w, h);
     }
     ctx.restore();
     return;

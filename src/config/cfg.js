@@ -610,11 +610,11 @@ export const CLASS_VISUALS = {
   },
   guerreiro: {
     // item
-    item: 'ombreira_metal',
+    item: 'ombreira_couro',
     anchorAngleDeg: 210,
     scale: 0.70,
     microAnim: 'sway_low',
-    palette: ['#9BA4AE', '#6B757F', '#CACFD6'],
+    palette: ['#8a4b2a', '#6a3921', '#4a2818'],
     distanceFromCenter: 0.82,
     internalRotationDeg: 0,
     weapon: { draw: 'spear', angleDeg: 15, distanceFromCenter: 1.0, weaponAnchor: [0.48, 0] }
