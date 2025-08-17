@@ -99,6 +99,9 @@ export class DruidRoot {
       const toTarget = new V(this.target.pos.x - this.pos.x, this.target.pos.y - this.pos.y);
       const dist = toTarget.len();
       if (dist > this.radius + this.target.bodyR) {
+        // Target escaped the root's reach; punish with burst damage
+        this.target.hit(CFG.druida.root.escapeDmg, new V(0, 0), this.owner);
+        spawnRootBurst(this.pos.clone());
         this.target = null;
       } else {
         // pull target toward center

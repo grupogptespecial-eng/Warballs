@@ -440,11 +440,12 @@ export const CFG = {
       limitFactor: 0.5,
       cooldown: 8,
       bodyRadius: 18,
-      baseHP: 90,
+      baseHP: 180,
+      escapeDmg: 35,
       pulse: { dmg: 5, radius: 60, interval: 1.0 },
       xpToLevel: [18, 36, 60],
       perLevel: {
-        hp: [0, 20, 30],
+        hp: [0, 40, 60],
         pulseDmg: [0, 2, 3]
       }
     },
