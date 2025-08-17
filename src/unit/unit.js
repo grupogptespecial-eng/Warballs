@@ -1128,6 +1128,7 @@ export class Unit {
   }
 
   drawClassItem(ctx) {
+    if (this.className === 'druida' && this.dru?.bear.active) return;
     const cfg = CLASS_VISUALS[this.className];
     if (!cfg) return;
 
@@ -1298,11 +1299,12 @@ export class Unit {
     ctx.fill();
     ctx.globalAlpha = 1;
 
+    const isBear = this.className === 'druida' && this.dru?.bear.active;
     // Desenha itens visuais sutis da classe antes das armas
-    if (!(this.className === 'druida' && this.dru?.bear.active)) {
+    if (!isBear) {
       this.drawClassItem(ctx);
     }
-    if (this.className === 'druida' && this.dru?.bear.active && bearImg.complete) {
+    if (isBear && bearImg.complete) {
       const s = this.bodyR * 2.2;
       ctx.save();
       ctx.globalAlpha = 0.9;
@@ -1314,7 +1316,7 @@ export class Unit {
     const skipWeapon = (this.className === 'guerreiro' && this.gw &&
       (this.gw.state === 'THROW_FLIGHT' || this.gw.disarmT > 0)) ||
       this.className === 'monge' ||
-      (this.className === 'druida' && this.dru?.bear.active);
+      isBear;
     if (!skipWeapon) {
       ctx.save();
       ctx.translate(this.pos.x, this.pos.y);
