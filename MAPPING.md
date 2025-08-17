@@ -129,3 +129,20 @@ serão listados aqui conforme adicionados.*
   se há inimigo na linha de visão durante a janela de mira.
 - `CrateSystem` — módulo em `src/core/crateSystem.js` que gerencia
   spawns de crates configuráveis e aplica políticas de shrink da arena.
+
+### Sistema de itens e armas
+
+Cada classe define sua aparência em `CLASS_VISUALS` usando dois blocos:
+
+- **`item` / `items`** – acessórios ligados ao corpo. Cada entrada aceita os
+  campos obrigatórios `anchorDeg`, `distanceFromCenter`, `internalRotation` e
+  `scale`, além de opções como `microAnim`, `palette` e `flipX`.
+- **`weapon`** – descrição da arma empunhada, contendo `draw` (nome do helper
+  de renderização) e os mesmos campos básicos de posição e escala. Opcionalmente
+  pode incluir `weaponAnchor: [x, y]` para deslocar sprites que não possuem
+  origem central.
+
+As transformações são aplicadas na ordem: rotação pelo ângulo de âncora,
+translação pela distância ao centro, rotação interna e por fim a escala. Isso
+garante que tanto itens quanto armas possam ser ajustados com precisão
+apenas alterando as variáveis de configuração.
