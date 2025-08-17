@@ -546,7 +546,7 @@ export const CLASS_VISUALS = {
     palette: ['#4E6B3A', '#B89B6B', '#2E3B22'],
     distanceFromCenter: 0.82,
     internalRotationDeg: 0,
-    weapon: { draw: 'bow', angleDeg: -25, scale: 1.56, distanceFromCenter: 1.5 }
+    weapon: { draw: 'bow', angleDeg: -25, scale: 1.56, distanceFromCenter: 1.5, weaponAnchor: [-0.4, 0] }
   },
   monge: {
     // item
@@ -606,7 +606,7 @@ export const CLASS_VISUALS = {
     palette: ['#A6B1B8', '#E0E7EA', '#3B4A5A'],
     distanceFromCenter: 0.52,
     internalRotationDeg: 0,
-    weapon: { draw: 'arcaneCannon', angleDeg: 40, scale: 1.8, distanceFromCenter: 1.5 }
+    weapon: { draw: 'arcaneCannon', angleDeg: 40, scale: 1.8, distanceFromCenter: 1.5, weaponAnchor: [-0.2, 0] }
   },
   guerreiro: {
     // item
@@ -628,7 +628,7 @@ export const CLASS_VISUALS = {
     palette: ['#6E4A2F', '#C9A17B', '#E9D7C1'],
     distanceFromCenter: 0.72,
     internalRotationDeg: 90,
-    weapon: { draw: 'druidaStaff', scale: 1.5, distanceFromCenter: 1.6 }
+    weapon: { draw: 'druidaStaff', angleDeg: 90, scale: 1.5, distanceFromCenter: 1.6, weaponAnchor: [0, 0.5] }
   }
 };
 
