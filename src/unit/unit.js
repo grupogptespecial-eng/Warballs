@@ -1,4 +1,4 @@
-import { CFG, CLASSES, CLASS_VISUALS, CLASS_ITEM_SCALE_DEFAULT, GLOBAL_ITEM_SCALE_MULT, LEVEL_SAFE_RADIUS_MULT, ITEM_ALIASES } from '../config/cfg.js';
+import { CFG, CLASSES, CLASS_VISUALS } from '../config/cfg.js';
 import { V } from '../math/vec.js';
 import { clamp, shade } from '../utils/misc.js';
 import { randAng, rrand } from '../utils/rand.js';
@@ -7,34 +7,11 @@ import { Particle } from '../entities/particle.js';
 import { Effect } from '../entities/effect.js';
 import { Projectile } from '../entities/projectile.js';
 import { game } from '../core/game.js';
-import {
-  drawItemSprite,
-  drawSword,
-  drawMace,
-  drawBow,
-  drawBook,
-  drawSpear,
-  drawArcaneCannon,
-  drawFlute,
-  drawAxeDoubleBitV2,
-  drawDruidaStaff,
-  applyMicroAnim
-} from '../render/visuals_module.js';
+import { drawItem, drawWeapon } from '../render/visuals_module.js';
 
 const bearImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
 if (bearImg.src !== undefined) bearImg.src = 'assets/druida_bear.svg';
 
-const WEAPON_DRAWERS = {
-  axe: (ctx,S,p,u)=>drawAxeDoubleBitV2(ctx,S,p),
-  bow: (ctx,S,p,u)=>drawBow(ctx,S,p),
-  sword: (ctx,S,p,u)=>drawSword(ctx,S,p),
-  mace: (ctx,S,p,u)=>drawMace(ctx,u,S,p),
-  book: (ctx,S,p,u)=>drawBook(ctx,S,p),
-  flute: (ctx,S,p,u)=>drawFlute(ctx,S,p),
-  arcaneCannon: (ctx,S,p,u)=>drawArcaneCannon(ctx,S,p),
-  spear: (ctx,S,p,u)=>drawSpear(ctx,S,p),
-  druidaStaff: (ctx,S,p,u)=>drawDruidaStaff(ctx,S,p)
-};
 
 import {
   makeMonkState,
@@ -1147,40 +1124,7 @@ export class Unit {
     const now = performance.now();
     const items = cfg.items || (cfg.item ? [cfg.item] : []);
     for (const ic of items) {
-      const pal = ic.palette || [];
-      const itemId = ic.item;
-      const iRot = (ic.internalRotation ?? 0) * Math.PI / 180;
-      if (itemId === 'colar_monge' || ITEM_ALIASES[itemId] === 'saia_barbaro') {
-        ctx.save();
-        const offY = this.bodyR * (ic.itemOffsetY ?? 0);
-        const offX = this.bodyR * (ic.itemOffsetX ?? 0);
-        ctx.translate(this.pos.x + offX, this.pos.y + offY);
-        ctx.rotate(iRot);
-        applyMicroAnim(ctx, ic.microAnim, now);
-        if (ic.flipX) ctx.scale(-1, 1);
-        const scale = (ic.scale ?? CLASS_ITEM_SCALE_DEFAULT) * (this.bodyR * 2) * GLOBAL_ITEM_SCALE_MULT;
-        drawItemSprite(ctx, itemId, scale, pal, now);
-        ctx.restore();
-      } else {
-        const anchor = (ic.anchorDeg || 0) * Math.PI / 180;
-        const safeR = LEVEL_SAFE_RADIUS_MULT * this.bodyR;
-        let dist = this.bodyR * (ic.distanceFromCenter ?? 0.82);
-        if (dist < safeR) dist = safeR;
-        const offX = this.bodyR * (ic.itemOffsetX ?? 0);
-        const offY = this.bodyR * (ic.itemOffsetY ?? 0);
-        const x = this.pos.x + Math.cos(anchor) * dist + offX;
-        const y = this.pos.y + Math.sin(anchor) * dist + offY;
-        const scale = (ic.scale ?? CLASS_ITEM_SCALE_DEFAULT) * (this.bodyR * 2) * GLOBAL_ITEM_SCALE_MULT;
-
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(anchor);
-        ctx.rotate(iRot);
-        applyMicroAnim(ctx, ic.microAnim, now);
-        if (ic.flipX) ctx.scale(-1, 1);
-        drawItemSprite(ctx, itemId, scale, pal, now);
-        ctx.restore();
-      }
+      drawItem(ctx, this, ic, now);
     }
   }
 
@@ -1329,25 +1273,7 @@ export class Unit {
       this.className === 'monge' ||
       isBear;
     if (!skipWeapon) {
-      const wv = CLASS_VISUALS[this.className]?.weapon || {};
-      const pal = wv.palette || CLASS_VISUALS[this.className]?.palette;
-      const base = this.bodyR * 1.2;
-      const ang = this.angle + (wv.anchorDeg ?? 0) * Math.PI / 180;
-      const dist = this.weaponOffset !== undefined ? this.weaponOffset : this.bodyR * (wv.distanceFromCenter ?? 1);
-      const scale = base * (wv.scale ?? 1);
-      const anchor = wv.weaponAnchor || [0, 0];
-      const iRot = (wv.internalRotation ?? 0) * Math.PI / 180;
-      const key = wv.draw || 'mace';
-      const drawFn = WEAPON_DRAWERS[key] || WEAPON_DRAWERS.mace;
-      const x = this.pos.x + Math.cos(ang) * dist;
-      const y = this.pos.y + Math.sin(ang) * dist;
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(ang);
-      ctx.rotate(iRot);
-      if (anchor[0] || anchor[1]) ctx.translate(-scale * anchor[0], -scale * anchor[1]);
-      drawFn(ctx, scale, pal, this);
-      ctx.restore();
+      drawWeapon(ctx, this);
     }
     if (game.debugHit) {
       ctx.globalAlpha = 0.3;

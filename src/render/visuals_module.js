@@ -1,5 +1,5 @@
 // Generated visuals module for class items and weapons
-import { CLASS_VISUALS, ITEM_ALIASES, CLASS_ITEM_SCALE_DEFAULT, GLOBAL_ITEM_SCALE_MULT, LEVEL_SAFE_RADIUS_MULT, BARBARIAN_PALETTE, CLASSES } from '../config/cfg.js';
+import { CLASS_VISUALS, ITEM_ALIASES, CLASS_ITEM_SCALE_DEFAULT, GLOBAL_ITEM_SCALE_MULT, LEVEL_SAFE_RADIUS_MULT } from '../config/cfg.js';
 
 export const TAU = Math.PI * 2;
 
@@ -478,6 +478,45 @@ export const WEAPON_DRAWERS = {
   druidaStaff: (ctx,S,p,u)=>drawDruidaStaff(ctx,S,p)
 };
 
+// Generic helper to draw an item using config values
+export function drawItem(ctx, unit, ic, now){
+  const itemId = ic.item;
+  const pal = ic.palette || [];
+  const scaleBase = (unit.bodyR * 2) * GLOBAL_ITEM_SCALE_MULT;
+  const scaleFactor = ic.scale ?? CLASS_ITEM_SCALE_DEFAULT;
+  const iRot = (ic.internalRotation ?? 0) * Math.PI / 180;
+  const offX = unit.bodyR * (ic.itemOffsetX ?? 0);
+  const offY = unit.bodyR * (ic.itemOffsetY ?? 0);
+
+  ctx.save();
+  ctx.translate(unit.pos.x + offX, unit.pos.y + offY);
+
+  // special sprites that hug the body center
+  if (itemId === 'colar_monge' || ITEM_ALIASES[itemId] === 'saia_barbaro') {
+    ctx.rotate(iRot);
+    applyMicroAnim(ctx, ic.microAnim, now);
+    if (ic.flipX) ctx.scale(-1, 1);
+    ctx.scale(scaleFactor, scaleFactor);
+    drawItemSprite(ctx, itemId, scaleBase, pal, now);
+    ctx.restore();
+    return;
+  }
+
+  const safeR = LEVEL_SAFE_RADIUS_MULT * unit.bodyR;
+  const anchor = (ic.anchorDeg || 0) * Math.PI / 180;
+  let dist = unit.bodyR * (ic.distanceFromCenter ?? 0.82);
+  if (dist < safeR) dist = safeR;
+
+  ctx.rotate(anchor);
+  ctx.translate(dist, 0);
+  ctx.rotate(iRot);
+  applyMicroAnim(ctx, ic.microAnim, now);
+  if (ic.flipX) ctx.scale(-1, 1);
+  ctx.scale(scaleFactor, scaleFactor);
+  drawItemSprite(ctx, itemId, scaleBase, pal, now);
+  ctx.restore();
+}
+
 // Helper para desenhar a arma de uma unidade a partir de CLASS_VISUALS
 export function drawWeapon(ctx, unit){
   const vis = CLASS_VISUALS[unit.className];
@@ -485,21 +524,22 @@ export function drawWeapon(ctx, unit){
   if (!wv) return;
   const pal = wv.palette || vis.palette;
   const base = unit.bodyR * 1.2;
-  const ang = (unit.angle ?? 0) + (wv.anchorDeg ?? 0) * Math.PI / 180;
+  const scaleFactor = wv.scale ?? 1;
+  const anchorAng = (unit.angle ?? 0) + (wv.anchorDeg ?? 0) * Math.PI / 180;
   const dist = unit.weaponOffset !== undefined ? unit.weaponOffset : unit.bodyR * (wv.distanceFromCenter ?? 1);
-  const scale = base * (wv.scale ?? 1);
-  const anchor = wv.weaponAnchor || [0,0];
   const iRot = (wv.internalRotation ?? 0) * Math.PI / 180;
+  const anchor = wv.weaponAnchor || [0,0];
   const key = wv.draw || 'mace';
   const drawFn = WEAPON_DRAWERS[key] || WEAPON_DRAWERS.mace;
-  const x = unit.pos.x + Math.cos(ang) * dist;
-  const y = unit.pos.y + Math.sin(ang) * dist;
+
   ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(ang);
+  ctx.translate(unit.pos.x, unit.pos.y);
+  ctx.rotate(anchorAng);
+  ctx.translate(dist, 0);
   ctx.rotate(iRot);
-  if (anchor[0] || anchor[1]) ctx.translate(-scale*anchor[0], -scale*anchor[1]);
-  drawFn(ctx, scale, pal, unit);
+  ctx.scale(scaleFactor, scaleFactor);
+  if (anchor[0] || anchor[1]) ctx.translate(-anchor[0] * base, -anchor[1] * base);
+  drawFn(ctx, base, pal, unit);
   ctx.restore();
 }
 
@@ -528,37 +568,7 @@ export function renderUnitPreview(ctx, unit, teamColor, now){
   if (cfg){
     const items=cfg.items || (cfg.item ? [cfg.item] : []);
     for(const ic of items){
-      const pal=ic.palette||[];
-      const baseScale=(ic.scale ?? CLASS_ITEM_SCALE_DEFAULT)*(unit.bodyR*2)*GLOBAL_ITEM_SCALE_MULT;
-      const iRot=(ic.internalRotation ?? 0)*Math.PI/180;
-      if (ic.item==='colar_monge' || (ITEM_ALIASES[ic.item]==='saia_barbaro')){
-        ctx.save();
-        const offX=unit.bodyR*(ic.itemOffsetX ?? 0);
-        const offY=unit.bodyR*(ic.itemOffsetY ?? 0);
-        ctx.translate(unit.pos.x+offX,unit.pos.y+offY);
-        ctx.rotate(iRot);
-        applyMicroAnim(ctx,ic.microAnim,now);
-        if (ic.flipX) ctx.scale(-1,1);
-        drawItemSprite(ctx,ic.item, baseScale, pal, now);
-        ctx.restore();
-      } else {
-        const safeR=LEVEL_SAFE_RADIUS_MULT*unit.bodyR;
-        const anchor=(ic.anchorDeg||0)*Math.PI/180;
-        let dist=unit.bodyR*(ic.distanceFromCenter ?? 0.82);
-        if(dist<safeR) dist=safeR;
-        const offX=unit.bodyR*(ic.itemOffsetX ?? 0);
-        const offY=unit.bodyR*(ic.itemOffsetY ?? 0);
-        const x=unit.pos.x+Math.cos(anchor)*dist+offX;
-        const y=unit.pos.y+Math.sin(anchor)*dist+offY;
-        ctx.save();
-        ctx.translate(x,y);
-        ctx.rotate(anchor);
-        ctx.rotate(iRot);
-        applyMicroAnim(ctx,ic.microAnim,now);
-        if (ic.flipX) ctx.scale(-1,1);
-        drawItemSprite(ctx,ic.item,baseScale,pal,now);
-        ctx.restore();
-      }
+      drawItem(ctx, unit, ic, now);
     }
   }
   // 4) arma (omitida para classes sem arma)

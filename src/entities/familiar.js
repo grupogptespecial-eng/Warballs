@@ -1,12 +1,12 @@
 // Familiar invocado pelo Bruxo
 
 import { V } from '../math/vec.js';
-import { CFG, CLASS_VISUALS, CLASS_ITEM_SCALE_DEFAULT, GLOBAL_ITEM_SCALE_MULT } from '../config/cfg.js';
+import { CFG, CLASS_VISUALS } from '../config/cfg.js';
 import { randAng } from '../utils/rand.js';
 import { clamp } from '../utils/misc.js';
 import { Projectile } from './projectile.js';
 import { drawRoundedRect } from '../utils/geometry.js';
-import { drawItemSprite, applyMicroAnim } from '../render/visuals_module.js';
+import { drawItem } from '../render/visuals_module.js';
 import { game } from '../core/game.js';
 
 export class Familiar {
@@ -92,18 +92,7 @@ export class Familiar {
     if (vis?.items) {
       const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
       for (const ic of vis.items) {
-        const pal = ic.palette || vis.palette || [];
-        const ang = (ic.anchorDeg ?? 0) * Math.PI / 180;
-        const dist = this.bodyR * (ic.distanceFromCenter ?? 0);
-        const rot = (ic.internalRotation ?? 0) * Math.PI / 180;
-        const scale = (ic.scale ?? CLASS_ITEM_SCALE_DEFAULT) * (this.bodyR * 2) * GLOBAL_ITEM_SCALE_MULT;
-        ctx.save();
-        ctx.translate(this.pos.x + Math.cos(ang) * dist, this.pos.y + Math.sin(ang) * dist);
-        ctx.rotate(ang + rot);
-        if (ic.flipX) ctx.scale(-1, 1);
-        applyMicroAnim(ctx, ic.microAnim, now);
-        drawItemSprite(ctx, ic.item, scale, pal, now);
-        ctx.restore();
+        drawItem(ctx, this, ic, now);
       }
     }
 
