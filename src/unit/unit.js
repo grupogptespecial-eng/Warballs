@@ -1145,11 +1145,11 @@ export class Unit {
     if (!cfg) return;
 
     const now = performance.now();
-    const items = cfg.items || [cfg];
+    const items = cfg.items || (cfg.item ? [cfg.item] : []);
     for (const ic of items) {
       const pal = ic.palette || [];
       const itemId = ic.item;
-      const iRot = (ic.internalRotationDeg ?? 0) * Math.PI / 180;
+      const iRot = (ic.internalRotation ?? 0) * Math.PI / 180;
       if (itemId === 'colar_monge' || ITEM_ALIASES[itemId] === 'saia_barbaro') {
         ctx.save();
         const offY = this.bodyR * (ic.itemOffsetY ?? 0);
@@ -1162,7 +1162,7 @@ export class Unit {
         drawItemSprite(ctx, itemId, scale, pal, now);
         ctx.restore();
       } else {
-        const anchor = (ic.anchorAngleDeg || 0) * Math.PI / 180;
+        const anchor = (ic.anchorDeg || 0) * Math.PI / 180;
         const safeR = LEVEL_SAFE_RADIUS_MULT * this.bodyR;
         let dist = this.bodyR * (ic.distanceFromCenter ?? 0.82);
         if (dist < safeR) dist = safeR;
@@ -1332,10 +1332,11 @@ export class Unit {
       const wv = CLASS_VISUALS[this.className]?.weapon || {};
       const pal = wv.palette || CLASS_VISUALS[this.className]?.palette;
       const base = this.bodyR * 1.2;
-      const ang = this.angle + (wv.angleDeg ?? 0) * Math.PI / 180;
-      const dist = this.weaponOffset;
+      const ang = this.angle + (wv.anchorDeg ?? 0) * Math.PI / 180;
+      const dist = this.weaponOffset !== undefined ? this.weaponOffset : this.bodyR * (wv.distanceFromCenter ?? 1);
       const scale = base * (wv.scale ?? 1);
       const anchor = wv.weaponAnchor || [0, 0];
+      const iRot = (wv.internalRotation ?? 0) * Math.PI / 180;
       const key = wv.draw || 'mace';
       const drawFn = WEAPON_DRAWERS[key] || WEAPON_DRAWERS.mace;
       const x = this.pos.x + Math.cos(ang) * dist;
@@ -1343,6 +1344,7 @@ export class Unit {
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(ang);
+      ctx.rotate(iRot);
       if (anchor[0] || anchor[1]) ctx.translate(-scale * anchor[0], -scale * anchor[1]);
       drawFn(ctx, scale, pal, this);
       ctx.restore();

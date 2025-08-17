@@ -526,109 +526,121 @@ export const LEVEL_SAFE_RADIUS_MULT = 0.42;
 // e pode ajustar escala, animação e paleta de cores.
 export const CLASS_VISUALS = {
   barbaro: {
-    // item
-    item: 'saia_barbaro',
-    anchorAngleDeg: 100,
-    scale: 0.45,
-    microAnim: 'sway_low',
     palette: [BARBARIAN_PALETTE.leatherBase, BARBARIAN_PALETTE.leatherLight, BARBARIAN_PALETTE.leatherStroke],
-    distanceFromCenter: 0.02,
-    internalRotationDeg: -100,
-    itemOffsetY: 0.0,
-    weapon: { draw: 'axe', angleDeg: 35, scale: 1.25, distanceFromCenter: 2.0 }
+    item: {
+      item: 'saia_barbaro',
+      anchorDeg: 100,
+      scale: 0.45,
+      distanceFromCenter: 0.02,
+      internalRotation: -100,
+      microAnim: 'sway_low',
+      itemOffsetY: 0.0,
+      palette: [BARBARIAN_PALETTE.leatherBase, BARBARIAN_PALETTE.leatherLight, BARBARIAN_PALETTE.leatherStroke]
+    },
+    weapon: { draw: 'axe', anchorDeg: 35, scale: 1.25, distanceFromCenter: 2.0 }
   },
   ranger: {
-    // item
-    item: 'aljava_pequena',
-    anchorAngleDeg: 45,
-    scale: 0.56,
-    microAnim: 'idle_breath',
-    palette: ['#4E6B3A', '#B89B6B', '#2E3B22'],
-    distanceFromCenter: 0.82,
-    internalRotationDeg: 0,
-    weapon: { draw: 'bow', angleDeg: -25, scale: 1.56, distanceFromCenter: 1.5, weaponAnchor: [-0.4, 0] }
+    item: {
+      item: 'aljava_pequena',
+      anchorDeg: 45,
+      scale: 0.56,
+      distanceFromCenter: 0.82,
+      internalRotation: 0,
+      microAnim: 'idle_breath',
+      palette: ['#4E6B3A', '#B89B6B', '#2E3B22']
+    },
+    weapon: { draw: 'bow', anchorDeg: -25, scale: 1.56, distanceFromCenter: 1.5, weaponAnchor: [-0.4, 0] }
   },
   monge: {
-    // item
-    item: 'colar_monge',
-    scale: 0.6,
-    palette: [],
-    distanceFromCenter: 0.82,
-    internalRotationDeg: 0
+    item: {
+      item: 'colar_monge',
+      anchorDeg: 0,
+      scale: 0.6,
+      distanceFromCenter: 0.82,
+      internalRotation: 0,
+      palette: []
+    }
   },
   paladino: {
-    // item
-    item: 'capacete_paladino',
-    anchorAngleDeg: 270,
-    scale: 0.7,
-    microAnim: 'glint_slow',
-    palette: ['#f4f6f8', '#ffefad', '#b68a34'],
-    distanceFromCenter: 0.72,
-    internalRotationDeg: 90,
-    weapon: { draw: 'sword', angleDeg: -90, scale: 1.6, distanceFromCenter: 2.0 }
+    item: {
+      item: 'capacete_paladino',
+      anchorDeg: 270,
+      scale: 0.7,
+      distanceFromCenter: 0.72,
+      internalRotation: 90,
+      microAnim: 'glint_slow',
+      palette: ['#f4f6f8', '#ffefad', '#b68a34']
+    },
+    weapon: { draw: 'sword', anchorDeg: -90, scale: 1.6, distanceFromCenter: 2.0 }
   },
   clerigo: {
-    // item
-    item: 'sigilo_sol',
-    anchorAngleDeg: 330,
-    scale: 0.34,
-    microAnim: 'soft_glow',
-    palette: ['#FFD67A', '#F4B43A', '#8A6A2A'],
-    distanceFromCenter: 0.72,
-    internalRotationDeg: 0,
-    weapon: { draw: 'mace', angleDeg: 90, scale: 2.0, distanceFromCenter: 1.8 }
+    item: {
+      item: 'sigilo_sol',
+      anchorDeg: 330,
+      scale: 0.34,
+      distanceFromCenter: 0.72,
+      internalRotation: 0,
+      microAnim: 'soft_glow',
+      palette: ['#FFD67A', '#F4B43A', '#8A6A2A']
+    },
+    weapon: { draw: 'mace', anchorDeg: 90, scale: 2.0, distanceFromCenter: 1.8 }
   },
   bruxo: {
     palette: ['#7E57C2', '#A586E8', '#40345A'],
     items: [
-      { item: 'chifre_bruxo', anchorAngleDeg: 220, scale: 0.38, microAnim: 'idle_breath', palette: ['#7E57C2', '#A586E8', '#40345A'], distanceFromCenter: 1.92, internalRotationDeg: -100 },
-      { item: 'chifre_bruxo', anchorAngleDeg: 320, scale: 0.38, microAnim: 'idle_breath', palette: ['#7E57C2', '#A586E8', '#40345A'], distanceFromCenter: 1.92, internalRotationDeg: 280, flipX: true }
+      { item: 'chifre_bruxo', anchorDeg: 220, scale: 0.38, distanceFromCenter: 1.92, internalRotation: -100, microAnim: 'idle_breath', palette: ['#7E57C2', '#A586E8', '#40345A'] },
+      { item: 'chifre_bruxo', anchorDeg: 320, scale: 0.38, distanceFromCenter: 1.92, internalRotation: 280, microAnim: 'idle_breath', palette: ['#7E57C2', '#A586E8', '#40345A'], flipX: true }
     ],
-    weapon: { draw: 'book', angleDeg: -10, scale: 1.0, distanceFromCenter: 1.0 }
+    weapon: { draw: 'book', anchorDeg: -10, scale: 1.0, distanceFromCenter: 1.0 }
   },
   bardo: {
-    // item
-    item: 'chapeu_bardo',
-    anchorAngleDeg: 270,
-    scale: 0.66,
-    microAnim: 'idle_breath',
-    palette: ['#11772a', '#22a33a', '#d7b193'],
-    distanceFromCenter: 0.72,
-    internalRotationDeg: 0,
-    weapon: { draw: 'flute', scale: 1.5, distanceFromCenter: 1.6 }
+    item: {
+      item: 'chapeu_bardo',
+      anchorDeg: 270,
+      scale: 0.66,
+      distanceFromCenter: 0.72,
+      internalRotation: 0,
+      microAnim: 'idle_breath',
+      palette: ['#11772a', '#22a33a', '#d7b193']
+    },
+    weapon: { draw: 'flute', anchorDeg: 0, scale: 1.5, distanceFromCenter: 1.6 }
   },
   artifice: {
-    // item
-    item: 'goggles',
-    anchorAngleDeg: 270,
-    scale: 0.56,
-    microAnim: 'idle_breath',
-    palette: ['#A6B1B8', '#E0E7EA', '#3B4A5A'],
-    distanceFromCenter: 0.52,
-    internalRotationDeg: 0,
-    weapon: { draw: 'arcaneCannon', angleDeg: 40, scale: 1.8, distanceFromCenter: 1.5, weaponAnchor: [-0.2, 0] }
+    item: {
+      item: 'goggles',
+      anchorDeg: 270,
+      scale: 0.56,
+      distanceFromCenter: 0.52,
+      internalRotation: 0,
+      microAnim: 'idle_breath',
+      palette: ['#A6B1B8', '#E0E7EA', '#3B4A5A']
+    },
+    weapon: { draw: 'arcaneCannon', anchorDeg: 40, scale: 1.8, distanceFromCenter: 1.5, weaponAnchor: [-0.2, 0] }
   },
   guerreiro: {
-    // item
-    item: 'ombreira_couro',
-    anchorAngleDeg: 210,
-    scale: 0.70,
-    microAnim: 'sway_low',
     palette: ['#8a4b2a', '#6a3921', '#4a2818'],
-    distanceFromCenter: 0.82,
-    internalRotationDeg: 0,
-    weapon: { draw: 'spear', angleDeg: 15, distanceFromCenter: 1.0, weaponAnchor: [0.48, 0] }
+    item: {
+      item: 'ombreira_couro',
+      anchorDeg: 210,
+      scale: 0.70,
+      distanceFromCenter: 0.82,
+      internalRotation: 0,
+      microAnim: 'sway_low',
+      palette: ['#8a4b2a', '#6a3921', '#4a2818']
+    },
+    weapon: { draw: 'spear', anchorDeg: 15, scale: 1.0, distanceFromCenter: 1.0, weaponAnchor: [0.48, 0] }
   },
   druida: {
-    // item
-    item: 'druida_horns',
-    anchorAngleDeg: 270,
-    scale: 1.5,
-    microAnim: 'idle_breath',
-    palette: ['#6E4A2F', '#C9A17B', '#E9D7C1'],
-    distanceFromCenter: 0.72,
-    internalRotationDeg: 90,
-    weapon: { draw: 'druidaStaff', angleDeg: 90, scale: 1.5, distanceFromCenter: 1.6, weaponAnchor: [0, 0.5] }
+    item: {
+      item: 'druida_horns',
+      anchorDeg: 270,
+      scale: 1.5,
+      distanceFromCenter: 0.72,
+      internalRotation: 90,
+      microAnim: 'idle_breath',
+      palette: ['#6E4A2F', '#C9A17B', '#E9D7C1']
+    },
+    weapon: { draw: 'druidaStaff', anchorDeg: 90, scale: 1.5, distanceFromCenter: 1.6, weaponAnchor: [0, 0.5] }
   }
 };
 

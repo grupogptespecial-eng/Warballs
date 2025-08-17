@@ -485,10 +485,11 @@ export function drawWeapon(ctx, unit){
   if (!wv) return;
   const pal = wv.palette || vis.palette;
   const base = unit.bodyR * 1.2;
-  const ang = (unit.angle ?? 0) + (wv.angleDeg ?? 0) * Math.PI / 180;
+  const ang = (unit.angle ?? 0) + (wv.anchorDeg ?? 0) * Math.PI / 180;
   const dist = unit.weaponOffset !== undefined ? unit.weaponOffset : unit.bodyR * (wv.distanceFromCenter ?? 1);
   const scale = base * (wv.scale ?? 1);
   const anchor = wv.weaponAnchor || [0,0];
+  const iRot = (wv.internalRotation ?? 0) * Math.PI / 180;
   const key = wv.draw || 'mace';
   const drawFn = WEAPON_DRAWERS[key] || WEAPON_DRAWERS.mace;
   const x = unit.pos.x + Math.cos(ang) * dist;
@@ -496,6 +497,7 @@ export function drawWeapon(ctx, unit){
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(ang);
+  ctx.rotate(iRot);
   if (anchor[0] || anchor[1]) ctx.translate(-scale*anchor[0], -scale*anchor[1]);
   drawFn(ctx, scale, pal, unit);
   ctx.restore();
@@ -524,11 +526,11 @@ export function renderUnitPreview(ctx, unit, teamColor, now){
   // 3) itens
   const cfg=CLASS_VISUALS[unit.className];
   if (cfg){
-    const items=cfg.items || [cfg];
+    const items=cfg.items || (cfg.item ? [cfg.item] : []);
     for(const ic of items){
       const pal=ic.palette||[];
       const baseScale=(ic.scale ?? CLASS_ITEM_SCALE_DEFAULT)*(unit.bodyR*2)*GLOBAL_ITEM_SCALE_MULT;
-      const iRot=(ic.internalRotationDeg ?? 0)*Math.PI/180;
+      const iRot=(ic.internalRotation ?? 0)*Math.PI/180;
       if (ic.item==='colar_monge' || (ITEM_ALIASES[ic.item]==='saia_barbaro')){
         ctx.save();
         const offX=unit.bodyR*(ic.itemOffsetX ?? 0);
@@ -541,7 +543,7 @@ export function renderUnitPreview(ctx, unit, teamColor, now){
         ctx.restore();
       } else {
         const safeR=LEVEL_SAFE_RADIUS_MULT*unit.bodyR;
-        const anchor=(ic.anchorAngleDeg||0)*Math.PI/180;
+        const anchor=(ic.anchorDeg||0)*Math.PI/180;
         let dist=unit.bodyR*(ic.distanceFromCenter ?? 0.82);
         if(dist<safeR) dist=safeR;
         const offX=unit.bodyR*(ic.itemOffsetX ?? 0);

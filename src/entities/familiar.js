@@ -93,9 +93,9 @@ export class Familiar {
       const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
       for (const ic of vis.items) {
         const pal = ic.palette || vis.palette || [];
-        const ang = (ic.anchorAngleDeg ?? 0) * Math.PI / 180;
+        const ang = (ic.anchorDeg ?? 0) * Math.PI / 180;
         const dist = this.bodyR * (ic.distanceFromCenter ?? 0);
-        const rot = (ic.internalRotationDeg ?? 0) * Math.PI / 180;
+        const rot = (ic.internalRotation ?? 0) * Math.PI / 180;
         const scale = (ic.scale ?? CLASS_ITEM_SCALE_DEFAULT) * (this.bodyR * 2) * GLOBAL_ITEM_SCALE_MULT;
         ctx.save();
         ctx.translate(this.pos.x + Math.cos(ang) * dist, this.pos.y + Math.sin(ang) * dist);
