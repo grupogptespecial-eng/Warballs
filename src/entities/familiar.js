@@ -1,12 +1,12 @@
 // Familiar invocado pelo Bruxo
 
 import { V } from '../math/vec.js';
-import { CFG } from '../config/cfg.js';
+import { CFG, CLASS_VISUALS, CLASS_ITEM_SCALE_DEFAULT, GLOBAL_ITEM_SCALE_MULT } from '../config/cfg.js';
 import { randAng } from '../utils/rand.js';
 import { clamp } from '../utils/misc.js';
 import { Projectile } from './projectile.js';
 import { drawRoundedRect } from '../utils/geometry.js';
-import { drawItemSprite } from '../render/visuals_module.js';
+import { drawItemSprite, applyMicroAnim } from '../render/visuals_module.js';
 import { game } from '../core/game.js';
 
 export class Familiar {
@@ -87,25 +87,25 @@ export class Familiar {
     ctx.fill();
     ctx.restore();
 
-    // chifres do familiar
-    const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
-    const pal = ['#7E57C2', '#A586E8', '#40345A'];
-    const scale = 0.38 * (this.bodyR * 2);
-    const dist = this.bodyR * 1.92;
-
-    const drawHorn = (angDeg, rotDeg, flipX = false) => {
-      const ang = angDeg * Math.PI / 180;
-      const rot = rotDeg * Math.PI / 180;
-      ctx.save();
-      ctx.translate(this.pos.x + Math.cos(ang) * dist, this.pos.y + Math.sin(ang) * dist);
-      ctx.rotate(ang + rot);
-      if (flipX) ctx.scale(-1, 1);
-      drawItemSprite(ctx, 'chifre_bruxo', scale, pal, now);
-      ctx.restore();
-    };
-
-    drawHorn(220, -100);
-    drawHorn(320, 280, true);
+    // chifres do familiar usando configuração do Bruxo
+    const vis = CLASS_VISUALS.bruxo;
+    if (vis?.items) {
+      const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+      for (const ic of vis.items) {
+        const pal = ic.palette || vis.palette || [];
+        const ang = (ic.anchorAngleDeg ?? 0) * Math.PI / 180;
+        const dist = this.bodyR * (ic.distanceFromCenter ?? 0);
+        const rot = (ic.internalRotationDeg ?? 0) * Math.PI / 180;
+        const scale = (ic.scale ?? CLASS_ITEM_SCALE_DEFAULT) * (this.bodyR * 2) * GLOBAL_ITEM_SCALE_MULT;
+        ctx.save();
+        ctx.translate(this.pos.x + Math.cos(ang) * dist, this.pos.y + Math.sin(ang) * dist);
+        ctx.rotate(ang + rot);
+        if (ic.flipX) ctx.scale(-1, 1);
+        applyMicroAnim(ctx, ic.microAnim, now);
+        drawItemSprite(ctx, ic.item, scale, pal, now);
+        ctx.restore();
+      }
+    }
 
     const w = 36, h = 4, x = this.pos.x - w / 2, y = this.pos.y - this.bodyR - 10;
     drawRoundedRect(ctx, x, y, w, h, 3);
