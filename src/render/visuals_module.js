@@ -459,6 +459,35 @@ export function drawWeaponForUnit(ctx, unit, S){
   }
 }
 
+export function drawWeapon(ctx, unit){
+  const cfg = CLASS_VISUALS[unit.className] || {};
+  const off = (cfg.weaponAngleDeg ?? 0) * Math.PI / 180;
+  const internal = (cfg.weaponInternalRotationDeg ?? 0) * Math.PI / 180;
+  const flip = cfg.weaponFlipX;
+  const offX = unit.bodyR * (cfg.weaponOffsetX ?? 0);
+  const offY = unit.bodyR * (cfg.weaponOffsetY ?? 0);
+  const dist = unit.weaponOffset;
+  const ang = unit.angle + off;
+  let wScale;
+  if (unit.className === 'guerreiro') {
+    const base = CLASSES[unit.className] || {};
+    const wLen = (base.weaponLen || 0) * (cfg.weaponScale ?? 1);
+    wScale = wLen / 0.88;
+  } else {
+    wScale = unit.bodyR * 1.2 * (cfg.weaponScale ?? 1);
+  }
+  const anchor = (cfg.weaponAnchor ?? 0) * wScale;
+  const x = unit.pos.x + Math.cos(ang) * dist + offX;
+  const y = unit.pos.y + Math.sin(ang) * dist + offY;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(ang + internal);
+  if (flip) ctx.scale(-1, 1);
+  ctx.translate(anchor, 0);
+  drawWeaponForUnit(ctx, unit, wScale);
+  ctx.restore();
+}
+
 // ===== Render Unit (bola + item + arma + nível)
 export function renderUnitPreview(ctx, unit, teamColor, now){
   // 1) sombra
@@ -519,33 +548,7 @@ export function renderUnitPreview(ctx, unit, teamColor, now){
   }
   // 4) arma (omitida para classes sem arma, ex.: monge)
   if (unit.className !== 'monge') {
-    ctx.save();
-    ctx.translate(unit.pos.x, unit.pos.y);
-    const wAng = (cfg?.weaponAngleDeg ?? 30) * Math.PI / 180;
-    let wScale, wOff, anchor;
-    if (unit.className === 'guerreiro') {
-      const base = CLASSES[unit.className] || {};
-      const wLen = (base.weaponLen || 0) * (cfg?.weaponScale ?? 1);
-      wScale = wLen / 0.88;
-      wOff = unit.bodyR * (cfg?.weaponOffsetMult ?? 1.4);
-      anchor = (cfg?.weaponAnchor ?? 0) * wScale;
-      ctx.rotate(wAng);
-      ctx.translate(wOff + anchor, 0);
-    } else {
-      wScale = unit.bodyR * 1.2 * (cfg?.weaponScale ?? 1);
-      wOff = unit.bodyR * (cfg?.weaponOffsetMult ?? 1.4);
-      anchor = (cfg?.weaponAnchor ?? 0) * wScale;
-      if (unit.className === 'paladino' || unit.className === 'clerigo') {
-        ctx.rotate(0);
-        ctx.translate(wOff + anchor, 0);
-        ctx.rotate(wAng);
-      } else {
-        ctx.rotate(wAng);
-        ctx.translate(wOff + anchor, 0);
-      }
-    }
-    drawWeaponForUnit(ctx, unit, wScale);
-    ctx.restore();
+    drawWeapon(ctx, unit);
   }
   // 5) destaque
   ctx.save(); ctx.globalAlpha=0.25; ctx.beginPath(); ctx.arc(unit.pos.x-unit.bodyR*0.35, unit.pos.y-unit.bodyR*0.35, unit.bodyR*0.45, 0, TAU); ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.fill(); ctx.restore();

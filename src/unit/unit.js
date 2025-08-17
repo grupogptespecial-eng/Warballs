@@ -7,7 +7,7 @@ import { Particle } from '../entities/particle.js';
 import { Effect } from '../entities/effect.js';
 import { Projectile } from '../entities/projectile.js';
 import { game } from '../core/game.js';
-import { drawItemSprite, drawWeaponForUnit, applyMicroAnim } from '../render/visuals_module.js';
+import { drawItemSprite, drawWeapon, applyMicroAnim } from '../render/visuals_module.js';
 
 const bearImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
 if (bearImg.src !== undefined) bearImg.src = 'assets/druida_bear.svg';
@@ -198,7 +198,7 @@ export class Unit {
     const tipScale = (cfg.weaponThickness ?? 1) * lenScale;
     this.weaponLen = cfg.weaponLen * lenScale;
     this.weaponTipR = cfg.tipRadius * tipScale;
-    const offMult = cfg.weaponOffsetMult ?? 1;
+    const offMult = cfg.weaponDistanceFromCenter ?? cfg.weaponOffsetMult ?? 1;
     this.weaponOffset = this.bodyR * offMult;
   }
 
@@ -315,7 +315,7 @@ export class Unit {
       weaponLen: this.weaponLen,
       tipRadius: this.weaponTipR,
       weaponScale: vis.weaponScale,
-      weaponOffsetMult: vis.weaponOffsetMult,
+      weaponDistanceFromCenter: vis.weaponDistanceFromCenter ?? vis.weaponOffsetMult,
       weaponThickness: vis.weaponThickness
     });
     if (this.className === 'guerreiro' && this.gw) {
@@ -1312,39 +1312,12 @@ export class Unit {
       ctx.restore();
     }
 
-    const cfg = CLASS_VISUALS[this.className];
     const skipWeapon = (this.className === 'guerreiro' && this.gw &&
       (this.gw.state === 'THROW_FLIGHT' || this.gw.disarmT > 0)) ||
       this.className === 'monge' ||
       isBear;
     if (!skipWeapon) {
-      ctx.save();
-      ctx.translate(this.pos.x, this.pos.y);
-      const off = (cfg?.weaponAngleDeg ?? 30) * Math.PI / 180;
-      let wScale, wOff, anchor;
-      if (this.className === 'guerreiro') {
-        wScale = this.weaponLen / 0.88;
-        wOff = this.weaponOffset;
-        anchor = (cfg?.weaponAnchor ?? 0) * wScale;
-        const ang = this.angle + off;
-        ctx.rotate(ang);
-        ctx.translate(wOff + anchor, 0);
-      } else {
-        wScale = this.bodyR * 1.2 * (cfg?.weaponScale ?? 1);
-        wOff = this.bodyR * (cfg?.weaponOffsetMult ?? 1.4);
-        anchor = (cfg?.weaponAnchor ?? 0) * wScale;
-        if (this.className === 'paladino' || this.className === 'clerigo') {
-          ctx.rotate(this.angle);
-          ctx.translate(wOff + anchor, 0);
-          ctx.rotate(off);
-        } else {
-          const ang = this.angle + off;
-          ctx.rotate(ang);
-          ctx.translate(wOff + anchor, 0);
-        }
-      }
-      drawWeaponForUnit(ctx, this, wScale);
-      ctx.restore();
+      drawWeapon(ctx, this);
     }
     if (game.debugHit) {
       ctx.globalAlpha = 0.3;

@@ -538,7 +538,7 @@ export const CLASS_VISUALS = {
     weaponOverride: 'axe_double_bit_v2',
     weaponAngleDeg: 35,
     weaponScale: 1.25,
-    weaponOffsetMult: 2.0,
+    weaponDistanceFromCenter: 2.0,
     weaponAnchor: 0
   },
   ranger: {
@@ -553,7 +553,7 @@ export const CLASS_VISUALS = {
     // weapon
     weaponAngleDeg: -25,
     weaponScale: 1.56,
-    weaponOffsetMult: 1.5,
+    weaponDistanceFromCenter: 1.5,
     weaponAnchor: 0
   },
   monge: {
@@ -576,7 +576,7 @@ export const CLASS_VISUALS = {
     // weapon
     weaponAngleDeg: -90,
     weaponScale: 1.6,
-    weaponOffsetMult: 2.0,
+    weaponDistanceFromCenter: 2.0,
     weaponAnchor: 0
   },
   clerigo: {
@@ -591,7 +591,7 @@ export const CLASS_VISUALS = {
     // weapon
     weaponAngleDeg: 90,
     weaponScale: 2.0,
-    weaponOffsetMult: 1.8,
+    weaponDistanceFromCenter: 1.8,
     weaponAnchor: 0
   },
   bruxo: {
@@ -617,7 +617,7 @@ export const CLASS_VISUALS = {
     weaponOverride: 'flauta',
     weaponAngleDeg: 0,
     weaponScale: 1.5,
-    weaponOffsetMult: 1.6,
+    weaponDistanceFromCenter: 1.6,
     weaponAnchor: 0
   },
   artifice: {
@@ -633,7 +633,7 @@ export const CLASS_VISUALS = {
     weaponOverride: 'arcane_cannon',
     weaponAngleDeg: 40,
     weaponScale: 1.8,
-    weaponOffsetMult: 1.5,
+    weaponDistanceFromCenter: 1.5,
     weaponAnchor: 0
   },
   guerreiro: {
@@ -648,7 +648,7 @@ export const CLASS_VISUALS = {
     // weapon
     weaponAngleDeg: 15,
     weaponScale: 1,
-    weaponOffsetMult: 1.0,
+    weaponDistanceFromCenter: 1.0,
     weaponThickness: 1,
     weaponAnchor: 0.48
   },
@@ -665,7 +665,7 @@ export const CLASS_VISUALS = {
     weaponOverride: 'druida_staff',
     weaponAngleDeg: 90,
     weaponScale: 1.5,
-    weaponOffsetMult: 1.6,
+    weaponDistanceFromCenter: 1.6,
     weaponAnchor: 0
   }
 };
