@@ -664,7 +664,7 @@ export const CLASS_VISUALS = {
     internalRotationDeg: 90,
     // weapon
     weaponOverride: 'druida_staff',
-    weaponAngleDeg: 90,
+    weaponAngleDeg: 0,
     weaponScale: 1.5,
     weaponDistanceFromCenter: 1.6,
     weaponAnchor: 0
