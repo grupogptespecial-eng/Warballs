@@ -1,0 +1,137 @@
+<svg width="360" height="360" viewBox="0 0 360 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Nódulo de raiz com vinhas e poro central">
+  <defs>
+    <!-- madeira do bulbo -->
+    <linearGradient id="bulbGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#8A5D43"/>
+      <stop offset="55%" stop-color="#6A4634"/>
+      <stop offset="100%" stop-color="#3D2A20"/>
+    </linearGradient>
+    <!-- aresta clara da madeira -->
+    <linearGradient id="woodEdge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"  stop-color="#C69C7B" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#9A7357" stop-opacity="0"/>
+    </linearGradient>
+    <!-- vinhas -->
+    <linearGradient id="vineGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#34BE6A"/>
+      <stop offset="100%" stop-color="#1D6E44"/>
+    </linearGradient>
+    <!-- folhas -->
+    <linearGradient id="leafGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"  stop-color="#59D07E"/>
+      <stop offset="100%" stop-color="#1F8B55"/>
+    </linearGradient>
+    <!-- brilho verde do poro -->
+    <radialGradient id="coreGlow" cx="50%" cy="50%" r="60%">
+      <stop offset="0%"  stop-color="#CBFFD8"/>
+      <stop offset="55%" stop-color="#7BFFA7"/>
+      <stop offset="100%" stop-color="#1CD67A"/>
+    </radialGradient>
+    <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="4" result="g"/>
+      <feMerge>
+        <feMergeNode in="g"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- recorte para desenhar veios/fissuras dentro do bulbo -->
+    <clipPath id="bulbClip">
+      <path id="bulbShape"
+            d="M178 64
+               C140 70, 110 90, 94 118
+               C76 150, 78 194, 96 228
+               C114 260, 144 286, 180 292
+               C214 298, 248 286, 270 262
+               C294 236, 304 198, 296 162
+               C288 124, 262 92, 228 76
+               C208 66, 194 62, 178 64 Z"/>
+    </clipPath>
+  </defs>
+
+  <!-- ===== bulbo principal ===== -->
+  <path d="M178 64
+           C140 70, 110 90, 94 118
+           C76 150, 78 194, 96 228
+           C114 260, 144 286, 180 292
+           C214 298, 248 286, 270 262
+           C294 236, 304 198, 296 162
+           C288 124, 262 92, 228 76
+           C208 66, 194 62, 178 64 Z"
+        fill="url(#bulbGrad)" stroke="#2C1C15" stroke-width="3" />
+
+  <!-- aresta clara -->
+  <path d="M170 70
+           C138 78, 114 96, 102 120
+           C90 146, 92 178, 108 206
+           C126 236, 156 258, 188 262"
+        fill="none" stroke="url(#woodEdge)" stroke-width="8" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- veios/fissuras internas -->
+  <g clip-path="url(#bulbClip)" opacity="0.35" stroke="#2C1C15" fill="none" stroke-linecap="round">
+    <path d="M124 120 C146 134 134 156 152 170" stroke-width="2"/>
+    <path d="M148 200 C170 210 160 230 176 242" stroke-width="1.8"/>
+    <path d="M202 112 C222 128 212 146 226 160" stroke-width="2"/>
+    <path d="M216 210 C236 222 226 242 240 254" stroke-width="1.6"/>
+  </g>
+
+  <!-- raízes finas na base -->
+  <g stroke="url(#bulbGrad)" stroke-linecap="round" fill="none">
+    <path d="M168 292 c-10 12 -22 18 -30 14" stroke-width="6"/>
+    <path d="M184 294 c  8 16  22 24  30 18" stroke-width="6"/>
+    <path d="M156 286 c-14  8 -26  8 -30  2" stroke-width="4"/>
+    <path d="M200 288 c 16 10  28 10  32  4" stroke-width="4"/>
+  </g>
+
+  <!-- coroa de espinhos/raízes ao redor (proteção) -->
+  <g stroke="#3A291E" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.9">
+    <path d="M112 156 l-14 -10 l18 -4" stroke-width="5"/>
+    <path d="M132 128 l-16 -12 l18 -2" stroke-width="5"/>
+    <path d="M246 126 l16 -10 l-8 18" stroke-width="5"/>
+    <path d="M252 158 l18 -2 l-14 14" stroke-width="5"/>
+  </g>
+
+  <!-- vinhas que se enrolam ao bulbo -->
+  <path d="M118 108
+           C 86 136 150 170 120 198
+           C 94 220 152 248 130 268
+           C 112 286 164 300 176 306"
+        fill="none" stroke="url(#vineGrad)" stroke-width="12" stroke-linecap="round"/>
+  <path d="M238 106
+           C 268 126 212 164 240 186
+           C 266 206 210 236 228 254
+           C 244 270 196 292 182 302"
+        fill="none" stroke="url(#vineGrad)" stroke-width="10" stroke-linecap="round" opacity="0.9"/>
+
+  <!-- folhas nas vinhas -->
+  <g>
+    <path d="M126 190
+             C110 186 106 200 114 210
+             C122 220 140 214 140 202
+             C138 196 134 192 126 190 Z"
+          fill="url(#leafGrad)" stroke="#0E5A38" stroke-width="2"/>
+    <path d="M232 214
+             C250 210 254 226 244 236
+             C234 246 214 240 214 228
+             C216 222 222 216 232 214 Z"
+          fill="url(#leafGrad)" stroke="#0E5A38" stroke-width="2"/>
+  </g>
+
+  <!-- poro central (abertura do tentáculo) com brilho -->
+  <g filter="url(#softGlow)">
+    <!-- fenda -->
+    <ellipse cx="182" cy="188" rx="40" ry="26" fill="#1A241D" opacity="0.7"/>
+    <!-- glow -->
+    <ellipse cx="182" cy="188" rx="26" ry="16" fill="url(#coreGlow)" opacity="0.95"/>
+    <!-- “respiração” do poro -->
+    <ellipse cx="182" cy="188" rx="14" ry="8" fill="#E9FFE9" opacity="0.55">
+      <animate attributeName="rx" values="12;16;12" dur="1.6s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.45;0.9;0.45" dur="1.6s" repeatCount="indefinite"/>
+    </ellipse>
+  </g>
+
+  <!-- pequenas runas naturais gravadas (opcional) -->
+  <g opacity="0.5" transform="translate(0,6)">
+    <path d="M176 130 l6 -10 l6 10" stroke="#DEC8A8" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <path d="M178 156 l0 -14 m0 0 l10 7" stroke="#DEC8A8" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>

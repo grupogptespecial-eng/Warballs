@@ -49,7 +49,10 @@ export class NoteProjectile {
           u.bardBuffT = N.duration;
         } else {
           const dealt = u.hit(this.dmg, this.dir.clone().mul(this.knock), this.owner);
-          if (dealt > 0 && this.owner) this.owner.gainXPOffense(dealt);
+          if (dealt > 0 && this.owner) {
+            this.owner.gainXPOffense(dealt);
+            this.owner.hp = clamp(this.owner.hp + N.selfHeal, 0, this.owner.hpMax);
+          }
           u.bardDebuffT = N.duration;
         }
         const cols = this.colors;

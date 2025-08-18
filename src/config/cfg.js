@@ -20,11 +20,12 @@ export const CLASSES = {
   paladino:  { label: 'Paladino',  color: '#fde047', hasRanged: false, weaponLen: 36, tipRadius: 12, omega: 3.6 },
   monge:     { label: 'Monge',     color: '#60a5fa', hasRanged: false, weaponLen: 0,  tipRadius: 0,  omega: 0.0 },
   clerigo:   { label: 'Clérigo',   color: '#93c5fd', hasRanged: false, weaponLen: 36, tipRadius: 8.4, omega: 3.6 },
-  ranger:    { label: 'Ranger',    color: '#34d399', hasRanged: true,  cooldownMiraPercent: 0.25, weaponLen: 36, tipRadius: 9,  omega: 3.6 },
-  bruxo:     { label: 'Bruxo',     color: '#a78bfa', hasRanged: true,  cooldownMiraPercent: 0.10, weaponLen: 20, tipRadius: 6,  omega: 3.4 },
-  bardo:     { label: 'Bardo',     color: '#f472b6', hasRanged: true,  cooldownMiraPercent: 0.15, weaponLen: 20, tipRadius: 5,  omega: 3.6 },
-  artifice:  { label: 'Artífice',  color: '#7FDBFF', hasRanged: true,  cooldownMiraPercent: 0.20, weaponLen: 34, tipRadius: 9,  omega: 3.6 },
-  guerreiro: { label: 'Guerreiro', color: '#f59e0b', hasRanged: true, cooldownMiraPercent: 0.10, weaponLen: 38, tipRadius: 5, omega: 3.6 }
+  ranger:    { label: 'Ranger',    color: '#34d399', hasRanged: true,  cooldownMiraPercent: 0.375, weaponLen: 36, tipRadius: 9,  omega: 3.6 },
+  bruxo:     { label: 'Bruxo',     color: '#a78bfa', hasRanged: true,  cooldownMiraPercent: 0.15, weaponLen: 20, tipRadius: 6,  omega: 3.4 },
+  bardo:     { label: 'Bardo',     color: '#f472b6', hasRanged: true,  cooldownMiraPercent: 0.225, weaponLen: 20, tipRadius: 5,  omega: 3.6 },
+  artifice:  { label: 'Artífice',  color: '#7FDBFF', hasRanged: true,  cooldownMiraPercent: 0.30, weaponLen: 34, tipRadius: 9,  omega: 3.6 },
+  guerreiro: { label: 'Guerreiro', color: '#f59e0b', hasRanged: true, cooldownMiraPercent: 0.15, weaponLen: 94, tipRadius: 5, omega: 3.6 },
+  druida:   { label: 'Druida',   color: '#22c55e', hasRanged: true, cooldownMiraPercent: 0.15, weaponLen: 32, tipRadius: 8, omega: 3.2 }
 };
 
 // Paleta completa para os elementos do Bárbaro (couro, metal e madeira)
@@ -114,12 +115,14 @@ export const CFG = {
     dmg: 7,
     knock: 220,
     cooldown: 0.85,
-    trail: 10
+    trail: 10,
+    scale: 1,
+    internalRotation: 0
   },
 
   // Configuração específica da classe Ranger
   ranger: {
-    hpBase: 156, hpPerLevel: 10.4,
+    hpBase: 171.6, hpPerLevel: 11.44,
     stillVel: 30, stillTime: 0.5, passiveDmgMult: 1.5,
     arrow: { baseSpeed: 700, speedPerLevel: 15, gravity: 180, drag: 0.12, life: 3.0, radius: 5, color: '#16a34a' },
     // Perfect Shot: dano reduzido em 60%
@@ -185,8 +188,8 @@ export const CFG = {
 
     beam: {
       cd: 18.0, dur: 1.6, range: 900, width: 26,
-      // dano do Sunbeam dobrado
-      dpsBase: 204, dpsPerLevel: 15.3, push: 900, tick: 0.06,
+      // dano do Sunbeam reduzido em 40%
+      dpsBase: 122.4, dpsPerLevel: 9.18, push: 900, tick: 0.06,
       color: '#ffe28a', edge: '#f59e0b'
     },
 
@@ -216,11 +219,12 @@ export const CFG = {
 
   // Configuração da classe Bardo
   bardo: {
-    hpBase: 156, hpPerLevel: 10.4,
+    hpBase: 187.2, hpPerLevel: 12.48,
     note: {
-      dmg: 11.232,
-      heal: 4,
-      buffDmg: 0.15,
+      dmg: 20.443,
+      heal: 6,
+      selfHeal: 4,
+      buffDmg: 0.3,
       buffSpeed: 0.15,
       debuffDmg: 0.18,
       duration: 2.0,
@@ -233,17 +237,17 @@ export const CFG = {
     },
     inspire: { heal: 3, radius: 120 },
     ritmo: {
-      radius: 180,
+      radius: 270,
       dmg: 0.2,
       speed: 0.2,
-      tempHP: 20,
+      tempHP: 40,
       duration: 5.0,
       cooldown: 12.0
     },
     cortante: {
       cd: 8.0,
-      speed: 300,
-      life: 2.1,
+      speed: 120,
+      life: 6.3,
       radius: 5,
       zigzagAmp: 100,
       zigzagFreq: 20,
@@ -420,6 +424,44 @@ export const CFG = {
     }
   },
 
+  // Configuração da classe Druida
+  druida: {
+    staff: {
+      dmgBase: 15, dmgPerLevel: 1.5,
+      cooldown: 1.8,
+      radiusBase: 8.4, radiusPerLevel: 0.4,
+      fire: { dot: 5, duration: 3 },
+      ice: { slowPct: 0.35, duration: 1.6 },
+      lightning: { stunChance: 0.18, duration: 0.8 },
+      earth: { knock: 380 },
+      projectile: { scale: 1, internalRotation: 0 }
+    },
+    passive: { regenPerSec: 4, delay: 5.0 },
+    root: {
+      radius: 220,
+      pullSpeed: 160,
+      limitFactor: 0.5,
+      cooldown: 8,
+      bodyRadius: 18,
+      baseHP: 302.4,
+      escapeDmg: 175,
+      pulse: { dmg: 5, radius: 60, interval: 1.0 },
+      vineDps: 4,
+      xpToLevel: [18, 36, 60],
+      perLevel: {
+        hp: [0, 67.2, 100.8],
+        pulseDmg: [0, 2, 3],
+        vineDps: [0, 1, 2]
+      }
+    },
+    bear: {
+      hpBase: 260,
+      duration: 20,
+      radiusMult: 1.3,
+      impactDmg: 22
+    }
+  },
+
   // Sistema de níveis e experiência
   level: { max: 20, hpPerLevelPct: 0.1875, dmgPerLevelPct: 0.125 },
   xp: {
@@ -488,34 +530,161 @@ export const LEVEL_SAFE_RADIUS_MULT = 0.42;
 // Configuração visual por classe. Cada item é posicionado usando um ângulo fixo
 // e pode ajustar escala, animação e paleta de cores.
 export const CLASS_VISUALS = {
-  barbaro:  { item:'saia_barbaro', scale:0.45,anchorAngleDeg:100, microAnim:'sway_low',   palette:[BARBARIAN_PALETTE.leatherBase,BARBARIAN_PALETTE.leatherLight,BARBARIAN_PALETTE.leatherStroke], weaponOverride:'axe_double_bit_v2', weaponAngleDeg:35 ,weaponScale:1.25, weaponOffsetMult:2.0, itemOffsetY:0.0, distanceFromCenter:0.02, internalRotationDeg:-100 },
-  ranger:   { item:'aljava_pequena', anchorAngleDeg:45, scale:0.56, microAnim:'idle_breath', palette:['#4E6B3A','#B89B6B','#2E3B22'], weaponAngleDeg:-25, weaponScale:1.56, weaponOffsetMult:1.5, distanceFromCenter:0.82, internalRotationDeg:0 },
-  monge:    { item:'colar_monge',    scale:0.6, palette:[], distanceFromCenter:0.82, internalRotationDeg:0 },
-  paladino: { item:'insignia_escudo',anchorAngleDeg:20, scale:0.55, microAnim:'glint_slow',   palette:['#C9C9C9','#E6D27A','#7A6A3A'], weaponAngleDeg:-90, weaponScale:1.6, weaponOffsetMult:2.0, distanceFromCenter:0.62, internalRotationDeg:0 },
-  clerigo:  { item:'sigilo_sol',     anchorAngleDeg:330,scale:0.34, microAnim:'soft_glow',    palette:['#FFD67A','#F4B43A','#8A6A2A'], weaponAngleDeg:90, weaponScale:2.0, weaponOffsetMult:1.8, distanceFromCenter:0.72, internalRotationDeg:0 },
-  bruxo:    {
-    weaponAngleDeg:-10,
-    palette:['#7E57C2','#A586E8','#40345A'],
+  barbaro: {
+    palette: [BARBARIAN_PALETTE.leatherBase, BARBARIAN_PALETTE.leatherLight, BARBARIAN_PALETTE.leatherStroke],
+    item: {
+      item: 'saia_barbaro',
+      anchorDeg: 100,
+      scale: 0.45,
+      distanceFromCenter: 0.02,
+      internalRotation: -100,
+      itemOffsetY: 0.0,
+      palette: [BARBARIAN_PALETTE.leatherBase, BARBARIAN_PALETTE.leatherLight, BARBARIAN_PALETTE.leatherStroke]
+    }
+  },
+  ranger: {
+    item: {
+      item: 'aljava_pequena',
+      anchorDeg: 45,
+      scale: 0.56,
+      distanceFromCenter: 0.82,
+      internalRotation: 0,
+      microAnim: 'idle_breath',
+      palette: ['#4E6B3A', '#B89B6B', '#2E3B22']
+    }
+  },
+  monge: {
+    item: {
+      item: 'colar_monge',
+      anchorDeg: 0,
+      scale: 0.6,
+      distanceFromCenter: 0.82,
+      internalRotation: 0,
+      palette: []
+    }
+  },
+  paladino: {
     items: [
-      { item:'chifre_bruxo', anchorAngleDeg:220, scale:0.38, microAnim:'idle_breath', palette:['#7E57C2','#A586E8','#40345A'], distanceFromCenter:1.92, internalRotationDeg:-100 },
-      { item:'chifre_bruxo', anchorAngleDeg:320, scale:0.38, microAnim:'idle_breath', palette:['#7E57C2','#A586E8','#40345A'], distanceFromCenter:1.92, internalRotationDeg:280, flipX:true }
+      {
+        item: 'sigilo_sol',
+        anchorDeg: 360,
+        scale: 0.34,
+        distanceFromCenter: 0.62,
+        internalRotation: 0,
+        microAnim: 'soft_glow',
+        palette: ['#FFD67A', '#F4B43A', '#8A6A2A']
+      },
+      {
+        item: 'capacete_paladino',
+        anchorDeg: 270,
+        scale: 0.9,
+        distanceFromCenter: 0.82,
+        internalRotation: 90,
+        microAnim: 'glint_slow',
+        palette: ['#f4f6f8', '#ffefad', '#b68a34']
+      }
     ]
   },
-  bardo:    {
-    item:'chapeu_bardo',
-    anchorAngleDeg:270,
-    scale:0.66,
-    microAnim:'idle_breath',
-    palette:['#11772a','#22a33a','#d7b193'],
-    distanceFromCenter:0.72,
-    internalRotationDeg:0,
-    weaponOverride:'flauta',
-    weaponAngleDeg:0,
-    weaponScale:1.5,
-    weaponOffsetMult:1.6
+  clerigo: {
+    items: [
+      {
+        item: 'sigilo_sol',
+        anchorDeg: 360,
+        scale: 0.34,
+        distanceFromCenter: 0.72,
+        internalRotation: 0,
+        microAnim: 'soft_glow',
+        palette: ['#FFD67A', '#F4B43A', '#8A6A2A']
+      },
+      {
+        item: 'diadema_clerigo',
+        anchorDeg: 270,
+        scale: 0.66,
+        distanceFromCenter: 0.52,
+        internalRotation: 90,
+        microAnim: 'idle_breath',
+        palette: ['#f5f7fb', '#cfd5dd', '#a9b0ba']
+      }
+    ]
   },
-  artifice: { item:'goggles',        anchorAngleDeg:270, scale:0.56, microAnim:'idle_breath',  palette:['#A6B1B8','#E0E7EA','#3B4A5A'], weaponOverride:'arcane_cannon', weaponAngleDeg:40, weaponScale:1.8, weaponOffsetMult:1.5, distanceFromCenter:0.52, internalRotationDeg:0 },
-  guerreiro:{ item:'ombreira_metal', anchorAngleDeg:210,scale:0.70, microAnim:'sway_low',     palette:['#9BA4AE','#6B757F','#CACFD6'], weaponAngleDeg:15, weaponScale:1, weaponOffsetMult:1.0, weaponThickness:1, distanceFromCenter:0.82, internalRotationDeg:0 }
+  bruxo: {
+    palette: ['#7E57C2', '#A586E8', '#40345A'],
+    items: [
+      { item: 'chifre_bruxo', anchorDeg: 220, scale: 0.38, distanceFromCenter: 1.92, internalRotation: -100, microAnim: 'idle_breath', palette: ['#7E57C2', '#A586E8', '#40345A'] },
+      { item: 'chifre_bruxo', anchorDeg: 320, scale: 0.38, distanceFromCenter: 1.92, internalRotation: 280, microAnim: 'idle_breath', palette: ['#7E57C2', '#A586E8', '#40345A'], flipX: true },
+      { item: 'bruxo_rune1', anchorDeg: 0,   scale: 1.1, distanceFromCenter: 1.6, internalRotation: 0 },
+      { item: 'bruxo_rune2', anchorDeg: 120, scale: 1.1, distanceFromCenter: 1.6, internalRotation: 0 },
+      { item: 'bruxo_rune3', anchorDeg: 240, scale: 1.1, distanceFromCenter: 1.6, internalRotation: 0 }
+    ]
+  },
+  bardo: {
+    item: {
+      item: 'chapeu_bardo',
+      anchorDeg: 270,
+      scale: 0.72,
+      distanceFromCenter: 0.72,
+      internalRotation: 0,
+      microAnim: 'idle_breath',
+      palette: ['#11772a', '#22a33a', '#d7b193']
+    }
+  },
+  artifice: {
+    item: {
+      item: 'goggles',
+      anchorDeg: 270,
+      scale: 0.56,
+      distanceFromCenter: 0.52,
+      internalRotation: 0,
+      microAnim: 'idle_breath',
+      palette: ['#A6B1B8', '#E0E7EA', '#3B4A5A']
+    }
+  },
+  guerreiro: {
+    palette: ['#8a4b2a', '#6a3921', '#4a2818'],
+    items: [
+      {
+        item: 'ombreira_metal',
+        anchorDeg: 210,
+        scale: 0.7,
+        distanceFromCenter: 0.82,
+        internalRotation: 0,
+        microAnim: 'sway_low',
+        palette: ['#9BA4AE', '#6B757F', '#CACFD6']
+      },
+      {
+        item: 'ombreira_couro',
+        anchorDeg: 360,
+        scale: 0.8,
+        distanceFromCenter: 0,
+        internalRotation: 0,
+        microAnim: 'sway_low',
+        palette: ['#8a4b2a', '#6a3921', '#4a2818']
+      }
+    ]
+  },
+  druida: {
+    item: {
+      item: 'druida_horns',
+      anchorDeg: 270,
+      scale: 1.5,
+      distanceFromCenter: 0.72,
+      internalRotation: 90,
+      microAnim: 'idle_breath',
+      palette: ['#6E4A2F', '#C9A17B', '#E9D7C1']
+    }
+  }
+};
+
+export const WEAPON_VISUALS = {
+  barbaro: { draw: 'axe', anchorDeg: 0, scale: 1.25, distanceFromCenter: 0.0, weaponReach: 85, weaponRadius: 20, weaponAnchor: [-1.5, 0] },
+  ranger: { draw: 'bow', anchorDeg: 0, scale: 1.76, distanceFromCenter: 1.8, weaponAnchor: [0, 0], weaponReach: 10, weaponRadius: 9 },
+  paladino: { draw: 'sword', anchorDeg: -90, scale: 1.6, distanceFromCenter: 0.0, weaponReach: 80, weaponRadius: 5, weaponAnchor: [0, -0.9] },
+  clerigo: { draw: 'mace', anchorDeg: 90, scale: 2.0, distanceFromCenter: 0, weaponReach: 90, weaponRadius: 8.4, weaponAnchor: [0, 0.7] },
+  bruxo: { draw: 'book', anchorDeg: 0, scale: 1.0, distanceFromCenter: 1.0, weaponReach: 20, weaponRadius: 6 },
+  bardo: { draw: 'flute', anchorDeg: 0, scale: 1.5, distanceFromCenter: 1.6, weaponReach: 20, weaponRadius: 5 },
+  artifice: { draw: 'arcaneCannon', anchorDeg: 0, scale: 1.8, distanceFromCenter: 1.5, weaponAnchor: [0, 0], weaponReach: 34, weaponRadius: 9 },
+  guerreiro: { draw: 'spear', anchorDeg: 0, scale: 3.0, distanceFromCenter: 0, weaponAnchor: [-0.75, 0], weaponReach: 94, weaponRadius: 5 },
+  druida: { draw: 'druidaStaff', anchorDeg: 90, scale: 2, distanceFromCenter: 0, weaponAnchor: [0, 0.9], weaponReach: 80, weaponRadius: 8 }
 };
 
 export const ITEM_ALIASES = {

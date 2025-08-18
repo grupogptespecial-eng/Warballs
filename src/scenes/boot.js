@@ -155,6 +155,23 @@ export function boot() {
     localStorage.setItem('theme', next);
   });
 
+  window.addEventListener('keydown', (e) => {
+    const tag = e.target && e.target.tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+    const k = e.key.toLowerCase();
+    if (k === 'r') {
+      resetGame();
+    } else if (k === 'p') {
+      if (paused) startLoop(); else stopLoop();
+      paused = !paused;
+      updatePauseButton();
+    } else if (k === 'b') {
+      game.debugHit = !game.debugHit;
+    } else if (k === 'h') {
+      game.showHitboxes = !game.showHitboxes;
+    }
+  });
+
   if (typeof window !== 'undefined') {
     window.startGame = startGame;
     window.stopLoop = stopLoop;

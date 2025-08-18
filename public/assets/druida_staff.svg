@@ -1,0 +1,163 @@
+<svg width="260" height="520" viewBox="0 0 260 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cajado de druida com madeira espessa, prongs, nós e raízes">
+  <defs>
+    <!-- Gradientes principais -->
+    <linearGradient id="woodGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#8A5D43"/>
+      <stop offset="55%" stop-color="#654332"/>
+      <stop offset="100%" stop-color="#3B271E"/>
+    </linearGradient>
+    <linearGradient id="woodEdge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#B78463"/>
+      <stop offset="100%" stop-color="#6E4A37"/>
+    </linearGradient>
+    <radialGradient id="knotGrad" cx="35%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#B78363"/>
+      <stop offset="55%" stop-color="#7A523A"/>
+      <stop offset="100%" stop-color="#4B3227"/>
+    </radialGradient>
+
+    <!-- Vinhas / folhas / metal / cristal -->
+    <linearGradient id="vineGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#36B86A"/>
+      <stop offset="100%" stop-color="#1E6B44"/>
+    </linearGradient>
+    <linearGradient id="vineHi" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#8EF0B4" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#2A8C59" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="leafGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"  stop-color="#48D27C"/>
+      <stop offset="100%" stop-color="#1A8C55"/>
+    </linearGradient>
+    <linearGradient id="metalGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"  stop-color="#D9D9D9"/>
+      <stop offset="60%" stop-color="#A0A0A0"/>
+      <stop offset="100%" stop-color="#6E6E6E"/>
+    </linearGradient>
+    <radialGradient id="gemGrad" cx="45%" cy="35%" r="65%">
+      <stop offset="0%"  stop-color="#C8FFE9"/>
+      <stop offset="55%" stop-color="#55F0AD"/>
+      <stop offset="100%" stop-color="#0AD68A"/>
+    </radialGradient>
+    <filter id="gemGlow">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Sombra -->
+  <ellipse cx="128" cy="506" rx="34" ry="9" fill="#000" opacity="0.25"/>
+
+  <!-- ===== TRONCO BEM GROSSO (camada de sombra + tronco + aresta clara) ===== -->
+  <!-- Sombra externa para dar volume -->
+  <path d="M132 22
+           C110 82 150 150 124 220
+           C110 272 150 350 130 410
+           C122 446 124 486 124 502"
+        fill="none" stroke="#231711" stroke-width="40" stroke-linecap="round"/>
+
+  <!-- Tronco principal -->
+  <path id="trunk"
+        d="M132 22
+           C110 82 150 150 124 220
+           C110 272 150 350 130 410
+           C122 446 124 486 124 502"
+        fill="none" stroke="url(#woodGrad)" stroke-width="34" stroke-linecap="round"/>
+
+  <!-- Aresta/hilight da madeira (lado esquerdo) -->
+  <path d="M128 28
+           C106 86 146 152 120 222
+           C106 270 146 346 126 408
+           C120 444 122 486 122 498"
+        fill="none" stroke="url(#woodEdge)" stroke-width="10" stroke-linecap="round" opacity="0.45"/>
+
+  <!-- ===== RAÍZES NA BASE ===== -->
+  <path d="M124 498
+           c-10 6 -22 8 -28 2
+           c-6 -6 6 -14 18 -18"
+        fill="none" stroke="url(#woodGrad)" stroke-width="16" stroke-linecap="round"/>
+  <path d="M124 498
+           c 12 8 26 10 32 4
+           c 6 -6 -6 -15 -20 -20"
+        fill="none" stroke="url(#woodGrad)" stroke-width="14" stroke-linecap="round"/>
+
+  <!-- ===== PRONGS / GALHOS segurando o cristal ===== -->
+  <path d="M126 48
+           C108 58 98 72 100 86
+           C106 78 118 70 132 62"
+        fill="none" stroke="url(#woodGrad)" stroke-width="12" stroke-linecap="round"/>
+  <path d="M136 46
+           C156 56 168 72 166 86
+           C158 76 146 68 130 60"
+        fill="none" stroke="url(#woodGrad)" stroke-width="12" stroke-linecap="round"/>
+  <!-- pequeno prong superior -->
+  <path d="M130 34
+           c-8 4 -12 10 -12 16"
+        fill="none" stroke="url(#woodGrad)" stroke-width="8" stroke-linecap="round"/>
+
+  <!-- ===== NÓS DE MADEIRA ===== -->
+  <ellipse cx="116" cy="180" rx="7" ry="10" fill="url(#knotGrad)" opacity="0.9"/>
+  <ellipse cx="138" cy="320" rx="6" ry="9" fill="url(#knotGrad)" opacity="0.9"/>
+
+  <!-- ===== ANÉIS ENTALHADOS NA MADEIRA ===== -->
+  <g opacity="0.55" stroke-linecap="round">
+    <path d="M108 208 C124 214 140 214 156 208" stroke="#B78463" stroke-width="4"/>
+    <path d="M110 284 C126 290 138 290 152 284" stroke="#B78463" stroke-width="3.5"/>
+    <path d="M112 360 C126 366 138 366 150 360" stroke="#B78463" stroke-width="3"/>
+  </g>
+
+  <!-- ===== VINHAS MAIS LARGAS ===== -->
+  <path d="M128 92 C92 118 164 154 126 184
+           C96 208 164 246 130 276
+           C102 302 160 338 130 366
+           C100 392 154 422 126 446"
+        fill="none" stroke="url(#vineGrad)" stroke-width="18" stroke-linecap="round"/>
+  <path d="M126 100 C98 124 158 156 130 182
+           C102 206 158 240 132 266
+           C106 292 154 324 130 348
+           C106 372 148 400 128 426"
+        fill="none" stroke="url(#vineHi)" stroke-width="7" stroke-linecap="round" opacity="0.85"/>
+  <path d="M132 86 C104 114 170 154 136 186
+           C108 210 170 252 138 280
+           C112 306 170 342 140 372
+           C112 396 164 428 136 452"
+        fill="none" stroke="#184733" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+
+  <!-- ===== ARO METÁLICO ===== -->
+  <g transform="translate(0,-2)">
+    <ellipse cx="130" cy="58" rx="22" ry="11" fill="url(#metalGrad)" stroke="#4A4A4A" stroke-width="1.6"/>
+    <rect x="108" y="52" width="44" height="12" rx="6" ry="6" fill="url(#metalGrad)" opacity="0.95"/>
+  </g>
+
+  <!-- ===== CRISTAL ===== -->
+  <g filter="url(#gemGlow)">
+    <circle cx="130" cy="40" r="19" fill="url(#gemGrad)" stroke="#087A4A" stroke-width="3"/>
+    <path d="M120 33 C124 27 135 26 140 30
+             C134 31 131 33 126 36 Z"
+          fill="#FFFFFF" opacity="0.55"/>
+  </g>
+
+  <!-- ===== FOLHAS ===== -->
+  <g>
+    <path d="M96 232 C74 216 70 240 80 256
+             C90 272 112 268 114 248
+             C112 238 106 236 96 232 Z"
+          fill="url(#leafGrad)" stroke="#0E5A38" stroke-width="2"/>
+    <path d="M94 234 C90 246 96 258 110 250"
+          fill="none" stroke="#0E5A38" stroke-width="1.6"/>
+    <path d="M144 272 C170 260 172 288 160 302
+             C148 316 124 310 124 290
+             C126 280 134 278 144 272 Z"
+          fill="url(#leafGrad)" stroke="#0E5A38" stroke-width="2"/>
+    <path d="M146 274 C150 288 146 300 132 294"
+          fill="none" stroke="#0E5A38" stroke-width="1.6"/>
+  </g>
+
+  <!-- ===== RUNAS DISCRETAS ===== -->
+  <g opacity="0.55">
+    <path d="M122 324 l6 -10 l6 10" stroke="#E6D4A6" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <path d="M124 352 l0 -14 m0 0 l10 7" stroke="#E6D4A6" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <path d="M120 382 l12 0 m-6 0 l0 -12" stroke="#E6D4A6" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>
+

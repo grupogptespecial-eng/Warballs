@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900" role="img" aria-label="Ombreira de couro com sua faixa">
+  <title>Ombreira de couro + faixa</title>
+
+  <defs>
+    <!-- couro -->
+    <linearGradient id="leather" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#8a4b2a"/>
+      <stop offset="55%" stop-color="#6a3921"/>
+      <stop offset="100%" stop-color="#4a2818"/>
+    </linearGradient>
+    <!-- brilho do couro -->
+    <linearGradient id="leatherSheen" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"  stop-color="#ffffff" stop-opacity=".28"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <!-- metal -->
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#f4e7b0"/>
+      <stop offset="50%" stop-color="#d6b86b"/>
+      <stop offset="100%" stop-color="#a5842f"/>
+    </linearGradient>
+  </defs>
+
+  <style>
+    .edge{ stroke:#3b2416; stroke-width:10; stroke-linejoin:round; stroke-linecap:round; }
+    .rivet{ fill:url(#metal); stroke:#7a5f2b; stroke-width:3; }
+  </style>
+
+  <!-- ===== FAIXA (correia diagonal) ===== -->
+  <g aria-label="Faixa de couro">
+    <path class="edge" fill="url(#leather)" d="
+      M180 600
+      q260 -210 540 -180
+      q16 38 16 56
+      q-280 -18 -520 200
+      q-22 -22 -36 -76 z"/>
+    <!-- furos -->
+    <circle cx="420" cy="560" r="6" fill="#2b170d"/>
+    <circle cx="458" cy="540" r="6" fill="#2b170d"/>
+    <circle cx="496" cy="524" r="6" fill="#2b170d"/>
+    <circle cx="534" cy="514" r="6" fill="#2b170d"/>
+    <circle cx="572" cy="508" r="6" fill="#2b170d"/>
+    <!-- fivela -->
+    <g transform="translate(400,650) rotate(-18)">
+      <rect x="-6" y="-28" width="12" height="56" rx="4" fill="#2b170d" opacity=".95"/>
+      <ellipse cx="0" cy="0" rx="52" ry="36" fill="url(#metal)" class="edge" stroke-width="6"/>
+      <path d="M-22 -2 h44" stroke="#7a5f2b" stroke-width="6" stroke-linecap="round" fill="none"/>
+    </g>
+  </g>
+
+  <!-- ===== OMBREIRA ===== -->
+  <g transform="translate(120,-40)" aria-label="Ombreira de couro">
+    <!-- placa principal -->
+    <path class="edge" fill="url(#leather)" d="
+      M560 310
+      q110 10 160 50
+      q-12 50 -36 86
+      q-34 50 -138 64
+      q-26 -52 -26 -110
+      q0 -46 40 -90 z"/>
+    <!-- brilho -->
+    <path d="M560 310 q110 10 160 50 q-6 24 -18 46 q-110 -42 -192 -18 q14 -44 50 -78 z"
+          fill="url(#leatherSheen)" opacity=".35"/>
+    <!-- tiras trançadas simplificadas -->
+    <path class="edge" fill="url(#leather)" d="M612 320 q40 22 72 48 q-12 16 -24 26 q-36 -24 -66 -40 q10 -18 18 -34 z"/>
+    <path class="edge" fill="url(#leather)" d="M636 404 q44 26 74 52 q-12 16 -24 26 q-32 -22 -64 -40 q8 -18 14 -38 z"/>
+    <!-- tiras de fixação e rebites -->
+    <rect x="544" y="334" width="48" height="120" rx="10" fill="url(#leather)" class="edge"/>
+    <circle class="rivet" cx="560" cy="348" r="8"/>
+    <circle class="rivet" cx="560" cy="390" r="8"/>
+    <circle class="rivet" cx="560" cy="430" r="8"/>
+    <circle class="rivet" cx="690" cy="356" r="9"/>
+    <circle class="rivet" cx="726" cy="374" r="9"/>
+  </g>
+</svg>

@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 360" role="img" aria-label="Diadema metálica com placa central e placas laterais, estilo clérigo">
+  <title>Diadema Metálica — estilo clérigo</title>
+  <desc>Headband metálico com placa central geométrica, gema vertical e placas laterais. Curvatura pensada para aplicação sobre uma cabeça/esfera.</desc>
+
+  <defs>
+    <!-- Aço escovado -->
+    <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#f5f7fb"/>
+      <stop offset="50%" stop-color="#cfd5dd"/>
+      <stop offset="100%" stop-color="#a9b0ba"/>
+    </linearGradient>
+    <!-- Bordas mais escuras -->
+    <linearGradient id="steelEdge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#9aa3ae"/>
+      <stop offset="100%" stop-color="#6f7782"/>
+    </linearGradient>
+    <!-- Destaque superior do aro -->
+    <linearGradient id="rimHi" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <!-- "Gema" verde-água -->
+    <radialGradient id="gem" cx="50%" cy="30%" r="80%">
+      <stop offset="0%" stop-color="#a6fff3"/>
+      <stop offset="60%" stop-color="#38d5c1"/>
+      <stop offset="100%" stop-color="#0f9e8f"/>
+    </radialGradient>
+
+    <style>
+      .band      { fill: none; stroke: url(#steelEdge); stroke-width: 26; stroke-linecap: round; stroke-linejoin: round; }
+      .band-hi   { fill: none; stroke: url(#rimHi);    stroke-width: 8;  stroke-linecap: round; }
+      .plate     { fill: url(#steel); stroke: #7b828c; stroke-width: 4; }
+      .line      { stroke: #8a93a0; stroke-width: 3; stroke-linecap: round; }
+      .groove    { stroke: #e8edf5; stroke-width: 2; opacity: .85; }
+    </style>
+  </defs>
+
+  <!-- ARO PRINCIPAL (curvado para cabeça/esfera) -->
+  <path class="band"
+        d="M 120 190
+           Q 450 120 780 190"/>
+  <path class="band-hi"
+        d="M 140 187
+           Q 450 125 760 187"/>
+
+  <!-- CONECTORES/HASTES que prendem a placa central ao aro -->
+  <path class="line" d="M 385 164 L 430 142"/>
+  <path class="line" d="M 515 164 L 470 142"/>
+
+  <!-- PLACA CENTRAL (simétrica, formato geométrico clerical) -->
+  <g transform="translate(450,150)">
+    <!-- base -->
+    <path class="plate"
+      d="M -85 14
+         L -65 4
+         L -40 -2
+         L -12 -10
+         L -12 -48
+         L   0 -60
+         L  12 -48
+         L  12 -10
+         L  40 -2
+         L  65 4
+         L  85 14
+         L  58 46
+         Q  35 62  0 66
+         Q -35 62 -58 46
+         Z"/>
+    <!-- rebaixo em 'T' -->
+    <path class="groove" fill="none"
+          d="M 0 -55 L 0 12
+             M -40 -2 L 40 -2"/>
+    <!-- "gema"/inserto vertical -->
+    <rect x="-8" y="-8" width="16" height="44" rx="5" fill="url(#gem)" stroke="#0b8277" stroke-width="3"/>
+    <!-- detalhe superior em M -->
+    <path class="plate"
+          d="M -30 -42 L -12 -48 L 0 -60 L 12 -48 L 30 -42
+             L 30 -32 L 22 -28 L 0 -36 L -22 -28 L -30 -32 Z"/>
+    <!-- ranhuras decorativas -->
+    <path class="groove" fill="none"
+          d="M -72 18 Q 0 36 72 18"/>
+    <path class="groove" fill="none"
+          d="M -56 38 Q 0 52 56 38"/>
+  </g>
+
+  <!-- PLACAS LATERAIS (diamantes) -->
+  <g>
+    <g transform="translate(270,178) rotate(45)">
+      <rect class="plate" x="-28" y="-28" width="56" height="56" rx="6"/>
+      <path class="groove" d="M -20 0 H 20 M 0 -20 V 20"/>
+    </g>
+    <g transform="translate(630,178) rotate(45)">
+      <rect class="plate" x="-28" y="-28" width="56" height="56" rx="6"/>
+      <path class="groove" d="M -20 0 H 20 M 0 -20 V 20"/>
+    </g>
+  </g>
+
+  <!-- “cabos” curtos ligando o aro às placas laterais -->
+  <path class="line" d="M 200 184 L 242 178"/>
+  <path class="line" d="M 700 184 L 658 178"/>
+</svg>
