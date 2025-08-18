@@ -1,0 +1,205 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900" role="img" aria-label="Maça longa e pesada, cabeça flangeada grossa, eixo reforçado e pomo maciço">
+  <title>Maça Pesadíssima — reforço e detalhes</title>
+  <desc>Versão mais robusta, com flanges mais largos e profundos, anéis de reforço, rebaixos, rebites e sombreamento para sensação de massa.</desc>
+
+  <defs>
+    <!-- Aço escovado -->
+    <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#f7f9fc"/>
+      <stop offset="50%" stop-color="#d5dbe4"/>
+      <stop offset="100%" stop-color="#a9b1bc"/>
+    </linearGradient>
+    <!-- Bordas/escuras -->
+    <linearGradient id="steelEdge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#8e98a5"/>
+      <stop offset="100%" stop-color="#6a7380"/>
+    </linearGradient>
+    <!-- Aço mais escuro (reforços) -->
+    <linearGradient id="darkSteel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#7c8693"/>
+      <stop offset="100%" stop-color="#4c545f"/>
+    </linearGradient>
+    <!-- Brilho lateral -->
+    <linearGradient id="hi" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity=".9"/>
+      <stop offset="70%"  stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <!-- Brilho vertical (no eixo) -->
+    <linearGradient id="hiVert" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity=".8"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <!-- Textura sutil de arranhões -->
+    <pattern id="scratch" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="rotate(18)">
+      <rect width="20" height="20" fill="transparent"/>
+      <rect x="0" y="0" width="1.2" height="20" fill="#ffffff" opacity=".08"/>
+      <rect x="10" y="0" width="1.2" height="20" fill="#ffffff" opacity=".05"/>
+    </pattern>
+    <!-- Sombra geral para dar peso -->
+    <filter id="heavyShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000000" flood-opacity=".35"/>
+    </filter>
+    <!-- Sombra local (cabeça) -->
+    <filter id="headShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#000000" flood-opacity=".4"/>
+    </filter>
+
+    <style>
+      .metal-fill { fill: url(#steel); }
+      .metal-line { stroke: url(#steelEdge); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+      .dark-line  { stroke: url(#darkSteel); stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; }
+      .groove     { stroke: #e9edf3; stroke-width: 5; opacity:.9; }
+      .smallGroove{ stroke: #e9edf3; stroke-width: 3; opacity:.8; }
+      .cap-line   { stroke: #6b7480; stroke-width: 5; }
+    </style>
+  </defs>
+
+  <!-- sombra no chão (extra pesada) -->
+  <ellipse cx="450" cy="845" rx="240" ry="50" fill="#000" opacity=".22"/>
+
+  <g id="maca" filter="url(#heavyShadow)">
+    <!-- CABEÇA ULTRARROBUSTA -->
+    <g id="head" transform="translate(450,170)" filter="url(#headShadow)">
+      <!-- colar de base espesso com escuro -->
+      <g>
+        <ellipse rx="68" ry="18" fill="url(#darkSteel)"/>
+        <ellipse rx="68" ry="18" fill="none" class="cap-line"/>
+      </g>
+
+      <!-- flange base (mais longo, com “ombro” côncavo) -->
+      <defs>
+        <path id="flange"
+              d="M -28 -12
+                 L  28 -12
+                 L  20 -170
+                 Q  0 -200 -20 -170
+                 Z"
+              class="metal-fill"/>
+        <!-- aresta destacada do flange -->
+        <path id="flangeHi"
+              d="M -20 -150 Q 0 -182 20 -150" fill="none" stroke="url(#hi)" stroke-width="6" opacity=".85"/>
+      </defs>
+
+      <!-- 8 flanges grossos -->
+      <g>
+        <use href="#flange" class="metal-line"/>
+        <use href="#flange" class="metal-line" transform="rotate(45)"/>
+        <use href="#flange" class="metal-line" transform="rotate(90)"/>
+        <use href="#flange" class="metal-line" transform="rotate(135)"/>
+        <use href="#flange" class="metal-line" transform="rotate(180)"/>
+        <use href="#flange" class="metal-line" transform="rotate(225)"/>
+        <use href="#flange" class="metal-line" transform="rotate(270)"/>
+        <use href="#flange" class="metal-line" transform="rotate(315)"/>
+        <!-- brilhos nas cristas dos flanges -->
+        <use href="#flangeHi"/>
+        <use href="#flangeHi" transform="rotate(45)"/>
+        <use href="#flangeHi" transform="rotate(90)"/>
+        <use href="#flangeHi" transform="rotate(135)"/>
+        <use href="#flangeHi" transform="rotate(180)"/>
+        <use href="#flangeHi" transform="rotate(225)"/>
+        <use href="#flangeHi" transform="rotate(270)"/>
+        <use href="#flangeHi" transform="rotate(315)"/>
+      </g>
+
+      <!-- tambor/hub central gigante com rebaixo e rebites -->
+      <g>
+        <circle r="84" class="metal-fill"/>
+        <circle r="84" fill="none" class="metal-line"/>
+        <!-- rebaixos concêntricos -->
+        <circle r="64" fill="none" class="groove"/>
+        <circle r="50" fill="none" class="smallGroove"/>
+        <!-- rebites -->
+        <g fill="url(#steel)" stroke="#7b838f" stroke-width="3">
+          <circle r="7" cx="0" cy="-74"/>
+          <circle r="7" cx="52" cy="-52"/>
+          <circle r="7" cx="74" cy="0"/>
+          <circle r="7" cx="52" cy="52"/>
+          <circle r="7" cx="0"  cy="74"/>
+          <circle r="7" cx="-52" cy="52"/>
+          <circle r="7" cx="-74" cy="0"/>
+          <circle r="7" cx="-52" cy="-52"/>
+        </g>
+      </g>
+
+      <!-- pino superior + porca castelo -->
+      <g>
+        <rect x="-8" y="-210" width="16" height="54" rx="8" class="metal-fill"/>
+        <rect x="-8" y="-210" width="16" height="54" rx="8" fill="none" class="metal-line"/>
+        <g transform="translate(0,-212)">
+          <polygon points="-18,-4 18,-4 14,-26 8,-34 -8,-34 -14,-26"
+                   class="metal-fill"/>
+          <polygon points="-18,-4 18,-4 14,-26 8,-34 -8,-34 -14,-26"
+                   fill="none" class="metal-line"/>
+        </g>
+      </g>
+
+      <!-- brilho lateral para dar massa -->
+      <path d="M -84 -10 C -46 -70, -30 -132, -24 -170" fill="none" stroke="url(#hi)" stroke-width="10" opacity=".9"/>
+    </g>
+
+    <!-- EIXO LONGO REFORÇADO -->
+    <g id="shaft" transform="translate(450,260)">
+      <!-- tubo principal espesso -->
+      <rect x="-22" y="0" width="44" height="500" rx="12" class="metal-fill"/>
+      <rect x="-22" y="0" width="44" height="500" rx="12" fill="none" class="metal-line"/>
+      <!-- textura/arranhões e brilho -->
+      <rect x="-22" y="0" width="44" height="500" rx="12" fill="url(#scratch)" opacity=".7"/>
+      <path d="M -12 10 V 490" stroke="url(#hi)" stroke-width="8" stroke-linecap="round"/>
+
+      <!-- anéis de reforço (3) -->
+      <g transform="translate(0,110)">
+        <ellipse rx="44" ry="12" fill="url(#darkSteel)"/>
+        <ellipse rx="44" ry="12" fill="none" class="cap-line"/>
+        <ellipse rx="36" ry="8" fill="none" class="smallGroove"/>
+      </g>
+      <g transform="translate(0,260)">
+        <ellipse rx="44" ry="12" fill="url(#darkSteel)"/>
+        <ellipse rx="44" ry="12" fill="none" class="cap-line"/>
+        <ellipse rx="36" ry="8" fill="none" class="smallGroove"/>
+      </g>
+      <g transform="translate(0,400)">
+        <ellipse rx="44" ry="12" fill="url(#darkSteel)"/>
+        <ellipse rx="44" ry="12" fill="none" class="cap-line"/>
+        <ellipse rx="36" ry="8" fill="none" class="smallGroove"/>
+      </g>
+
+      <!-- guarda/colar sob a cabeça -->
+      <g transform="translate(0,-12)">
+        <ellipse rx="56" ry="14" fill="url(#darkSteel)"/>
+        <ellipse rx="56" ry="14" fill="none" class="cap-line"/>
+        <ellipse rx="46" ry="9"  fill="none" class="smallGroove"/>
+      </g>
+
+      <!-- EMPUNHADURA/POMO MASSIVO -->
+      <g transform="translate(0,500)">
+        <!-- manga superior -->
+        <ellipse rx="40" ry="10" fill="url(#darkSteel)"/>
+        <ellipse rx="40" ry="10" fill="none" class="cap-line"/>
+
+        <!-- corpo cônico e pesado da empunhadura -->
+        <path d="M -28 0 L 28 0 L 34 140 L -34 140 Z" class="metal-fill"/>
+        <path d="M -28 0 L 28 0 L 34 140 L -34 140 Z" fill="none" class="metal-line"/>
+        <!-- rebaixos longitudinais -->
+        <path d="M -14 6 L -10 134" class="smallGroove"/>
+        <path d="M  14 6 L  10 134" class="smallGroove"/>
+
+        <!-- anel inferior largo -->
+        <g transform="translate(0,140)">
+          <ellipse rx="50" ry="12" fill="url(#darkSteel)"/>
+          <ellipse rx="50" ry="12" fill="none" class="cap-line"/>
+          <ellipse rx="40" ry="7"  fill="none" class="smallGroove"/>
+        </g>
+
+        <!-- pomo final maciço (cilindro + esfera) -->
+        <g transform="translate(0,174)">
+          <rect x="-20" y="0" width="40" height="40" rx="10" class="metal-fill"/>
+          <rect x="-20" y="0" width="40" height="40" rx="10" fill="none" class="metal-line"/>
+          <circle r="22" cy="40" class="metal-fill"/>
+          <circle r="22" cy="40" fill="none" class="metal-line"/>
+          <!-- brilho no pomo -->
+          <path d="M -8 10 V 32" stroke="url(#hiVert)" stroke-width="6" stroke-linecap="round"/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

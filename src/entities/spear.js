@@ -1,0 +1,121 @@
+// Lança arremessada pelo Guerreiro
+
+import { CFG } from '../config/cfg.js';
+import { sweepSegmentCircle } from '../utils/geometry.js';
+import { randAng, rrand } from '../utils/rand.js';
+import { game } from '../core/game.js';
+import { Particle } from './particle.js';
+import { V } from '../math/vec.js';
+import { Projectile } from './projectile.js';
+import { spawnSpearTrail } from '../vfx/spear_trail.js';
+import { CLASS_VISUALS, CLASSES } from '../config/cfg.js';
+import { drawSpear } from '../render/visuals_module.js';
+
+export class SpearProjectile extends Projectile {
+  constructor(owner, pos, dir) {
+    super(owner, pos, dir);
+    const T = CFG.guerreiro.throw;
+    this.speed = T.speed * CFG.body.radius;
+    this.life = T.flightMaxTime;
+    // Derive physical dimensions from the same values used for the warrior's in-hand spear
+    // so the projectile mirrors the weapon visible on the unit and in previews.
+    const vis = CLASS_VISUALS.guerreiro || {};
+    const len = owner ? owner.weaponLen : CLASSES.guerreiro.weaponLen;
+    const rad = owner ? owner.weaponTipR : CLASSES.guerreiro.tipRadius;
+    this.len = len;
+    this.rad = rad;
+    const pal = vis.palette;
+    this.color = pal ? pal[0] : '#9ca3af';
+    this.dmgBase = CFG.guerreiro.damage.throwBase * (owner ? owner.dmgMult() : 1);
+    this.knock = 260;
+    this.finalDir = dir.clone();
+    this.angle = Math.atan2(this.dir.y, this.dir.x);
+    this.attached = false;
+    this.visual = 'spear';
+  }
+
+  stepMove(dt) {
+    this.pos.add(this.dir.clone().mul(this.speed * dt));
+    this.angle = Math.atan2(this.dir.y, this.dir.x);
+  }
+
+  segment() {
+    const tip = this.pos.clone();
+    const tail = tip.clone().sub(this.dir.clone().mul(this.len));
+    return { tip, tail };
+  }
+
+  update(dt, arena, units) {
+    if (this.attached && this.owner && this.owner.gw) {
+      const gw = this.owner.gw;
+      const base = this.owner.weaponBase();
+      const dir = V.fromAng(this.owner.angle);
+      const t = gw.releaseT / gw.releaseDur;
+      this.pos = base.add(dir.clone().mul(gw.baseWeaponLen * (1 - t)));
+      this.angle = this.owner.angle;
+      if (gw.releaseT <= 0) {
+        this.attached = false;
+        this.dir = this.finalDir.clone();
+        this.angle = Math.atan2(this.dir.y, this.dir.x);
+        for (let i = 0; i < 3; i++) spawnSpearTrail(this.pos.clone(), this.dir.clone());
+      } else {
+        return;
+      }
+    }
+    this.life -= dt;
+    if (this.life <= 0) { this.alive = false; return; }
+    const prev = this.segment();
+    this.stepMove(dt);
+    spawnSpearTrail(this.pos.clone(), this.dir.clone());
+
+    // fora da arena
+    if (this.pos.x < arena.x - this.rad || this.pos.x > arena.x + arena.w + this.rad ||
+        this.pos.y < arena.y - this.rad || this.pos.y > arena.y + arena.h + this.rad) {
+      this.alive = false;
+      return;
+    }
+
+    const { tip, tail } = this.segment();
+    for (const u of units) {
+      if (!u.alive || u === this.owner) continue;
+      if (this.owner && u.team && this.owner.team && u.team === this.owner.team && !CFG.guerreiro.throw.friendlyFire) continue;
+      if (sweepSegmentCircle(prev.tail, prev.tip, tail, tip, u.pos, u.bodyR + this.rad)) {
+        let dmg = this.dmgBase;
+        const proj = ((u.pos.x - tail.x) * this.dir.x + (u.pos.y - tail.y) * this.dir.y);
+        if (proj > this.len * 0.8) dmg *= CFG.guerreiro.spear.tipBonus;
+        if (this.owner && this.owner.gw && this.owner.gw.disciplineReady && this.owner.gw.disciplineStacks > 0) {
+          dmg *= 1 + this.owner.gw.disciplineStacks * CFG.guerreiro.discipline.nextHitBonus;
+          this.owner.gw.disciplineReady = false;
+          this.owner.gw.disciplineStacks = 0;
+        }
+        const dealt = u.hit(dmg, this.dir.clone().mul(this.knock), this.owner);
+        if (dealt > 0) {
+          game.onDamage(dealt);
+          if (this.owner) this.owner.gainXPOffense(dealt);
+        }
+        for (let i = 0; i < CFG.vfx.particlesOnHit; i++) {
+          game.spawnParticle(new Particle(
+            u.pos.clone(),
+            V.fromAng(randAng(), rrand(50, 220)),
+            rrand(.2, .6),
+            this.color
+          ));
+        }
+        this.alive = false;
+        break;
+      }
+    }
+  }
+
+  draw(ctx) {
+    ctx.save();
+    ctx.translate(this.pos.x, this.pos.y);
+    ctx.rotate(this.angle);
+    const scale = this.len / 0.88;
+    ctx.translate(-0.4 * scale, 0);
+    const pal = CLASS_VISUALS.guerreiro?.palette;
+    drawSpear(ctx, scale, pal);
+    ctx.restore();
+  }
+}
+

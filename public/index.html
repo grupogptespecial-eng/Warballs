@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Battle Balls • Protótipo</title>
+
+  <style>
+  :root {
+    --bg: #0b0f14;
+    --bg2:#0d131d;
+    --panel: #0f1520;
+    --line: #1c2434;
+    --text: #e6edf7;
+    --muted: #9aa6c1;
+    --accent: #78ffd6;
+    --accent-2:#4df3c2;
+    --p1: #50fa7b;
+    --p2: #ff6b6b;
+    --p3: #8be9fd;
+    --p4: #f1fa8c;
+    --border-radius: 14px;
+    --bg-grad-start: #0d1724;
+    --bg-grad-end: #070a0e;
+    --toolbar-bg: rgba(15,21,32,0.85);
+    --toolbar-border: rgba(120,255,214,0.08);
+    --card-bg: linear-gradient(180deg, rgba(16,22,33,.9), rgba(12,17,26,.95));
+    --card-border: rgba(120,255,214,0.06);
+    --canvas-bg: #0a0f15;
+    --canvas-border: #162033;
+    --btn-bg: linear-gradient(180deg, #0f1624, #0c121d);
+    --btn-border: rgba(120,255,214,0.14);
+    --btn-primary-bg: linear-gradient(180deg, #122a1f, #0f201a);
+    --btn-primary-border: rgba(120,255,214,.4);
+    --btn-danger-bg: linear-gradient(180deg, #2a1616, #1c1111);
+    --btn-danger-border: rgba(255,107,107,.35);
+    --btn-ghost-border: rgba(120,255,214,0.12);
+    --unit-item-bg: rgba(7,10,14,.35);
+    --unit-item-border: rgba(120,255,214,.07);
+    --unit-pretty-bg: rgba(255,255,255,.03);
+    --unit-pretty-border: rgba(125,211,252,.15);
+    --unit-thumb-bg: #0b1220;
+    --unit-thumb-border: rgba(125,211,252,.25);
+    --input-bg: #0d1320;
+    --input-border: rgba(120,255,214,0.14);
+    --overlay-bg: rgba(11, 15, 20, 0.92);
+    --message-card-bg: rgba(15,21,32,0.95);
+    --message-card-border: rgba(120,255,214,0.12);
+  }
+
+  [data-theme="light"] {
+    --bg: #f3f4f6;
+    --bg2: #e5e7eb;
+    --panel: #ffffff;
+    --line: #d1d5db;
+    --text: #1f2937;
+    --muted: #4b5563;
+    --accent: #0ea5e9;
+    --accent-2:#0284c7;
+    --p1: #15803d;
+    --p2: #be123c;
+    --p3: #0369a1;
+    --p4: #ca8a04;
+    --bg-grad-start: #ffffff;
+    --bg-grad-end: #e5e7eb;
+    --toolbar-bg: rgba(255,255,255,0.85);
+    --toolbar-border: rgba(0,0,0,0.06);
+    --card-bg: #ffffff;
+    --card-border: rgba(0,0,0,0.06);
+    --canvas-bg: #f8fafc;
+    --canvas-border: #cbd5e1;
+    --btn-bg: linear-gradient(180deg, #f9fafb, #f3f4f6);
+    --btn-border: #d1d5db;
+    --btn-primary-bg: linear-gradient(180deg, #dbeafe, #bfdbfe);
+    --btn-primary-border: rgba(14,165,233,0.4);
+    --btn-danger-bg: linear-gradient(180deg, #fee2e2, #fecaca);
+    --btn-danger-border: rgba(190,18,60,0.35);
+    --btn-ghost-border: rgba(0,0,0,0.1);
+    --unit-item-bg: rgba(249,250,251,0.8);
+    --unit-item-border: rgba(0,0,0,0.06);
+    --unit-pretty-bg: rgba(0,0,0,0.03);
+    --unit-pretty-border: rgba(148,163,184,0.15);
+    --unit-thumb-bg: #ffffff;
+    --unit-thumb-border: rgba(148,163,184,0.25);
+    --input-bg: #ffffff;
+    --input-border: #d1d5db;
+    --overlay-bg: rgba(255,255,255,0.92);
+    --message-card-bg: rgba(255,255,255,0.95);
+    --message-card-border: rgba(0,0,0,0.12);
+  }
+
+  /* Reset básico */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; }
+  body {
+    background: radial-gradient(1200px 800px at 20% -10%, var(--bg-grad-start) 0%, var(--bg) 35%, var(--bg-grad-end) 100%);
+    color: var(--text);
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.35;
+    padding: 16px;
+  }
+
+  /* Top bar */
+  .toolbar {
+    display:flex; align-items:center; gap:16px;
+    padding: 10px 14px;
+    background: var(--toolbar-bg);
+    backdrop-filter: blur(6px);
+    border: 1px solid var(--toolbar-border);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
+  .brand { font-weight: 700; letter-spacing: .2px; opacity: .9; }
+  .spacer { flex:1; }
+  .fps { font-weight: 700; color: var(--accent); }
+
+  /* Grid principal */
+  .layout {
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: minmax(640px, 1fr) 420px;
+    gap: 16px;
+    align-items: start;
+  }
+
+  /* Cartões */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--border-radius);
+    box-shadow: 0 12px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03);
+    padding: 14px;
+  }
+  .card-title {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-bottom: 8px;
+    letter-spacing: .3px;
+  }
+
+  /* Palco */
+  .stage { padding: 10px; }
+  canvas {
+    background: var(--canvas-bg);
+    border-radius: 12px;
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--canvas-border);
+    box-shadow: inset 0 0 0 1px rgba(120,255,214,0.03), 0 0 0 2px rgba(0,0,0,.25);
+  }
+
+  /* Sidebar */
+  .sidebar { display: grid; gap: 16px; }
+
+  /* Controles */
+  .ctrl-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .btn {
+    appearance: none;
+    border: 1px solid var(--btn-border);
+    background: var(--btn-bg);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: transform .04s ease, box-shadow .15s ease, border-color .2s ease, background .2s ease;
+    box-shadow: 0 6px 18px rgba(0,0,0,.25);
+  }
+  .btn:hover { border-color: var(--accent-2); box-shadow: 0 10px 22px rgba(0,0,0,.35); }
+  .btn:active { transform: translateY(1px) scale(.995); }
+  .btn.primary { background: var(--btn-primary-bg); border-color: var(--btn-primary-border); }
+  .btn.danger  { background: var(--btn-danger-bg); border-color: var(--btn-danger-border); }
+  .btn.ghost   { background: transparent; border-color: var(--btn-ghost-border); }
+
+  .row { display: grid; grid-template-columns: 80px 1fr; align-items: center; gap: 10px; margin-top: 12px; }
+  .label { color: var(--muted); font-size: .9rem; }
+
+  .select, input[type="number"] {
+    width: 100%;
+    background: var(--input-bg);
+    color: var(--text);
+    border: 1px solid var(--input-border);
+    padding: 8px 10px;
+    border-radius: 10px;
+    outline: none;
+    box-shadow: 0 4px 14px rgba(0,0,0,.25) inset;
+  }
+  .select:focus, input[type="number"]:focus {
+    border-color: var(--accent-2);
+    box-shadow: 0 0 0 3px rgba(120,255,214,.1), 0 4px 14px rgba(0,0,0,.25) inset;
+  }
+
+  .unit-list { display: flex; flex-direction: column; gap: 8px; }
+  .unit-item {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 72px 28px;
+    gap: 8px;
+    align-items: center;
+    padding: 8px;
+    border-radius: 10px;
+    background: var(--unit-item-bg);
+    border: 1px solid var(--unit-item-border);
+  }
+  .unit-item button {
+    padding: 8px;
+    line-height: 1;
+    border-radius: 10px;
+  }
+  /* Cartão de cada unidade */
+  .unit-item.pretty{
+    display:flex; gap:12px; align-items:center;
+    padding:10px; margin:10px 0;
+    border-radius:12px;
+    background:var(--unit-pretty-bg);
+    border:1px solid var(--unit-pretty-border);
+    box-shadow: 0 6px 16px rgba(0,0,0,.25) inset, 0 1px 0 rgba(255,255,255,.04);
+  }
+
+  /* Mini-preview (canvas) */
+  .unit-item.pretty .unit-thumb{
+    border-radius:10px; overflow:hidden;
+    border:1px solid var(--unit-thumb-border);
+    background:var(--unit-thumb-bg);
+  }
+
+  /* Campos */
+  .unit-item.pretty .unit-fields{
+    display:grid;
+    grid-template-columns: 1fr 1fr 20px 64px 34px;
+    gap:8px; align-items:center; flex:1;
+  }
+  .unit-item.pretty .unit-fields select,
+  .unit-item.pretty .unit-fields input{
+    background:var(--input-bg); color:var(--text);
+    border:1px solid var(--input-border);
+    border-radius:8px; padding:6px 8px; height:34px;
+  }
+  .unit-item.pretty .team-swatch{
+    width:20px; height:20px; border-radius:50%;
+    border:1px solid #0004; box-shadow:0 0 0 2px #000 inset;
+  }
+
+  /* Botão remover */
+  .unit-item.pretty .kill{
+    height:34px; border-radius:8px; border:1px solid #3b1b1b;
+    background:#2a1010; color:#ffb4b4; cursor:pointer;
+  }
+  .unit-item.pretty .kill:hover{ filter:brightness(1.1); }
+
+  /* Overlay (menu de partida) */
+  #overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--overlay-bg);
+    display: none; /* começa escondido; game.showMenu() mostra */
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: .5px;
+    z-index: 100;
+  }
+
+  /* Painel de crates */
+  .crate-block{ margin-top:12px; }
+  .crate-block label{ display:flex; align-items:center; gap:6px; }
+  .crate-config{ margin-left:20px; margin-top:6px; display:none; }
+
+  /* Mensagens simples */
+  #message-box {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 200;
+    display: none;
+  }
+  .message-card {
+    background: var(--message-card-bg);
+    border: 1px solid var(--message-card-border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.4);
+    max-width: 420px;
+  }
+  .message-head {
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    margin-bottom:6px; color: var(--muted); font-size:.9rem;
+  }
+  .message-close { cursor:pointer; border:0; background:transparent; color:var(--muted); font-size:1.1rem; }
+
+  /* Pequenos toques */
+  .small { font-size: .85rem; }
+  .muted { color: var(--muted); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: rgba(13,19,32,.6); border-radius: 8px; }
+  ::-webkit-scrollbar-thumb { background: #172132; border-radius: 8px; border: 2px solid #0e1624; }
+  ::-webkit-scrollbar-thumb:hover { background: #1e2a40; }
+  </style>
+</head>
+<body data-theme="dark">
+
+  <!-- TOP BAR -->
+  <div class="toolbar">
+    <div class="brand">⚔️ Battle Balls</div>
+    <button id="btnTheme" class="btn ghost" aria-label="Alternar tema">
+      <svg id="iconMoon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+      <svg id="iconSun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2m11-11h-2M3 12H1m16.95 7.95l-1.41-1.41M6.46 6.46 5.05 5.05m12.9 0-1.41 1.41M6.46 17.54l-1.41 1.41"/></svg>
+    </button>
+    <div class="spacer"></div>
+    <div class="small muted">FPS:</div>
+    <div id="fps" class="fps">—</div>
+  </div>
+
+  <!-- GRID PRINCIPAL -->
+  <div class="layout">
+    <!-- Palco -->
+    <section class="card stage">
+      <div class="card-title">Palco</div>
+      <canvas id="game" width="1280" height="720"></canvas>
+      <div class="small muted" style="margin-top:8px">
+        Atalhos: <b>R</b> reiniciar • <b>P</b> pausar • <b>B</b> debug borda • <b>H</b> hitbox
+      </div>
+    </section>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <!-- Partida -->
+      <section class="card">
+        <div class="card-title">Partida</div>
+        <div class="ctrl-grid">
+          <button id="btnStart" class="btn primary">Iniciar</button>
+          <button id="btnPause" class="btn">Pausar</button>
+          <button id="btnReset" class="btn danger">Reset</button>
+        </div>
+
+        <div class="row">
+          <div class="label">Arena</div>
+          <select id="arena" class="select" aria-label="Modo de Arena">
+            <!-- opções preenchidas em runtime (game.populateArenaSelect) -->
+          </select>
+        </div>
+
+        <div id="cfgStandard">
+          <div class="row">
+            <div class="label">Largura</div>
+            <input id="arenaWidth" type="number" class="select" min="100" value="1000" />
+          </div>
+          <div class="row">
+            <div class="label">Altura</div>
+            <input id="arenaHeight" type="number" class="select" min="100" value="700" />
+          </div>
+        </div>
+
+        <div id="cfgBR" style="display:none">
+          <div class="row">
+            <div class="label">Largura Ini</div>
+            <input id="arenaWidthStart" type="number" class="select" value="1200" />
+          </div>
+          <div class="row">
+            <div class="label">Altura Ini</div>
+            <input id="arenaHeightStart" type="number" class="select" value="800" />
+          </div>
+          <div class="row">
+            <div class="label">Largura Final</div>
+            <input id="arenaWidthEnd" type="number" class="select" value="600" />
+          </div>
+          <div class="row">
+            <div class="label">Altura Final</div>
+            <input id="arenaHeightEnd" type="number" class="select" value="400" />
+          </div>
+          <div class="row">
+            <div class="label">Delay</div>
+            <input id="shrinkDelay" type="number" step="0.1" class="select" value="5" />
+          </div>
+          <div class="row">
+            <div class="label">Duração</div>
+            <input id="shrinkDuration" type="number" step="0.1" class="select" value="20" />
+          </div>
+        </div>
+      </section>
+
+      <!-- Unidades -->
+      <section class="card">
+        <div class="card-title">Unidades</div>
+        <div id="unitList" class="unit-list" aria-live="polite">
+          <!-- linhas adicionadas via addUnitRow -->
+        </div>
+        <div style="margin-top:10px; display:flex; gap:8px;">
+          <button id="btnAddUnit" class="btn">Adicionar Unidade</button>
+        </div>
+      </section>
+
+      <!-- Ajuda -->
+      <section class="card">
+        <div class="card-title">Ajuda</div>
+        <div class="small muted">
+          • Adicione pelo menos 2 unidades para iniciar.<br/>
+          • Selecione classe, equipe e nível em cada linha.<br/>
+          • O modo Battle Royale encolhe ou expande a arena entre valores inicial e final.
+        </div>
+      </section>
+
+      <!-- Crates -->
+      <section class="card" id="panelCrates">
+        <div class="card-title">Crates</div>
+
+        <div class="crate-block">
+          <label><input type="checkbox" id="enableHealthCrates"/> Vida</label>
+          <div id="cfgHealthCrate" class="crate-config">
+            <div class="row"><div class="label">Média/100s</div><input id="healthAvg" type="number" step="0.1" class="select" value="12"/></div>
+            <div class="row"><div class="label">Tempo de vida</div><input id="healthLifetime" type="number" class="select" value="35"/></div>
+            <div class="row"><div class="label">Máx. simultâneos</div><input id="healthMax" type="number" class="select" value="6"/></div>
+            <div class="row"><div class="label">Cura</div><input id="healthHeal" type="number" class="select" value="12"/></div>
+          </div>
+        </div>
+
+        <div class="crate-block">
+          <label><input type="checkbox" id="enableXpCrates"/> XP</label>
+          <div id="cfgXpCrate" class="crate-config">
+            <div class="row"><div class="label">Média/100s</div><input id="xpAvg" type="number" step="0.1" class="select" value="12"/></div>
+            <div class="row"><div class="label">Tempo de vida</div><input id="xpLifetime" type="number" class="select" value="35"/></div>
+            <div class="row"><div class="label">Máx. simultâneos</div><input id="xpMax" type="number" class="select" value="6"/></div>
+            <div class="row"><div class="label">XP</div><input id="xpXp" type="number" class="select" value="8"/></div>
+          </div>
+        </div>
+
+        <div class="crate-block">
+          <label><input type="checkbox" id="enableHybridCrates"/> Vida+XP</label>
+          <div id="cfgHybridCrate" class="crate-config">
+            <div class="row"><div class="label">Média/100s</div><input id="hybridAvg" type="number" step="0.1" class="select" value="12"/></div>
+            <div class="row"><div class="label">Tempo de vida</div><input id="hybridLifetime" type="number" class="select" value="35"/></div>
+            <div class="row"><div class="label">Máx. simultâneos</div><input id="hybridMax" type="number" class="select" value="6"/></div>
+            <div class="row"><div class="label">Vida</div><input id="hybridHeal" type="number" class="select" value="8"/></div>
+            <div class="row"><div class="label">XP</div><input id="hybridXp" type="number" class="select" value="6"/></div>
+          </div>
+        </div>
+
+        <div style="margin-top:8px;"><button id="btnCrateReset" class="btn">Reset</button></div>
+      </section>
+    </aside>
+  </div>
+
+  <!-- OVERLAY / MENU -->
+  <div id="overlay">
+    <div style="text-align:center; padding:24px; max-width:720px; width:92%; background:rgba(15,21,32,0.88); border:1px solid rgba(120,255,214,0.12); border-radius:16px; box-shadow:0 30px 60px rgba(0,0,0,.6);">
+      <div class="small muted" style="margin-bottom:8px">Arena Atual</div>
+      <div style="font-size:1.6rem; font-weight:800; letter-spacing:.3px; margin-bottom:18px;">
+        <span id="arenaName">—</span>
+      </div>
+      <div style="display:flex; gap:10px; justify-content:center;">
+        <button id="btnStartOverlay" class="btn primary">Iniciar Partida</button>
+        <button id="btnMenu" class="btn ghost">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MENSAGENS -->
+  <div id="message-box" role="alert">
+    <div class="message-card">
+      <div class="message-head">
+        <span class="muted">Aviso</span>
+        <button id="message-close" class="message-close" aria-label="Fechar mensagem">✕</button>
+      </div>
+      <div id="message-content">Mensagem</div>
+    </div>
+  </div>
+
+  <noscript>
+    <div style="margin-top:16px; color:#ffb4b4;">Este jogo precisa de JavaScript habilitado.</div>
+  </noscript>
+
+  <!-- Entrada principal em módulos ES -->
+  <script type="module" src="main.js"></script>
+</body>
+</html>

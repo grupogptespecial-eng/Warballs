@@ -1,0 +1,303 @@
+// Máquina de estados e disciplina do Guerreiro
+
+import { V } from '../math/vec.js';
+import { CFG } from '../config/cfg.js';
+import { SpearProjectile } from '../entities/spear.js';
+import { Particle } from '../entities/particle.js';
+import {
+  spawnAdvanceVFX,
+  spawnDodgeVFX,
+  spawnParryVFX
+} from '../vfx/guerreiro_maneuver_vfx.js';
+import { projApproaching } from '../utils/geometry.js';
+import { randAng, rrand } from '../utils/rand.js';
+import { game } from '../core/game.js';
+
+export function registerSwap(u, kind) {
+  const D = CFG.guerreiro.discipline;
+  const gw = u.gw;
+  const now = game.time;
+  if (gw.lastAttackType && gw.lastAttackType !== kind && now - gw.lastAttackTime <= D.swapWindow) {
+    const max = Math.ceil(u.level / 2);
+    gw.disciplineStacks = Math.min(max, (gw.disciplineStacks || 0) + 1);
+    gw.disciplineReady = true;
+    gw.disciplineExpire = now + D.bonusDurationMax;
+  }
+  gw.lastAttackType = kind;
+  gw.lastAttackTime = now;
+
+}
+
+function startThrow(u) {
+  const T = CFG.guerreiro.throw;
+  const err = (T.precisionErrDeg + T.precisionErrPerLevel * (u.level - 1)) * Math.PI / 180;
+  const ang = u.angle + rrand(-err, err);
+  const dir = new V(Math.cos(ang), Math.sin(ang));
+  const base = u.weaponBase();
+  const proj = new SpearProjectile(u, base.clone(), dir);
+  proj.attached = true;
+  game.spawnProjectile(proj);
+  u.gw.thrown = proj;
+  u.gw.state = 'THROW_RELEASE';
+  u.gw.releaseDur = 0.08;
+  u.gw.releaseT = u.gw.releaseDur;
+  u.gw.throwT = 0;
+  u.gw.disableMelee = true;
+  registerSwap(u, 'RANGED');
+}
+
+function tickThrow(u, dt) {
+  const T = CFG.guerreiro.throw;
+  const gw = u.gw;
+  if (gw.state === 'THROW_RELEASE') {
+    gw.releaseT -= dt;
+    u.weaponLen = gw.baseWeaponLen * (gw.releaseT / gw.releaseDur);
+    if (gw.releaseT <= 0) {
+      gw.state = 'THROW_FLIGHT';
+      u.weaponLen = 0;
+      u.weaponTipR = 0;
+      u.weaponOffset = 0;
+      u.prevTip = u.tip();
+      u.prevBase = u.weaponBase();
+      }
+    return;
+  }
+  if (gw.state === 'THROW_FLIGHT') {
+    gw.throwT += dt;
+    if (!gw.thrown || !gw.thrown.alive || gw.throwT >= T.flightMaxTime) {
+      if (gw.thrown) gw.thrown.alive = false;
+      gw.thrown = null;
+      gw.state = 'DISARMED';
+      gw.disarmT = T.cooldown * 0.1;
+      gw.stanceActive = false;
+      u.omega = gw.baseOmega;
+      u.knockResist = 0;
+    }
+  }
+}
+
+export function fire() {
+  if (this.className !== 'guerreiro' || !this.gw) return CFG.guerreiro.throw.cooldown;
+  if (this.gw.state !== 'IDLE') return null;
+  startThrow(this);
+  return CFG.guerreiro.throw.cooldown;
+}
+
+function triggerAdvance(u, target) {
+  const A = CFG.guerreiro.maneuvers.advance;
+  u.gw.state = 'ADVANCE';
+  u.gw.advanceT = A.dashDuration;
+  u.gw.advanceTarget = target;
+  u.vel = V.fromAng(u.angle, A.dashSpeed);
+  u.gw.maneuverCD = A.cooldown;
+  spawnAdvanceVFX(u.pos.clone());
+}
+
+function tickAdvance(u, dt) {
+  const A = CFG.guerreiro.maneuvers.advance;
+  u.gw.advanceT -= dt;
+  u.vel = V.fromAng(u.angle, A.dashSpeed);
+  if (u.gw.advanceTarget) {
+    const ang = Math.atan2(u.gw.advanceTarget.pos.y - u.pos.y, u.gw.advanceTarget.pos.x - u.pos.x);
+    let diff = Math.atan2(Math.sin(ang - u.angle), Math.cos(ang - u.angle));
+    if (Math.abs(diff) > A.connectAngleDeg * Math.PI / 180) {
+      u.omega += Math.sign(diff) * A.angAccel * dt;
+    }
+  }
+  if (u.gw.advanceT <= 0) {
+    u.gw.state = 'IDLE';
+    u.vel.mul(0);
+    u.gw.advanceTarget = null;
+  }
+}
+
+function triggerDodge(u, proj) {
+  const D = CFG.guerreiro.maneuvers.dodge;
+  const side = new V(-proj.dir.y, proj.dir.x);
+  const toU = new V(u.pos.x - proj.pos.x, u.pos.y - proj.pos.y);
+  if (side.dot(toU) < 0) side.mul(-1);
+  const step = side.nrm().mul(D.sidestepDist * CFG.body.radius);
+  u.pos.add(step);
+  u.vel.mul(0);
+  u.gw.maneuverCD = D.cooldown;
+  spawnDodgeVFX(u.pos.clone());
+}
+
+export function updateGuerreiro(dt) {
+  if (this.className !== 'guerreiro' || !this.gw) return;
+  const gw = this.gw;
+  const BR = CFG.body.radius;
+
+  if (gw.disarmT > 0) gw.disarmT -= dt;
+  if (gw.maneuverCD > 0) gw.maneuverCD -= dt;
+  if (gw.disciplineReady && game.time > gw.disciplineExpire) {
+    gw.disciplineReady = false;
+    gw.disciplineStacks = 0;
+  }
+
+  if (gw.state === 'ADVANCE') {
+    tickAdvance(this, dt);
+    return;
+  }
+  if (gw.state === 'THROW_RELEASE' || gw.state === 'THROW_FLIGHT') {
+    tickThrow(this, dt);
+    return;
+  }
+  if (gw.state === 'DISARMED') {
+    if (gw.disarmT <= 0) {
+      gw.state = 'IDLE';
+      this.weaponLen = gw.baseWeaponLen;
+      this.weaponTipR = gw.baseWeaponTipR;
+      this.weaponOffset = gw.baseWeaponOffset;
+      this.prevTip = this.tip();
+      this.prevBase = this.weaponBase();
+      gw.disableMelee = false;
+    } else return;
+  }
+
+  // Rotaciona em direção ao inimigo durante a janela de mira
+  if (this.cd === 0 && this.cdAim > 0 && gw.state === 'IDLE') {
+    const T = CFG.guerreiro.throw;
+    const min = T.minRange * BR;
+    const max = T.maxRange * BR;
+    let best = null, bestDist = Infinity;
+    for (const u of game.units) {
+      if (!u.alive || u === this) continue;
+      if (this.team && u.team && this.team === u.team) continue;
+      const to = new V(u.pos.x - this.pos.x, u.pos.y - this.pos.y);
+      const d = to.len();
+      if (d < min || d > max) continue;
+      if (d < bestDist) { bestDist = d; best = u; }
+    }
+    if (best) {
+      const ang = Math.atan2(best.pos.y - this.pos.y, best.pos.x - this.pos.x);
+      let diff = Math.atan2(Math.sin(ang - this.angle), Math.cos(ang - this.angle));
+      const turn = CFG.guerreiro.spear.maxAngVel * Math.PI / 180 * dt;
+      if (Math.abs(diff) <= turn) this.angle = ang; else this.angle += Math.sign(diff) * turn;
+    }
+  }
+
+  // Postura de guerra
+  const ST = CFG.guerreiro.stance;
+  let threat = false;
+  for (const u of game.units) {
+    if (!u.alive || u === this) continue;
+    if (this.team && u.team && this.team === u.team) continue;
+    const d = new V(u.pos.x - this.pos.x, u.pos.y - this.pos.y).len();
+    if (d <= ST.threatRadius * BR) { threat = true; break; }
+  }
+  if (threat) {
+    if (!gw.stanceActive) {
+      for (let i = 0; i < 8; i++) {
+        game.spawnParticle(new Particle(
+          this.pos.clone(),
+          V.fromAng(randAng(), rrand(80, 160)),
+          rrand(.2, .4),
+          '#fcd34d'
+        ));
+      }
+    }
+    gw.stanceActive = true;
+    gw.stanceGrace = ST.exitGrace;
+    this.omega = gw.baseOmega * 1.5;
+    this.knockResist = Math.min(
+      ST.knockbackRedBase + (this.hpMax / 100) * ST.knockbackRedPer100HP,
+      ST.knockbackRedMax
+    );
+  } else if (gw.stanceActive) {
+    gw.stanceGrace -= dt;
+    if (gw.stanceGrace <= 0) {
+      gw.stanceActive = false;
+      this.omega = gw.baseOmega;
+      this.knockResist = 0;
+    }
+  }
+
+  // Desvio contra projéteis
+  if (gw.maneuverCD <= 0 && gw.state === 'IDLE') {
+    const D = CFG.guerreiro.maneuvers.dodge;
+    for (const p of game.projectiles) {
+      if (!p.alive) continue;
+      if (p.owner && this.team && p.owner.team && this.team === p.owner.team) continue;
+      if (!projApproaching(p, this)) continue;
+      const toU = new V(this.pos.x - p.pos.x, this.pos.y - p.pos.y);
+      const distBody = toU.len();
+      const tti = distBody / (p.speed || 1);
+      if (tti > D.ttiProjectile) continue;
+      const tip = this.tip();
+      const distTip = new V(tip.x - p.pos.x, tip.y - p.pos.y).len();
+      if (distBody >= distTip) continue;
+      triggerDodge(this, p);
+      return;
+    }
+  }
+
+  // Avanço Tático
+  if (gw.maneuverCD <= 0) {
+    const A = CFG.guerreiro.maneuvers.advance;
+    let advTarget = null, advBest = Infinity;
+    for (const u of game.units) {
+      if (!u.alive || u === this) continue;
+      if (this.team && u.team && this.team === u.team) continue;
+      const to = new V(u.pos.x - this.pos.x, u.pos.y - this.pos.y);
+      const dist = to.len();
+      if (dist > A.triggerRadius * BR) continue;
+      const ang = Math.atan2(to.y, to.x);
+      const diff = Math.atan2(Math.sin(ang - this.angle), Math.cos(ang - this.angle));
+      if (Math.abs(diff) > A.vulnerableFOVDeg * Math.PI / 180) continue;
+      let vulnerable = u.state === 'DISARMED' || (u.weaponLockT || 0) > 0;
+      if (!vulnerable && u.tip) {
+        const tip = u.tip();
+        const tipDist = new V(tip.x - this.pos.x, tip.y - this.pos.y).len();
+        if (tipDist > dist) vulnerable = true;
+      }
+      if (vulnerable && dist < advBest) {
+        advBest = dist;
+        advTarget = u;
+      }
+    }
+    if (advTarget) {
+      triggerAdvance(this, advTarget);
+      return;
+    }
+  }
+  }
+
+export function guerreiroParryAgainst(other) {
+  if (this.className !== 'guerreiro' || !this.gw || this.gw.maneuverCD > 0) return false;
+  if (this.gw.state === 'THROW_RELEASE' || this.gw.state === 'THROW_FLIGHT' || this.gw.state === 'DISARMED') return false;
+  if (!other || !other.weaponTipR || !other.weaponLen) return false;
+  const P = CFG.guerreiro.maneuvers.parry;
+  const t1 = this.tip();
+  const t2 = other.tip();
+  const dist = new V(t2.x - t1.x, t2.y - t1.y).len();
+  if (dist >= this.weaponTipR + other.weaponTipR) return false;
+  if (!this.canDamage(other)) return false;
+
+  const toTip = new V(t2.x - this.pos.x, t2.y - this.pos.y);
+  const n = toTip.clone().nrm();
+  const t = new V(-n.y, n.x);
+
+  other.weaponLockT = Math.max(other.weaponLockT || 0, P.lockT);
+  other.vel.add(t.mul(P.tangent / other.mass));
+  other.vel.add(n.mul(P.radial / other.mass));
+  if (other.omega === 0) other.omega = (Math.random() < 0.5 ? 1 : -1) * 2.6;
+  other.omega *= -0.8;
+
+  this.gw.maneuverCD = P.disarmDuration;
+  if (this.canDamage(other)) {
+    const dmg = CFG.guerreiro.damage.meleeBase;
+    const dealt = other.hit(dmg, V.fromAng(this.angle, 380), this);
+    if (dealt > 0) {
+      this.gainXPOffense(dealt);
+      registerSwap(this, 'MELEE');
+    }
+    this.gainXPWeaponClash();
+    other.gainXPWeaponClash();
+  }
+
+  const mid = new V((t1.x + t2.x) / 2, (t1.y + t2.y) / 2);
+  spawnParryVFX(mid);
+  return true;
+}
+

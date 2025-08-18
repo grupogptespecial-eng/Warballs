@@ -1,0 +1,8 @@
+{
+  "name": "warballs",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "test": "find src -name '*.js' -print0 | xargs -0 -n1 node --check"
+  }
+}

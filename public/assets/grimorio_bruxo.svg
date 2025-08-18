@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 700" role="img" aria-label="Grimório roxo de warlock com fecho, cantoneiras metálicas e círculo arcano brilhante">
+  <title>Livro de Warlock — grimório roxo</title>
+  <desc>Livro de capa roxa com ferragens, faixa com fecho e selo arcano em brilho púrpura.</desc>
+
+  <defs>
+    <!-- Couro roxo -->
+    <linearGradient id="coverPurple" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#7e3ccf"/>
+      <stop offset="55%" stop-color="#5a26a3"/>
+      <stop offset="100%" stop-color="#33185b"/>
+    </linearGradient>
+    <!-- Textura leve do couro -->
+    <pattern id="leatherTex" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(25)">
+      <rect width="16" height="16" fill="transparent"/>
+      <rect x="0" y="0" width="2" height="16" fill="#ffffff" opacity=".05"/>
+      <rect x="8" y="0" width="1.2" height="16" fill="#ffffff" opacity=".04"/>
+    </pattern>
+
+    <!-- Metal (ouro antigo) -->
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#ffe7a6"/>
+      <stop offset="50%" stop-color="#d3a446"/>
+      <stop offset="100%" stop-color="#8b6a22"/>
+    </linearGradient>
+    <!-- Aço escuro -->
+    <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#cfd6e1"/>
+      <stop offset="100%" stop-color="#8e96a3"/>
+    </linearGradient>
+
+    <!-- Páginas -->
+    <linearGradient id="pages" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"  stop-color="#f5ecd4"/>
+      <stop offset="50%" stop-color="#e7d8b6"/>
+      <stop offset="100%" stop-color="#d9c79d"/>
+    </linearGradient>
+    <pattern id="pageLines" width="6" height="6" patternUnits="userSpaceOnUse">
+      <rect width="6" height="6" fill="transparent"/>
+      <rect x="0" y="0" width="1" height="6" fill="#b79f76" opacity=".35"/>
+    </pattern>
+
+    <!-- Faixa/fecho -->
+    <linearGradient id="strap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#332a2a"/>
+      <stop offset="100%" stop-color="#1b1515"/>
+    </linearGradient>
+    <!-- Gema do fecho -->
+    <radialGradient id="gem" cx="50%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#c8fff7"/>
+      <stop offset="60%" stop-color="#4dd6c7"/>
+      <stop offset="100%" stop-color="#158f86"/>
+    </radialGradient>
+
+    <!-- Brilho púrpura para o selo -->
+    <filter id="purpleGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <!-- Destaque fino de borda -->
+    <linearGradient id="edgeHi" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity=".7"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+
+    <style>
+      .line { stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+  </defs>
+
+  <!-- ===== PÁGINAS (lateral e base) ===== -->
+  <!-- Lateral direita de páginas -->
+  <g transform="translate(645,130)">
+    <rect x="0" y="0" width="36" height="360" rx="6" fill="url(#pages)"/>
+    <rect x="0" y="0" width="36" height="360" rx="6" fill="url(#pageLines)" opacity=".55"/>
+    <!-- cortes de páginas -->
+    <path d="M 4 22 H 30 M 4 76 H 30 M 4 128 H 30 M 4 180 H 30 M 4 232 H 30 M 4 284 H 30 M 4 336 H 30"
+          stroke="#b79f76" stroke-width="1.5" class="line" opacity=".6"/>
+  </g>
+  <!-- Borda inferior de páginas -->
+  <g transform="translate(230,490)">
+    <rect x="0" y="0" width="451" height="26" rx="5" fill="url(#pages)"/>
+    <rect x="0" y="0" width="451" height="26" rx="5" fill="url(#pageLines)" opacity=".55"/>
+  </g>
+
+  <!-- ===== CAPA (frente) ===== -->
+  <g id="cover" transform="translate(210,120)">
+    <!-- Base do couro -->
+    <rect x="0" y="0" width="450" height="370" rx="22" fill="url(#coverPurple)"/>
+    <rect x="0" y="0" width="450" height="370" rx="22" fill="url(#leatherTex)" opacity=".6"/>
+    <!-- Moldura interna -->
+    <rect x="18" y="18" width="414" height="334" rx="16" fill="none" stroke="#bda2ff" stroke-width="3" opacity=".6"/>
+    <!-- Realce lateral -->
+    <path d="M 18 22 V 352" stroke="url(#edgeHi)" stroke-width="6"/>
+
+    <!-- Cantoneiras metálicas -->
+    <g fill="url(#gold)" stroke="#6f5320" stroke-width="3">
+      <path d="M 0 54 L 0 22 Q 0 0 22 0 L 54 0 L 34 34 Z"/>
+      <path d="M 450 54 L 450 22 Q 450 0 428 0 L 396 0 L 416 34 Z"/>
+      <path d="M 0 316 L 0 348 Q 0 370 22 370 L 54 370 L 34 336 Z"/>
+      <path d="M 450 316 L 450 348 Q 450 370 428 370 L 396 370 L 416 336 Z"/>
+    </g>
+
+    <!-- Faixa horizontal com fecho -->
+    <g transform="translate(0,180)">
+      <rect x="-14" y="-18" width="478" height="36" rx="10" fill="url(#strap)" stroke="#0d0a0a" stroke-width="3"/>
+      <!-- Placa do fecho -->
+      <rect x="210" y="-26" width="78" height="52" rx="8" fill="url(#steel)" stroke="#5e6673" stroke-width="3"/>
+      <circle cx="249" cy="0" r="16" fill="url(#gold)" stroke="#6f5320" stroke-width="3"/>
+      <circle cx="249" cy="0" r="10" fill="url(#gem)" stroke="#0f6d63" stroke-width="2"/>
+    </g>
+
+    <!-- Marcador de páginas (ribbon) -->
+    <path d="M 358 0 v 110 l 24 18 l -24 8 v 130"
+          fill="none" stroke="#eebc2e" stroke-width="6" opacity=".9"/>
+
+    <!-- Selo arcano central -->
+    <g transform="translate(225,185)" filter="url(#purpleGlow)">
+      <!-- anéis -->
+      <circle r="88" fill="none" stroke="#caa6ff" stroke-width="8"/>
+      <circle r="72" fill="none" stroke="#b682ff" stroke-width="4"/>
+      <!-- estrela de 6 pontas (dois triângulos) -->
+      <polygon points="0,-52 45,26 -45,26" fill="#d7c1ff" opacity=".25"/>
+      <polygon points="0,52 -45,-26 45,-26" fill="#d7c1ff" opacity=".25"/>
+      <!-- glifos (segmentos) ao redor -->
+      <g stroke="#e6d7ff" stroke-width="5" class="line" opacity=".95">
+        <path d="M 0 -88 v 16"/>
+        <path d="M 62 -62 l -10 12"/>
+        <path d="M 88 0 h -16"/>
+        <path d="M 62 62 l -12 -10"/>
+        <path d="M 0 88 v -16"/>
+        <path d="M -62 62 l 10 -12"/>
+        <path d="M -88 0 h 16"/>
+        <path d="M -62 -62 l 12 10"/>
+      </g>
+      <!-- núcleo -->
+      <circle r="16" fill="#f0e8ff" stroke="#bba1ff" stroke-width="3"/>
+    </g>
+  </g>
+</svg>
