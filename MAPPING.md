@@ -67,6 +67,7 @@ símbolos e o destino correspondente em arquivos separados.
 
 | Classe | Passivas / Ativos |
 | --- | --- |
+| **Bardo** | Nota musical que causa dano, cura aliados e concede bônus; Ritmo de Guerra amplia aliados com escudo temporário |
 | **Barbaro** | `barbApplyPassiveDamage` (dano escala com HP faltante), `tryInvestida`/`updateInvestida` (Dash), `tryUrro` (Roar) |
 | **Paladino** | `trySacredStrike` (chance de golpe sagrado), `castPalHeal` (cura), `palShieldT`/`shield` (escudo bloqueia e empurra) |
 | **Monge** | Bônus de velocidade (`monkVMinBonus`/`VMaxBonus`), `monkSeek`, `monkImpactBurst`, `monkTryRajada` (Rajada), `monkTryDeflect`, `monkParryAgainst` |
@@ -74,7 +75,14 @@ símbolos e o destino correspondente em arquivos separados.
 | **Ranger** | `rangerSpeedMult` passivo, `fire` (flechas), `castPerfectShot`, `castForestCall` (invoca `Summon`) |
 | **Bruxo** | `fire` usa `CFG.bruxo.blast`, `castHex`, `link` (roubo de vida), `castFamiliar` |
 | **Guerreiro** | `fire` lança `SpearProjectile`, `parry` (contra-golpe), `war` (postura de guerra), passiva `discipline` após alternar modo |
+| **Druida** | Bastão Natural (projéteis elementais cíclicos), Respiro da Terra (regeneração), Raízes Prendentes (nódulo que puxa, causa dano em área e cura aliados) e Forma de Urso (transformação com HP próprio) |
+| **Ladino** | Faca das Sombras (acerto concede 0.5 s de invulnerabilidade), Faca da Serpente (veneno fraco empilhável), Passos Silenciosos (crítico garantido pelas costas), Ataque Furtivo (reposiciona atrás do alvo) e Rolamento (dash invulnerável) |
 | **Artífice** | Canhão Arcano, Overclock, Torreta Móvel, Campo de Mineração |
+
+#### Controles do Ladino
+- **Ataque** – Golpes de adaga à frente e atrás.
+- **Habilidade 1 – Ataque Furtivo (Q)** – Tenta se posicionar nas costas do inimigo antes de atacar.
+- **Habilidade 2 – Rolamento (E)** – Dash curto com invulnerabilidade que desvia de projéteis e armas.
 
 ### Projetis, summons e efeitos
 
@@ -127,3 +135,34 @@ serão listados aqui conforme adicionados.*
   se há inimigo na linha de visão durante a janela de mira.
 - `CrateSystem` — módulo em `src/core/crateSystem.js` que gerencia
   spawns de crates configuráveis e aplica políticas de shrink da arena.
+
+### Sistema de itens e armas
+
+Cada classe define sua aparência em dois objetos no `cfg.js`:
+
+- **`CLASS_VISUALS`** – fornece `item` ou `items` ligados ao corpo. Cada entrada
+  aceita os campos obrigatórios `anchorDeg`, `distanceFromCenter`,
+  `internalRotation` e `scale`, além de opções como `microAnim`, `palette` e
+  `flipX`.
+- **`WEAPON_VISUALS`** – descreve a arma empunhada, contendo `draw` (nome do
+  helper de renderização) e os mesmos campos básicos de posição e escala. O
+  ângulo de ancoragem pode ser definido em `anchorDeg` ou `anchorAngleDeg`.
+  Opcionalmente pode incluir `weaponAnchor: [x, y]` para deslocar sprites que
+  não possuem origem central.
+
+Exemplo: o `clerigo` usa `items` para combinar o `sigilo_sol` e a nova
+`diadema_clerigo` no mesmo visual.
+
+As transformações são aplicadas na ordem: rotação pelo ângulo de âncora,
+translação pela distância ao centro, rotação interna e por fim a escala. Isso
+garante que tanto itens quanto armas possam ser ajustados com precisão
+apenas alterando as variáveis de configuração.
+
+### Aparência dos projéteis
+
+Projéteis também expõem os campos `scale` e `internalRotation` para controle
+fino do sprite ou círculo desenhado. Os valores padrão ficam em
+`CFG.ranged` e podem ser sobrescritos ao instanciar cada projétil (por
+exemplo, `CFG.druida.staff.projectile`). `scale` afeta apenas o tamanho
+visual, enquanto `internalRotation` (em graus) gira o sprite antes de ser
+renderizado.

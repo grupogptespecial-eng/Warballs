@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 240" width="100%" height="100%" aria-labelledby="title desc" role="img">
+  <title id="title">Faca da Serpente — lâmina mais reta</title>
+  <desc id="desc">Adaga de mão secundária com lâmina mais reta e ponta definida, guarda com presas e cabo em escamas verdes. Estilo pronto para gameplay.</desc>
+
+  <!-- ======= PALETA E ESTILOS ======= -->
+  <style><![CDATA[
+    :root{
+      --steel-1:#e9eef2;   /* aço claro */
+      --steel-2:#b4c0c9;   /* aço médio */
+      --steel-3:#7b8791;   /* aço escuro */
+      --edge:#ffffff;      /* brilho do fio */
+      --gold-1:#f2d07a;   /* dourado claro */
+      --gold-2:#a27922;   /* dourado escuro */
+      --wood-1:#6e4a2f;   /* madeira */
+      --wood-2:#3f2919;   /* sombra madeira */
+      --scale-1:#1f7a4d;  /* escamas claras */
+      --scale-2:#0e4e31;  /* escamas escuras */
+      --venom-1:#6dff8a;  /* veneno claro */
+      --venom-2:#0c8f3e;  /* veneno sombra */
+      --outline:#1f2a33;  /* contorno geral discreto */
+    }
+    #runes path{ pointer-events:none; }
+  ]]></style>
+
+  <!-- ======= DEFINIÇÕES ======= -->
+  <defs>
+    <!-- aço polido -->
+    <linearGradient id="gSteel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"  stop-color="var(--steel-1)"/>
+      <stop offset="0.55" stop-color="var(--steel-2)"/>
+      <stop offset="1"  stop-color="var(--steel-3)"/>
+    </linearGradient>
+
+    <!-- brilho do fio -->
+    <linearGradient id="gEdge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="var(--edge)" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="var(--steel-2)" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- dourado da guarda/pomo -->
+    <linearGradient id="gGold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="var(--gold-1)"/>
+      <stop offset="1" stop-color="var(--gold-2)"/>
+    </linearGradient>
+
+    <!-- madeira do cabo -->
+    <linearGradient id="gWood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="var(--wood-1)"/>
+      <stop offset="1" stop-color="var(--wood-2)"/>
+    </linearGradient>
+
+    <!-- padrão de escamas -->
+    <pattern id="pScales" patternUnits="userSpaceOnUse" width="12" height="10" patternTransform="rotate(-20)">
+      <rect width="12" height="10" fill="var(--scale-2)"/>
+      <path d="M0,10 C3,4 9,4 12,10" fill="none" stroke="var(--scale-1)" stroke-width="2"/>
+      <path d="M0,0 C3,6 9,6 12,0"  fill="none" stroke="var(--scale-1)" stroke-width="2"/>
+    </pattern>
+
+    <!-- sombra suave -->
+    <filter id="fShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+
+    <!-- glow sutil do veneno -->
+    <filter id="fGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- ======= COMPOSIÇÃO ======= -->
+  <g id="dagger" filter="url(#fShadow)">
+    <!-- LÂMINA -->
+    <g id="blade">
+      <path id="blade-body" fill="url(#gSteel)" stroke="var(--outline)" stroke-opacity="0.35" stroke-width="1"
+            d="M210,112
+               L505,104
+               L592,112
+               L606,120
+               L592,128
+               L505,136
+               L210,128
+               Z"/>
+      <path id="swedge" fill="#f7fbff" fill-opacity="0.45" stroke="none"
+            d="M520,108 L590,114 L600,120 L590,126 L520,132 Z"/>
+      <path id="blade-edge" fill="url(#gEdge)" opacity="0.9"
+            d="M214,128 L505,135 L591,126 L602,120 L591,122 L505,133 L214,124 Z"/>
+      <path id="fuller" d="M230,114 L505,108 L584,116" fill="none"
+            stroke="#ffffff" stroke-opacity="0.35" stroke-width="2"/>
+      <g id="runes" stroke="#ffffff" stroke-opacity="0.55" stroke-width="2">
+        <path d="M360,110 l6,10 m-12,0 l12,0"/>
+        <path d="M382,111 l0,12 m-6,-6 l12,0"/>
+        <path d="M404,111 l6,12 m6,-12 l-12,12"/>
+      </g>
+    </g>
+
+    <!-- GUARDA com motivo de presas -->
+    <g id="guard">
+      <path fill="url(#gGold)" stroke="#8d6b24" stroke-width="1.5"
+            d="M188,120
+               c -8,-20 -36,-24 -54,-10
+               c 18,0 26,9 31,18
+               c -5,9 -13,18 -31,18
+               c 18,14 46,10 54,-10
+               c 8,20 36,24 54,10
+               c -18,0 -26,-9 -31,-18
+               c 5,-9 13,-18 31,-18
+               c -18,-14 -46,-10 -54,10 z"/>
+      <path fill="url(#gGold)" stroke="#8d6b24" stroke-width="1"
+            d="M192,134 c4,9 8,9 12,0 c-6,4 -6,4 -12,0 z"/>
+      <path fill="url(#gGold)" stroke="#8d6b24" stroke-width="1"
+            d="M220,134 c4,9 8,9 12,0 c-6,4 -6,4 -12,0 z"/>
+    </g>
+
+    <!-- CABO -->
+    <g id="handle">
+      <rect x="100" y="96" width="78" height="48" rx="10" fill="url(#gWood)" stroke="#24160d" stroke-width="2"/>
+      <rect x="104" y="100" width="70" height="40" rx="8" fill="url(#pScales)"/>
+      <g fill="none" stroke="#0a2d1c" stroke-opacity="0.5" stroke-width="3">
+        <path d="M108,136 l60,-40"/>
+        <path d="M108,126 l60,-40"/>
+        <path d="M108,116 l54,-36"/>
+      </g>
+    </g>
+
+    <!-- POMO -->
+    <g id="pommel">
+      <path d="M88,120 q-6,-16 10,-22 q18,-6 24,8 q4,10 -4,18 q-10,10 -23,6 q-9,-3 -7,-10 z"
+            fill="url(#gGold)" stroke="#8d6b24" stroke-width="2"/>
+      <circle cx="102" cy="116" r="3.2" fill="var(--venom-2)"/>
+      <path d="M96,124 q6,4 12,0" fill="none" stroke="#5a3a12" stroke-width="2"/>
+    </g>
+
+    <!-- EFEITO DE VENENO NA PONTA -->
+    <g id="venom" filter="url(#fGlow)">
+      <circle cx="606" cy="120" r="5.5" fill="var(--venom-1)"/>
+      <path d="M594,120 q6,-9 12,0 q-6,9 -12,0 z" fill="var(--venom-2)" opacity="0.35"/>
+    </g>
+  </g>
+
+  <!-- GUIAS (invisíveis) -->
+  <g id="guides" opacity="0">
+    <circle cx="210" cy="120" r="3" fill="#f00"/>
+    <circle cx="606" cy="120" r="3" fill="#0f0"/>
+  </g>
+</svg>

@@ -1,0 +1,107 @@
+<svg width="320" height="420" viewBox="0 0 320 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pedra de runas de raio">
+  <defs>
+    <!-- Pedra (tempestade) -->
+    <linearGradient id="stoneGradStorm" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#5C6068"/>
+      <stop offset="55%" stop-color="#3A3E45"/>
+      <stop offset="100%" stop-color="#23262B"/>
+    </linearGradient>
+    <radialGradient id="stoneHiStorm" cx="32%" cy="22%" r="60%">
+      <stop offset="0%"  stop-color="#9AA0AA" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#9AA0AA" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Raio -->
+    <linearGradient id="zapFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#FFFFFF"/>
+      <stop offset="55%"  stop-color="#FFE766"/>
+      <stop offset="100%" stop-color="#FFC300"/>
+    </linearGradient>
+
+    <!-- Brilho elétrico (sem cortar) -->
+    <filter id="zapGlow" x="-70%" y="-70%" width="240%" height="240%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Realce interno -->
+    <filter id="innerZap" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1.6" result="g"/>
+      <feBlend in="SourceGraphic" in2="g" mode="screen"/>
+    </filter>
+  </defs>
+
+  <!-- ===== Pedra ===== -->
+  <g id="stone">
+    <path d="M170 35
+             C122 44, 80 78, 66 124
+             C52 170, 60 232, 84 284
+             C106 330, 142 360, 184 360
+             C220 360, 256 336, 274 300
+             C292 264, 298 214, 288 168
+             C276 114, 232 46, 170 35 Z"
+          fill="url(#stoneGradStorm)"/>
+    <path d="M170 35
+             C122 44, 80 78, 66 124
+             C52 170, 60 232, 84 284
+             C106 330, 142 360, 184 360
+             C220 360, 256 336, 274 300
+             C292 264, 298 214, 288 168
+             C276 114, 232 46, 170 35 Z"
+          fill="url(#stoneHiStorm)"/>
+
+    <!-- Rachaduras frias -->
+    <g stroke="#C7CCDA" stroke-opacity="0.28" stroke-width="2" fill="none" stroke-linecap="round">
+      <path d="M116 132 C106 150, 106 170, 116 186
+               C126 202, 124 216, 110 232"/>
+      <path d="M214 120 C226 142, 228 164, 214 180
+               C206 190, 206 206, 222 222"/>
+      <path d="M160 252 C150 266, 150 282, 160 294"/>
+    </g>
+  </g>
+
+  <!-- ===== Runa: Raio (thunderbolt estilizado) ===== -->
+  <g id="rune" filter="url(#zapGlow)" opacity="0.98">
+    <!-- Raio principal (polígono) -->
+    <path d="M170 92
+             L146 148
+             L188 148
+             L150 228
+             L210 156
+             L170 156 Z"
+          fill="url(#zapFill)" filter="url(#innerZap)"/>
+
+    <!-- Núcleo interno mais claro -->
+    <path d="M172 108
+             L156 144
+             L188 144
+             L156 206
+             L196 158
+             L172 158 Z"
+          fill="#FFFDE8" opacity="0.9"/>
+  </g>
+
+  <!-- ===== Arcos elétricos ao redor (animação leve) ===== -->
+  <g id="arcs" stroke="#FFE45E" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.9">
+    <path d="M128 150 C136 140, 148 138, 156 146" stroke-dasharray="6 10">
+      <animate attributeName="stroke-dashoffset" values="0;16" dur="0.7s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.3;1;0.3" dur="0.9s" repeatCount="indefinite"/>
+    </path>
+    <path d="M190 176 C200 168, 212 168, 220 176" stroke-dasharray="6 10">
+      <animate attributeName="stroke-dashoffset" values="0;16" dur="0.65s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.3;1;0.3" dur="0.85s" repeatCount="indefinite"/>
+    </path>
+    <path d="M150 210 C158 202, 172 200, 182 206" stroke-dasharray="6 10">
+      <animate attributeName="stroke-dashoffset" values="0;16" dur="0.75s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.3;1;0.3" dur="1s" repeatCount="indefinite"/>
+    </path>
+  </g>
+
+  <!-- Reflexo sutil no topo da pedra -->
+  <path d="M122 96 C140 82, 166 80, 184 88
+           C168 88, 150 92, 136 100 Z"
+        fill="#FFFFFF" opacity="0.07"/>
+</svg>

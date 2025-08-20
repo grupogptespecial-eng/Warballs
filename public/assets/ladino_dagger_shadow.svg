@@ -1,0 +1,167 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 240" width="100%" height="100%" aria-labelledby="title desc" role="img">
+  <title id="title">Faca das Sombras (mão principal) — v3 detalhada</title>
+  <desc id="desc">Adaga tática em aço escurecido com ponta tanto marcada, bevel duplo, jimping no spine, choil/ricasso definidos, bolster metálico integrado à guarda e cabo com liners violeta, wraps e rebites. Todas as junções ajustadas sem folgas visuais.</desc>
+
+  <!-- ======= PALETA E ESTILOS ======= -->
+  <style><![CDATA[
+    :root{
+      --shadow-1:#d7dce0;   /* reflexo claro no aço preto */
+      --shadow-2:#7e8790;   /* cinza médio */
+      --shadow-3:#20262a;   /* aço negro */
+      --edge:#f3f8ff;       /* brilho frio do fio */
+      --accent-1:#7a5cff;   /* violeta claro */
+      --accent-2:#32207c;   /* violeta escuro */
+      --leather-1:#151515;  /* couro preto */
+      --leather-2:#0d0d0d;  /* sombra couro */
+      --liner-1:#6b59ff;    /* liner violeta claro */
+      --liner-2:#24185d;    /* liner violeta escuro */
+      --outline:#0b0f12;    /* contorno sutil */
+      --steel-shadow:#0e1215; /* divisórias do aço */
+    }
+    #runes path{ pointer-events:none; }
+  ]]></style>
+
+  <!-- ======= DEFINIÇÕES ======= -->
+  <defs>
+    <!-- aço preto escovado -->
+    <linearGradient id="gBlackSteel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"   stop-color="var(--shadow-1)"/>
+      <stop offset="0.5" stop-color="var(--shadow-2)"/>
+      <stop offset="1"   stop-color="var(--shadow-3)"/>
+    </linearGradient>
+
+    <!-- brilho do fio -->
+    <linearGradient id="gEdge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="var(--edge)" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="var(--shadow-2)" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- acento violeta -->
+    <linearGradient id="gAccent" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="var(--accent-1)"/>
+      <stop offset="1" stop-color="var(--accent-2)"/>
+    </linearGradient>
+
+    <!-- couro do cabo -->
+    <linearGradient id="gLeather" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="var(--leather-1)"/>
+      <stop offset="1" stop-color="var(--leather-2)"/>
+    </linearGradient>
+
+    <!-- liners do cabo -->
+    <linearGradient id="gLiner" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="var(--liner-1)"/>
+      <stop offset="1" stop-color="var(--liner-2)"/>
+    </linearGradient>
+
+    <!-- padrão de tiras do cabo -->
+    <pattern id="pWrap" patternUnits="userSpaceOnUse" width="12" height="12" patternTransform="rotate(-30)">
+      <rect width="12" height="12" fill="var(--leather-2)"/>
+      <path d="M0,12 L12,0 M-6,12 L6,0 M6,12 L18,0" stroke="#222" stroke-width="4" stroke-linecap="round"/>
+      <path d="M0,12 L12,0 M-6,12 L6,0 M6,12 L18,0" stroke="#3a3a3a" stroke-width="2" stroke-linecap="round"/>
+    </pattern>
+
+    <!-- sombra -->
+    <filter id="fShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000" flood-opacity="0.32"/>
+    </filter>
+  </defs>
+
+  <!-- ======= COMPOSIÇÃO ======= -->
+  <g id="dagger" filter="url(#fShadow)">
+
+    <!-- BOLSTER / COLAR (conector entre lâmina e cabo) -->
+    <!-- Dimensões casadas para encostar exatamente na base da lâmina (x=232..228) e sobrepor a guarda -->
+    <g id="bolster">
+      <path d="M206,106 h24 q2,0 2,2 v24 q0,2 -2,2 h-24 q-6,0 -10,-4 q-4,-4 -4,-10 v0 q0,-6 4,-10 q4,-4 10,-4z"
+            fill="url(#gBlackSteel)" stroke="var(--steel-shadow)" stroke-opacity="0.5" stroke-width="1"/>
+      <!-- parafuso de fixação do bolster -->
+      <circle cx="214" cy="120" r="2.8" fill="#1c1f23" stroke="#0a0d10" stroke-width="1"/>
+    </g>
+
+    <!-- GUARDA angular, encostada no bolster (sem folga) -->
+    <g id="guard">
+      <path fill="url(#gAccent)" stroke="#23164e" stroke-width="1.5"
+            d="M200,120
+               l-12,-11 l-7,3 l9,8 l-9,8 l7,3 l12,-11
+               l12,11 l7,-3 l-9,-8 l9,-8 l-7,-3 z"/>
+    </g>
+
+    <!-- LÂMINA (perfil reto + tanto, com choil e plunge line) -->
+    <g id="blade" stroke-linejoin="miter">
+      <!-- corpo principal -->
+      <path id="blade-body" fill="url(#gBlackSteel)" stroke="var(--outline)" stroke-opacity="0.45" stroke-width="1"
+            d="M232,112
+               L520,108
+               L574,112
+               L592,116
+               L606,120
+               L592,124
+               L574,128
+               L520,132
+               L232,128
+               L228,124
+               Q230,120 228,116 Z"/>
+
+      <!-- plunge line (transição bevel/ricasso) + choil circular -->
+      <path id="plunge" d="M232,113 q-2,7 -4,11" fill="none" stroke="#cdd6e2" stroke-opacity="0.35" stroke-width="2"/>
+      <circle id="choil" cx="229" cy="120" r="3" fill="#0c1013" stroke="#2a3340" stroke-width="1"/>
+
+      <!-- bevel principal do fio -->
+      <path id="bevel-main" fill="url(#gEdge)" opacity="0.88"
+            d="M234,127 L520,131 L572,126 L590,123 L599,120 L590,117 L572,114 L520,109 L234,113 Z"/>
+
+      <!-- segundo bevel da ponta (tanto) -->
+      <path id="bevel-tanto" fill="#eaf1ff" opacity="0.18"
+            d="M570,114 L592,118 L600,120 L592,122 L570,126 Z"/>
+
+      <!-- fuller discreto -->
+      <path id="fuller" d="M246,114 L520,110 L568,114" fill="none"
+            stroke="#e9f0ff" stroke-opacity="0.22" stroke-width="2"/>
+
+      <!-- jimping no spine -->
+      <g id="jimping" fill="#1e2327" opacity="0.7">
+        <rect x="250" y="106" width="6" height="4" rx="1"/>
+        <rect x="262" y="106" width="6" height="4" rx="1"/>
+        <rect x="274" y="106" width="6" height="4" rx="1"/>
+        <rect x="286" y="106" width="6" height="4" rx="1"/>
+        <rect x="298" y="106" width="6" height="4" rx="1"/>
+      </g>
+
+      <!-- micro marcas (insígnia) -->
+      <g id="runes" stroke="var(--accent-1)" stroke-opacity="0.35" stroke-width="2">
+        <path d="M362,112 l6,10 m-12,0 l12,0"/>
+        <path d="M384,113 l0,12 m-6,-6 l12,0"/>
+      </g>
+    </g>
+
+    <!-- CABO (com liners e wraps) -->
+    <g id="handle">
+      <!-- liners violeta (bordas finas sob o couro) -->
+      <rect x="108" y="94" width="86" height="52" rx="12" fill="url(#gLiner)"/>
+      <!-- núcleo -->
+      <rect x="110" y="96" width="82" height="48" rx="10" fill="url(#gLeather)" stroke="#0a0a0a" stroke-width="2"/>
+      <!-- wraps -->
+      <rect x="114" y="100" width="74" height="40" rx="8" fill="url(#pWrap)" opacity="0.95"/>
+      <!-- rebites (alinhados no eixo do tang) -->
+      <g fill="var(--accent-2)" stroke="#1b113f" stroke-width="1">
+        <circle cx="120" cy="120" r="3"/>
+        <circle cx="178" cy="120" r="3"/>
+      </g>
+    </g>
+
+    <!-- POMO: anel tático com filete violeta e furo de fiel contínuo -->
+    <g id="pommel">
+      <circle cx="94" cy="120" r="16" fill="none" stroke="#1a102f" stroke-width="2"/>
+      <circle cx="94" cy="120" r="13" fill="none" stroke="url(#gAccent)" stroke-width="4"/>
+      <!-- conectores do anel ao tang visual (pequenas placas) -->
+      <rect x="104" y="116" width="6" height="8" rx="2" fill="url(#gBlackSteel)" stroke="#0c1013" stroke-width="1"/>
+    </g>
+  </g>
+
+  <!-- GUIAS (invisíveis) -->
+  <g id="guides" opacity="0">
+    <circle cx="232" cy="120" r="3" fill="#f00"/>
+    <circle cx="606" cy="120" r="3" fill="#0f0"/>
+  </g>
+</svg>

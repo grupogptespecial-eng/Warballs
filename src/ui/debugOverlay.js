@@ -1,8 +1,9 @@
 // Funções de UI e depuração
 
-import { TEAM, CLASSES, CFG } from '../config/cfg.js';
+import { TEAM, CLASSES, CFG, WEAPON_VISUALS } from '../config/cfg.js';
 import { unitListEl } from '../utils/misc.js';
-import { renderUnitPreview } from '../render/visuals_module.js';
+import { renderUnitPreview, druidHornsImg, druidStaffImg, paladinHelmImg, warriorShoulderImg, clericMaceImg, paladinSwordImg, warlockBookImg } from '../render/visuals_module.js';
+import { game } from '../core/game.js';
 
 // Exibe uma mensagem simples de overlay
 export function showMessage(msg) {
@@ -31,6 +32,33 @@ export function populateClassSelect(selectEl) {
   selectEl.innerHTML = optionClassHTML();
 }
 
+function buildPreviewUnit(klass, level, x, y){
+  const base = CLASSES[klass] || {};
+  const u = {
+    className: klass,
+    pos: { x, y },
+    bodyR: CFG.body.radius,
+    level,
+    angle: 0,
+    color: base.color,
+    weaponLen: base.weaponLen ?? CFG.weapon.length,
+    weaponTipR: base.tipRadius ?? CFG.weapon.tipRadius,
+    omega: base.omega ?? CFG.weapon.omega,
+    hasRanged: !!base.hasRanged,
+    cooldownMiraPercent: base.cooldownMiraPercent || 0,
+    weaponOffset: CFG.body.radius
+  };
+  const wv = WEAPON_VISUALS[klass];
+  if (wv) {
+    if (typeof wv.distanceFromCenter === 'number') {
+      u.weaponOffset = u.bodyR * wv.distanceFromCenter;
+    }
+    if (wv.weaponReach != null) u.weaponLen = wv.weaponReach;
+    if (wv.weaponRadius != null) u.weaponTipR = wv.weaponRadius;
+  }
+  return u;
+}
+
 // Renderiza thumbnail de uma unidade (versão isolada)
 export function drawUnitThumb(ctx, klass, color, level){
   const W = ctx.canvas.width, H = ctx.canvas.height;
@@ -46,9 +74,59 @@ export function drawUnitThumb(ctx, klass, color, level){
 
   const base = color || (CLASSES[klass]?.color || '#7dd3fc');
   const cx = W*0.38, cy = H*0.58;
-  const r = 16;
-  const unit = { className: klass, pos:{x:cx, y:cy}, bodyR:r, level }; 
+  const unit = buildPreviewUnit(klass, level, cx, cy);
   renderUnitPreview(ctx, unit, base, performance.now());
+
+  if (game.showHitboxes) {
+    const baseP = {
+      x: unit.pos.x + Math.cos(unit.angle) * unit.weaponOffset,
+      y: unit.pos.y + Math.sin(unit.angle) * unit.weaponOffset
+    };
+    const tipP = {
+      x: unit.pos.x + Math.cos(unit.angle) * (unit.weaponOffset + unit.weaponLen),
+      y: unit.pos.y + Math.sin(unit.angle) * (unit.weaponOffset + unit.weaponLen)
+    };
+    ctx.save();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#0f0';
+    ctx.beginPath();
+    ctx.moveTo(baseP.x, baseP.y);
+    ctx.lineTo(tipP.x, tipP.y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(tipP.x, tipP.y, unit.weaponTipR, 0, Math.PI * 2);
+    ctx.stroke();
+    const noBack = unit.className === 'monge' || unit.className === 'ladino' ||
+      (unit.className === 'druida' && unit.dru?.bear?.active);
+    if (!noBack) {
+      // backstab wedge for preview
+      const backW = Math.PI / 3;
+      const r = unit.bodyR * 6;
+      ctx.strokeStyle = '#f00';
+      ctx.beginPath();
+      ctx.moveTo(unit.pos.x, unit.pos.y);
+      ctx.arc(unit.pos.x, unit.pos.y, r, unit.angle + Math.PI - backW, unit.angle + Math.PI + backW);
+      ctx.closePath();
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  const missing=[];
+  if(klass==='druida'){
+    if(!druidHornsImg.complete||!druidHornsImg.naturalWidth) missing.push(druidHornsImg);
+    if(!druidStaffImg.complete||!druidStaffImg.naturalWidth) missing.push(druidStaffImg);
+  }
+  if(klass==='paladino'){
+    if(!paladinHelmImg.complete||!paladinHelmImg.naturalWidth) missing.push(paladinHelmImg);
+    if(!paladinSwordImg.complete||!paladinSwordImg.naturalWidth) missing.push(paladinSwordImg);
+  }
+  if(klass==='clerigo'&&(!clericMaceImg.complete||!clericMaceImg.naturalWidth)) missing.push(clericMaceImg);
+  if(klass==='bruxo'&&(!warlockBookImg.complete||!warlockBookImg.naturalWidth)) missing.push(warlockBookImg);
+  if(klass==='guerreiro'&&(!warriorShoulderImg.complete||!warriorShoulderImg.naturalWidth)) missing.push(warriorShoulderImg);
+  for(const img of missing){
+    img.addEventListener('load',()=>drawUnitThumb(ctx,klass,color,level),{once:true});
+  }
 
   ctx.save();
   ctx.font = '700 11px system-ui,Segoe UI';
@@ -83,8 +161,11 @@ export function addUnitRow(preset) {
   div.className = 'unit-item pretty';
 
   const classOptions = getClassOptionsHTML();
+  const scale = CFG.body.radius / 16; // matches gameplay body size
+  const thumbW = Math.round(120 * scale);
+  const thumbH = Math.round(64 * scale);
   div.innerHTML = `
-    <canvas class="unit-thumb" width="120" height="64"></canvas>
+    <canvas class="unit-thumb" width="${thumbW}" height="${thumbH}" style="width:${thumbW}px;height:${thumbH}px"></canvas>
     <div class="unit-fields">
       <select class="unit-class">${classOptions}</select>
       <select class="unit-team">${optionTeamHTML()}</select>
