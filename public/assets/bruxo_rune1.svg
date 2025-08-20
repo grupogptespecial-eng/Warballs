@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" role="img" aria-label="Runa sombria em pedra com letras roxas brilhantes">
+  <title>Runa Sombria — letras roxas</title>
+  <desc>Placa de pedra escura com três glifos místicos roxos, com brilho suave.</desc>
+
+  <defs>
+    <!-- Pedra escura -->
+    <linearGradient id="stone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2b2d35"/>
+      <stop offset="60%" stop-color="#1a1b22"/>
+      <stop offset="100%" stop-color="#0e0f14"/>
+    </linearGradient>
+
+    <!-- Vinheta leve na pedra -->
+    <radialGradient id="vignette" cx="50%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.25"/>
+    </radialGradient>
+
+    <!-- Núcleo roxo das letras -->
+    <linearGradient id="runeCore" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#D7B3FF"/>
+      <stop offset="50%" stop-color="#B46CFF"/>
+      <stop offset="100%" stop-color="#8A36FF"/>
+    </linearGradient>
+
+    <!-- Brilho externo roxo -->
+    <filter id="purpleGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <style>
+      .stone { fill: url(#stone); stroke: #11141a; stroke-width: 6; }
+      .crack { stroke: #393c47; stroke-width: 2.5; stroke-linecap: round; opacity: .55; }
+      .rune-core { fill: url(#runeCore); stroke: #E6D7FF; stroke-width: 2.5; }
+      .rune-outline { fill: none; stroke: #9C5BFF; stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; opacity: .9; }
+    </style>
+  </defs>
+
+  <!-- Pedra irregular -->
+  <path class="stone"
+        d="M140 130 L458 85 L520 210 L502 640 L208 710 L95 520 Z"/>
+  <!-- Vinheta -->
+  <path fill="url(#vignette)"
+        d="M140 130 L458 85 L520 210 L502 640 L208 710 L95 520 Z"/>
+
+  <!-- Trincas sutis -->
+  <path class="crack" d="M190 260 C220 245, 250 260, 280 250"/>
+  <path class="crack" d="M300 560 C330 545, 360 560, 380 540"/>
+  <path class="crack" d="M410 340 C390 330, 360 340, 340 330"/>
+
+  <!-- RUNAS: três glifos verticais, com brilho roxo -->
+  <g filter="url(#purpleGlow)">
+    <!-- Runa 1 (topo) — diamante com haste (estilo odal) -->
+    <g transform="translate(300,240)">
+      <path class="rune-outline"
+            d="M0 -60 L45 -15 L0 30 L-45 -15 Z M0 30 L0 90"/>
+      <path class="rune-core"
+            d="M0 -50 L35 -15 L0 20 L-35 -15 Z M-6 24 L-6 84 L6 84 L6 24 Z"/>
+    </g>
+
+    <!-- Runa 2 (meio) — tridente (estilo algiz invertida) -->
+    <g transform="translate(300,400)">
+      <path class="rune-outline"
+            d="M0 -70 L0 70 M0 -20 L-35 15 M0 -20 L35 15"/>
+      <path class="rune-core"
+            d="M-6 -70 L6 -70 L6 70 L-6 70 Z
+               M0 -20 L-35 15 L-29 21 L6 -14 Z
+               M0 -20 L35 15 L29 21 L-6 -14 Z"/>
+    </g>
+
+    <!-- Runa 3 (base) — zig/elo (estilo eihwaz) -->
+    <g transform="translate(300,560)">
+      <path class="rune-outline" d="M-30 50 L30 -50 M-30 -50 L30 50"/>
+      <path class="rune-core"
+            d="M-36 50 L-24 50 L24 -50 L12 -50 Z
+               M-36 -50 L-24 -50 L24 50 L12 50 Z"/>
+    </g>
+  </g>
+</svg>

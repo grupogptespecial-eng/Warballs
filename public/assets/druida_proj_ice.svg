@@ -1,0 +1,100 @@
+<svg width="320" height="420" viewBox="0 0 320 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pedra de runas de gelo">
+  <defs>
+    <!-- Pedra fria -->
+    <linearGradient id="stoneGradIce" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#6F7D8B"/>
+      <stop offset="55%" stop-color="#46515C"/>
+      <stop offset="100%" stop-color="#2B3138"/>
+    </linearGradient>
+    <radialGradient id="stoneHiIce" cx="35%" cy="22%" r="60%">
+      <stop offset="0%"  stop-color="#A7B4C2" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#A7B4C2" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Gelo (runa) -->
+    <linearGradient id="iceFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#E9FAFF"/>
+      <stop offset="50%"  stop-color="#9EDCFF"/>
+      <stop offset="100%" stop-color="#3BA8FF"/>
+    </linearGradient>
+
+    <!-- Brilho gelado -->
+    <filter id="iceGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Gelinho interno (cristalino) -->
+    <filter id="innerFrost" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="g"/>
+      <feBlend in="SourceGraphic" in2="g" mode="screen"/>
+    </filter>
+  </defs>
+
+  <!-- ===== Pedra ===== -->
+  <g id="stone">
+    <path d="M170 35
+             C122 44, 80 78, 66 124
+             C52 170, 60 232, 84 284
+             C106 330, 142 360, 184 360
+             C220 360, 256 336, 274 300
+             C292 264, 298 214, 288 168
+             C276 114, 232 46, 170 35 Z"
+          fill="url(#stoneGradIce)"/>
+    <path d="M170 35
+             C122 44, 80 78, 66 124
+             C52 170, 60 232, 84 284
+             C106 330, 142 360, 184 360
+             C220 360, 256 336, 274 300
+             C292 264, 298 214, 288 168
+             C276 114, 232 46, 170 35 Z"
+          fill="url(#stoneHiIce)"/>
+
+    <!-- Rachaduras com gelo -->
+    <g stroke="#d3eaff" stroke-opacity="0.35" stroke-width="2" fill="none" stroke-linecap="round">
+      <path d="M118 132 C106 150, 106 170, 116 186
+               C126 202, 124 216, 112 230"/>
+      <path d="M212 120 C224 142, 226 162, 214 178
+               C206 188, 206 204, 218 220"/>
+      <path d="M160 250 C148 264, 148 278, 158 290"/>
+    </g>
+    <!-- Geada nas bordas -->
+    <path d="M88 112 C110 88, 142 76, 172 80
+             C206 84, 236 106, 254 138"
+          stroke="#CFEAFF" stroke-opacity="0.35" stroke-width="6" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- ===== Runa de Gelo: Hagalaz (ᚺ) ===== -->
+  <g id="rune" filter="url(#iceGlow)" opacity="0.97">
+    <!-- traço vertical esquerdo -->
+    <path d="M135 120 L135 280" stroke="url(#iceFill)" stroke-width="16" stroke-linecap="round" filter="url(#innerFrost)"/>
+    <!-- traço vertical direito -->
+    <path d="M195 120 L195 280" stroke="url(#iceFill)" stroke-width="16" stroke-linecap="round" filter="url(#innerFrost)"/>
+    <!-- barra diagonal -->
+    <path d="M135 150 L195 250" stroke="url(#iceFill)" stroke-width="14" stroke-linecap="round" filter="url(#innerFrost)"/>
+  </g>
+
+  <!-- ===== Flocos de neve / partículas ===== -->
+  <g id="flakes" fill="url(#iceFill)">
+    <circle cx="110" cy="150" r="2.2">
+      <animate attributeName="opacity" values="0.2;0.9;0.2" dur="2.4s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="150;140;150" dur="2.4s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="220" cy="170" r="2.0">
+      <animate attributeName="opacity" values="0.2;1;0.2" dur="2.8s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="170;158;170" dur="2.8s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="160" cy="210" r="1.8">
+      <animate attributeName="opacity" values="0.2;0.95;0.2" dur="2s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="210;198;210" dur="2s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <!-- Reflexo frio no topo -->
+  <path d="M122 96 C140 82, 166 80, 184 88
+           C168 88, 150 92, 136 100 Z"
+        fill="#EAF6FF" opacity="0.10"/>
+</svg>

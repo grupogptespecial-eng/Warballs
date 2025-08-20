@@ -1,4 +1,4 @@
-import { CFG, CLASSES, CLASS_VISUALS, CLASS_ITEM_SCALE_DEFAULT, GLOBAL_ITEM_SCALE_MULT, LEVEL_SAFE_RADIUS_MULT, ITEM_ALIASES } from '../config/cfg.js';
+import { CFG, CLASSES, CLASS_VISUALS, WEAPON_VISUALS } from '../config/cfg.js';
 import { V } from '../math/vec.js';
 import { clamp, shade } from '../utils/misc.js';
 import { randAng, rrand } from '../utils/rand.js';
@@ -7,7 +7,12 @@ import { Particle } from '../entities/particle.js';
 import { Effect } from '../entities/effect.js';
 import { Projectile } from '../entities/projectile.js';
 import { game } from '../core/game.js';
-import { drawItemSprite, drawWeaponForUnit, applyMicroAnim } from '../render/visuals_module.js';
+import { drawItem, drawWeapon, drawBruxoRunes } from '../render/visuals_module.js';
+import { spawnCritFx } from '../vfx/crit.js';
+
+const bearImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
+if (bearImg.src !== undefined) bearImg.src = 'assets/druida_bear.svg';
+
 
 import {
   makeMonkState,
@@ -55,6 +60,13 @@ import {
 } from './paladino.js';
 
 import {
+  initLadinoState,
+  updateLadino,
+  tryLadinoRoll,
+  tryStealthAttack
+} from './ladino.js';
+
+import {
   clericHP,
   clericTip,
   clericKnock,
@@ -93,6 +105,13 @@ import {
   artificeTookDamage
 } from './artifice.js';
 
+import {
+  makeDruidaState,
+  fireDruida,
+  updateDruida,
+  druidaRegisterCombat
+} from './druida.js';
+
 // Busca o inimigo vivo mais próximo de uma unidade
 export function nearestEnemyOf(self) {
   let best = null, bestD = 1e9;
@@ -129,6 +148,8 @@ export class Unit {
 
     this.prevTip = new V(0, 0);
     this.prevBase = new V(0, 0);
+    this.prevTip2 = new V(0, 0);
+    this.prevBase2 = new V(0, 0);
 
     this.hasRanged = false;
     this.cooldownMiraPercent = 0;
@@ -171,20 +192,26 @@ export class Unit {
     this.freezeReason = null;
     this.monk = makeMonkState();
 
+    // Efeitos gerais
+    this.burn = null;
+    this.slowT = 0;
+    this.slowPct = 0;
+    this.poisons = [];
+
     // Estado interno do Guerreiro
     this.gw = null;
 
     this.prevTip = this.tip();
     this.prevBase = this.weaponBase();
-  }
-
-  applyWeaponVisuals(cfg) {
-    const lenScale = cfg.weaponScale ?? 1;
-    const tipScale = (cfg.weaponThickness ?? 1) * lenScale;
-    this.weaponLen = cfg.weaponLen * lenScale;
-    this.weaponTipR = cfg.tipRadius * tipScale;
-    const offMult = cfg.weaponOffsetMult ?? 1;
-    this.weaponOffset = this.bodyR * offMult;
+    const a = this.angle + Math.PI;
+    this.prevBase2 = new V(
+      this.pos.x + Math.cos(a) * this.weaponOffset,
+      this.pos.y + Math.sin(a) * this.weaponOffset
+    );
+    this.prevTip2 = new V(
+      this.prevBase2.x + Math.cos(a) * this.weaponLen,
+      this.prevBase2.y + Math.sin(a) * this.weaponLen
+    );
   }
 
   // === Inicialização e progressão ===
@@ -263,6 +290,17 @@ export class Unit {
       this.art = makeArtificeState();
       this.a1cd = 0;
       this.a2cd = 0;
+    } else if (this.className === 'druida') {
+      this.baseHP = CFG.body.baseHP;
+      this.hpMax = this.baseHP;
+      this.hp = this.hpMax;
+      this.dru = makeDruidaState();
+
+    } else if (this.className === 'ladino') {
+      this.baseHP = CFG.body.baseHP;
+      this.hpMax = this.baseHP;
+      this.hp = this.hpMax;
+      this.lad = initLadinoState();
 
     } else if (this.className === 'guerreiro') {
         this.baseHP = CFG.guerreiro.hpBase;
@@ -290,14 +328,15 @@ export class Unit {
         };
       }
 
-    const vis = CLASS_VISUALS[this.className] || {};
-    this.applyWeaponVisuals({
-      weaponLen: this.weaponLen,
-      tipRadius: this.weaponTipR,
-      weaponScale: vis.weaponScale,
-      weaponOffsetMult: vis.weaponOffsetMult,
-      weaponThickness: vis.weaponThickness
-    });
+    const wv = WEAPON_VISUALS[this.className];
+    const wcfg = Array.isArray(wv) ? wv[0] : wv;
+    if (wcfg) {
+      if (typeof wcfg.distanceFromCenter === 'number') {
+        this.weaponOffset = this.bodyR * wcfg.distanceFromCenter;
+      }
+      if (wcfg.weaponReach != null) this.weaponLen = wcfg.weaponReach;
+      if (wcfg.weaponRadius != null) this.weaponTipR = wcfg.weaponRadius;
+    }
     if (this.className === 'guerreiro' && this.gw) {
       this.gw.baseWeaponLen = this.weaponLen;
       this.gw.baseWeaponTipR = this.weaponTipR;
@@ -306,6 +345,15 @@ export class Unit {
     this.baseSpeedMult = this.speedMult;
     this.prevTip = this.tip();
     this.prevBase = this.weaponBase();
+    const a = this.angle + Math.PI;
+    this.prevBase2 = new V(
+      this.pos.x + Math.cos(a) * this.weaponOffset,
+      this.pos.y + Math.sin(a) * this.weaponOffset
+    );
+    this.prevTip2 = new V(
+      this.prevBase2.x + Math.cos(a) * this.weaponLen,
+      this.prevBase2.y + Math.sin(a) * this.weaponLen
+    );
   }
 
   xpCost() { return CFG.xp.cost(this.level); }
@@ -373,7 +421,11 @@ export class Unit {
   gainXPWeaponClash() { this.addXP(CFG.xp.gain.weaponClash); }
   gainXPOffense(dmg) {
     const v = CFG.xp.gain.hitDealtBase + dmg * CFG.xp.gain.hitDealtPerDmg;
-    this.addXP(Math.round(v));
+    const xp = Math.round(v);
+    this.addXP(xp);
+    if (this.className === 'druida' && this.dru?.roots) {
+      for (const r of this.dru.roots) if (r.alive) r.gainXP(xp);
+    }
   }
   gainXPKill(enemyLevel = 1) {
     const g = CFG.xp.gain;
@@ -394,6 +446,27 @@ export class Unit {
     }
     let amountMod = amount;
     let impulseMod = impulse;
+    let crit = false;
+    let critChance = CFG.combat.critChance;
+    let critMult = CFG.combat.critMultiplier;
+    if (attacker && attacker.className === 'ladino') {
+      const D = CFG.ladino.daggers;
+      critChance = D.critChance;
+      critMult = D.critMultiplier;
+      const victimDir = V.fromAng(this.angle, 1);
+      const toAttacker = new V(attacker.pos.x - this.pos.x, attacker.pos.y - this.pos.y).nrm();
+      const noBack = this.className === 'monge' || this.className === 'ladino' ||
+        (this.className === 'druida' && this.dru?.bear.active);
+      // 60° wedge behind the victim counts as back
+      if (!noBack && toAttacker.dot(victimDir) < Math.cos(Math.PI - Math.PI / 3)) {
+        critChance = 1;
+        critMult += CFG.ladino.passive.backCritBonus;
+      }
+    }
+    if (attacker && Math.random() < critChance) {
+      amountMod *= critMult;
+      crit = true;
+    }
     if (this.hex && this.hex.t > 0) {
       amountMod *= CFG.bruxo.hex.dmgMult;
     }
@@ -411,9 +484,18 @@ export class Unit {
     }
     this.hp = clamp(this.hp - dmgLeft, 0, this.hpMax);
     const dealt = before - (this.hp + (this.tempHP || 0));
+    if (crit && dealt > 0) spawnCritFx(this.pos.clone());
+    if (dealt > 0) {
+      if (this.className === 'druida') this.druidaRegisterCombat();
+      if (attacker && attacker.className === 'druida') attacker.druidaRegisterCombat();
+    }
     this.vel.add(impulseMod.clone().mul(1 / this.mass));
     if (this.className === 'artifice' && dealt > 0) this.artificeTookDamage();
     if (attacker && attacker !== this && attacker.canDamage(this)) this.gainXPDefense();
+    if (this.className === 'druida' && this.dru?.bear.active && this.hp <= 0) {
+      this.dru.bear.t = 0;
+      return dealt;
+    }
     if (this.hp <= 0 && !this.deadHandled) {
       this.alive = false;
       this.deadHandled = true;
@@ -421,6 +503,20 @@ export class Unit {
       game.onDeath(this);
     }
     return dealt;
+  }
+
+  applyBurn(dps, duration, owner) {
+    this.burn = { dps, t: duration, owner };
+  }
+
+  applySlow(pct, duration) {
+    if (pct > this.slowPct) this.slowPct = pct;
+    this.slowT = Math.max(this.slowT, duration);
+  }
+
+  applyPoison(dps, duration, owner) {
+    if (dps <= 0 || duration <= 0) return;
+    this.poisons.push({ dps, t: duration, owner });
   }
 
   // === Física e colisão ===
@@ -445,7 +541,26 @@ export class Unit {
     const tip = this.tip();
     const pb = this.prevBase || base;
     const pt = this.prevTip || tip;
-    return sweepSegmentCircle(pb, pt, base, tip, pos, r);
+    let hitFront = sweepSegmentCircle(pb, pt, base, tip, pos, r);
+    let hitBack = false;
+    if (this.className === 'ladino') {
+      const a = this.angle + Math.PI;
+      const base2 = new V(
+        this.pos.x + Math.cos(a) * this.weaponOffset,
+        this.pos.y + Math.sin(a) * this.weaponOffset
+      );
+      const tip2 = new V(
+        base2.x + Math.cos(a) * this.weaponLen,
+        base2.y + Math.sin(a) * this.weaponLen
+      );
+      const pb2 = this.prevBase2 || base2;
+      const pt2 = this.prevTip2 || tip2;
+      hitBack = sweepSegmentCircle(pb2, pt2, base2, tip2, pos, r);
+      this.prevBase2 = base2;
+      this.prevTip2 = tip2;
+    }
+    this.lastDaggerHit = hitFront ? 1 : (hitBack ? 2 : 0);
+    return hitFront || hitBack;
   }
 
   enemyInLineOfSight(range) {
@@ -516,11 +631,42 @@ export class Unit {
     }
     this._lastDT = dt;
 
+    if (this.burn) {
+      const dmg = this.burn.dps * dt;
+      const dealt = this.hit(dmg, new V(0, 0), this.burn.owner);
+      if (dealt > 0) {
+        game.onDamage(dealt);
+        this.burn.owner?.gainXPOffense?.(dealt);
+      }
+      this.burn.t -= dt;
+      if (this.burn.t <= 0) this.burn = null;
+    }
+
+    if (this.poisons.length > 0) {
+      for (let i = this.poisons.length - 1; i >= 0; i--) {
+        const p = this.poisons[i];
+        const dmg = p.dps * dt;
+        const dealt = this.hit(dmg, new V(0, 0), p.owner);
+        if (dealt > 0) {
+          game.onDamage(dealt);
+          p.owner?.gainXPOffense?.(dealt);
+        }
+        p.t -= dt;
+        if (p.t <= 0) this.poisons.splice(i, 1);
+      }
+    }
+
+    if (this.slowT > 0) {
+      this.slowT = Math.max(0, this.slowT - dt);
+      if (this.slowT <= 0) this.slowPct = 0;
+    }
+
     if (this.bardBuffT > 0) this.bardBuffT = Math.max(0, this.bardBuffT - dt);
     if (this.bardDebuffT > 0) this.bardDebuffT = Math.max(0, this.bardDebuffT - dt);
     this.speedMult = this.baseSpeedMult;
     if (this.bardBuffT > 0) this.speedMult *= 1 + CFG.bardo.note.buffSpeed;
     if (this.ritmoAura) this.speedMult *= 1 + CFG.bardo.ritmo.speed;
+    if (this.slowT > 0) this.speedMult *= Math.max(0, 1 - this.slowPct);
 
     if (this.weaponLockT > 0) this.weaponLockT -= dt;
 
@@ -596,6 +742,16 @@ export class Unit {
       this.updateArtifice(dt);
       if (this.art.a1cd <= 0) this.castTurret();
       if (this.art.a2cd <= 0) this.castMine();
+    }
+
+    // Druida
+    if (this.className === 'druida') {
+      this.updateDruida(dt);
+    }
+
+    // Ladino
+    if (this.className === 'ladino') {
+      this.updateLadino(dt);
     }
 
     // Ranger (tempo parado)
@@ -774,6 +930,26 @@ export class Unit {
           }
         }
       }
+
+      // Dano de corpo do Druida em forma de urso (this)
+      if (this.className === 'druida' && this.dru?.bear.active && this.canDamage(other)) {
+        if ((this.dru.bear.hitCD || 0) <= 0) {
+          const dmg = CFG.druida.bear.impactDmg * this.dmgMult();
+          const dealt = other.hit(dmg, new V(0, 0), this);
+          if (dealt > 0) this.gainXPOffense(dealt);
+          this.dru.bear.hitCD = 0.25;
+        }
+      }
+
+      // Dano de corpo do Druida em forma de urso (other)
+      if (other.className === 'druida' && other.dru?.bear.active && other.canDamage(this)) {
+        if ((other.dru.bear.hitCD || 0) <= 0) {
+          const dmg = CFG.druida.bear.impactDmg * other.dmgMult();
+          const dealt = this.hit(dmg, new V(0, 0), other);
+          if (dealt > 0) other.gainXPOffense(dealt);
+          other.dru.bear.hitCD = 0.25;
+        }
+      }
     }
 
     // Parry do Monge
@@ -789,6 +965,7 @@ export class Unit {
           && this.weaponSweepHitsCircle(other.pos, other.bodyR + this.weaponTipR)
           && this.canDamage(other)
           && (this.weaponLockT || 0) <= 0
+          && !(other.className === 'ladino' && other.lad && (other.lad.rollT > 0 || other.lad.shadowInvulnT > 0))
           && !parried) {
         let tipBase;
         if (this.className === 'barbaro')        tipBase = barbTip(this.level);
@@ -797,6 +974,9 @@ export class Unit {
         else if (this.className === 'guerreiro') tipBase = CFG.guerreiro.damage.meleeBase;
         else                                     tipBase = CFG.engage.tipDamageBase;
         let dmg = tipBase * this.dmgMult();
+        if (this.className === 'druida' || this.className === 'bruxo' || this.className === 'bardo') {
+          dmg *= 0.3;
+        }
         if (this.className === 'barbaro') dmg = barbApplyPassiveDamage(this, dmg);
         if (this.className === 'guerreiro' && this.gw && this.gw.disciplineReady && this.gw.disciplineStacks > 0) {
           dmg *= 1 + this.gw.disciplineStacks * CFG.guerreiro.discipline.nextHitBonus;
@@ -818,6 +998,16 @@ export class Unit {
           this.gainXPOffense(dealt);
           if (this.className === 'paladino') this.trySacredStrike(t1, dealt);
           if (this.className === 'guerreiro' && this.gw) registerSwap(this, 'MELEE');
+          if (this.className === 'ladino') {
+            const D = CFG.ladino.daggers;
+            if (this.lastDaggerHit === 1) {
+              this.lad.shadowInvulnT = D.shadowInvuln;
+              this.invuln = true;
+            } else if (this.lastDaggerHit === 2) {
+              const P = D.serpentPoison;
+              other.applyPoison(P.dps, P.duration, this);
+            }
+          }
         }
         for (let i = 0; i < CFG.vfx.particlesOnHit; i++) {
           game.spawnParticle(new Particle(
@@ -836,6 +1026,7 @@ export class Unit {
           && other.weaponSweepHitsCircle(this.pos, this.bodyR + other.weaponTipR)
           && other.canDamage(this)
           && (other.weaponLockT || 0) <= 0
+          && !(this.className === 'ladino' && this.lad && (this.lad.rollT > 0 || this.lad.shadowInvulnT > 0))
           && !parried) {
         let tipBase;
         if (other.className === 'barbaro')        tipBase = barbTip(other.level);
@@ -844,6 +1035,9 @@ export class Unit {
         else if (other.className === 'guerreiro') tipBase = CFG.guerreiro.damage.meleeBase;
         else                                      tipBase = CFG.engage.tipDamageBase;
         let dmg = tipBase * other.dmgMult();
+        if (other.className === 'druida' || other.className === 'bruxo' || other.className === 'bardo') {
+          dmg *= 0.3;
+        }
         if (other.className === 'barbaro') dmg = barbApplyPassiveDamage(other, dmg);
         if (other.className === 'guerreiro' && other.gw && other.gw.disciplineReady && other.gw.disciplineStacks > 0) {
           dmg *= 1 + other.gw.disciplineStacks * CFG.guerreiro.discipline.nextHitBonus;
@@ -912,7 +1106,7 @@ export class Unit {
 
   collideSummons(summons) {
     for (const s of summons) {
-      if (!s.alive || (s.kind !== 'familiar' && s.kind !== 'turret' && s.kind !== 'mine')) continue;
+      if (!s.alive || (s.kind !== 'familiar' && s.kind !== 'turret' && s.kind !== 'mine' && s.kind !== 'druidRoot')) continue;
       if (this.team && s.team && this.team === s.team) continue;
       if (!this.weaponSweepHitsCircle(s.pos, s.bodyR + this.weaponTipR)) continue;
       if ((this.weaponLockT || 0) > 0) continue;
@@ -958,7 +1152,7 @@ export class Unit {
       } else {
         dealt = s.hit(dmg, this);
       }
-      if (dealt > 0) this.gainXPOffense(dealt);
+      if (dealt > 0 && s.kind !== 'druidRoot') this.gainXPOffense(dealt);
     }
   }
 
@@ -983,6 +1177,8 @@ export class Unit {
     if (this.className === 'ranger') return rangerFire.call(this);
     if (this.className === 'bruxo') return bruxoFire.call(this);
     if (this.className === 'bardo') return bardoFire.call(this);
+    if (this.className === 'druida') return fireDruida.call(this);
+    if (this.className === 'ladino') return 0;
     if (this.className === 'artifice') return artificeFire.call(this);
     if (this.className === 'guerreiro') return guerreiroFire.call(this);
     const dir = new V(Math.cos(this.angle), Math.sin(this.angle));
@@ -1044,46 +1240,14 @@ export class Unit {
   }
 
   drawClassItem(ctx) {
+    if (this.className === 'druida' && this.dru?.bear.active) return;
     const cfg = CLASS_VISUALS[this.className];
     if (!cfg) return;
 
     const now = performance.now();
-    const items = cfg.items || [cfg];
+    const items = cfg.items || (cfg.item ? [cfg.item] : []);
     for (const ic of items) {
-      const pal = ic.palette || [];
-      const itemId = ic.item;
-      const iRot = (ic.internalRotationDeg ?? 0) * Math.PI / 180;
-      if (itemId === 'colar_monge' || ITEM_ALIASES[itemId] === 'saia_barbaro') {
-        ctx.save();
-        const offY = this.bodyR * (ic.itemOffsetY ?? 0);
-        const offX = this.bodyR * (ic.itemOffsetX ?? 0);
-        ctx.translate(this.pos.x + offX, this.pos.y + offY);
-        ctx.rotate(iRot);
-        applyMicroAnim(ctx, ic.microAnim, now);
-        if (ic.flipX) ctx.scale(-1, 1);
-        const scale = (ic.scale ?? CLASS_ITEM_SCALE_DEFAULT) * (this.bodyR * 2) * GLOBAL_ITEM_SCALE_MULT;
-        drawItemSprite(ctx, itemId, scale, pal, now);
-        ctx.restore();
-      } else {
-        const anchor = (ic.anchorAngleDeg || 0) * Math.PI / 180;
-        const safeR = LEVEL_SAFE_RADIUS_MULT * this.bodyR;
-        let dist = this.bodyR * (ic.distanceFromCenter ?? 0.82);
-        if (dist < safeR) dist = safeR;
-        const offX = this.bodyR * (ic.itemOffsetX ?? 0);
-        const offY = this.bodyR * (ic.itemOffsetY ?? 0);
-        const x = this.pos.x + Math.cos(anchor) * dist + offX;
-        const y = this.pos.y + Math.sin(anchor) * dist + offY;
-        const scale = (ic.scale ?? CLASS_ITEM_SCALE_DEFAULT) * (this.bodyR * 2) * GLOBAL_ITEM_SCALE_MULT;
-
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(anchor);
-        ctx.rotate(iRot);
-        applyMicroAnim(ctx, ic.microAnim, now);
-        if (ic.flipX) ctx.scale(-1, 1);
-        drawItemSprite(ctx, itemId, scale, pal, now);
-        ctx.restore();
-      }
+      drawItem(ctx, this, ic, now);
     }
   }
 
@@ -1198,6 +1362,10 @@ export class Unit {
     }
 
     ctx.save();
+    const ladInv = this.className === 'ladino' && this.lad && (this.lad.rollT > 0 || this.lad.shadowInvulnT > 0);
+    if (ladInv) {
+      ctx.globalAlpha = 0.5;
+    }
     const base = this.color;
     const outlineCol = shade(base, -0.70);
     ctx.beginPath();
@@ -1212,40 +1380,82 @@ export class Unit {
     ctx.arc(this.pos.x - this.bodyR * 0.35, this.pos.y - this.bodyR * 0.35, this.bodyR * 0.55, 0, Math.PI * 2);
     ctx.fillStyle = '#ffffff';
     ctx.fill();
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha = ladInv ? 0.5 : 1;
 
+    const isBear = this.className === 'druida' && this.dru?.bear.active;
     // Desenha itens visuais sutis da classe antes das armas
-    this.drawClassItem(ctx);
+    if (!isBear) {
+      this.drawClassItem(ctx);
+    }
+    if (isBear && bearImg.complete && bearImg.naturalWidth) {
+      const s = this.bodyR * 2.2;
+      ctx.save();
+      ctx.globalAlpha = 0.9;
+      ctx.drawImage(bearImg, this.pos.x - s / 2, this.pos.y - s / 2, s, s);
+      ctx.restore();
+    }
 
-    const cfg = CLASS_VISUALS[this.className];
     const skipWeapon = (this.className === 'guerreiro' && this.gw &&
       (this.gw.state === 'THROW_FLIGHT' || this.gw.disarmT > 0)) ||
-      this.className === 'monge';
+      this.className === 'monge' ||
+      isBear;
     if (!skipWeapon) {
+      drawWeapon(ctx, this);
+    }
+    if (this.className === 'bruxo') {
+      drawBruxoRunes(ctx, this, performance.now());
+    }
+    if (game.showHitboxes) {
+      const base = this.weaponBase();
+      const tip = this.tip();
       ctx.save();
-      ctx.translate(this.pos.x, this.pos.y);
-      const off = (cfg?.weaponAngleDeg ?? 30) * Math.PI / 180;
-      let wScale, wOff;
-      if (this.className === 'guerreiro') {
-        wScale = this.weaponLen / 0.88;
-        wOff = this.weaponOffset;
-        const ang = this.angle + off;
-        ctx.rotate(ang);
-        ctx.translate(wOff + 0.48 * wScale, 0);
-      } else {
-        wScale = this.bodyR * 1.2 * (cfg?.weaponScale ?? 1);
-        wOff = this.bodyR * (cfg?.weaponOffsetMult ?? 1.4);
-        if (this.className === 'paladino' || this.className === 'clerigo') {
-          ctx.rotate(this.angle);
-          ctx.translate(wOff, 0);
-          ctx.rotate(off);
-        } else {
-          const ang = this.angle + off;
-          ctx.rotate(ang);
-          ctx.translate(wOff, 0);
-        }
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = '#0f0';
+      // body circle
+      ctx.beginPath();
+      ctx.arc(this.pos.x, this.pos.y, this.bodyR, 0, Math.PI * 2);
+      ctx.stroke();
+      // weapon segment and tip circle
+      ctx.beginPath();
+      ctx.moveTo(base.x, base.y);
+      ctx.lineTo(tip.x, tip.y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(tip.x, tip.y, this.weaponTipR, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // second dagger hitbox
+      if (this.className === 'ladino') {
+        const a = this.angle + Math.PI;
+        const base2 = new V(
+          this.pos.x + Math.cos(a) * this.weaponOffset,
+          this.pos.y + Math.sin(a) * this.weaponOffset
+        );
+        const tip2 = new V(
+          base2.x + Math.cos(a) * this.weaponLen,
+          base2.y + Math.sin(a) * this.weaponLen
+        );
+        ctx.beginPath();
+        ctx.moveTo(base2.x, base2.y);
+        ctx.lineTo(tip2.x, tip2.y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(tip2.x, tip2.y, this.weaponTipR, 0, Math.PI * 2);
+        ctx.stroke();
       }
-      drawWeaponForUnit(ctx, this, wScale);
+      const noBack = this.className === 'monge' || this.className === 'ladino' ||
+        (this.className === 'druida' && this.dru?.bear.active);
+      if (!noBack) {
+        // backstab wedge (debug)
+        const backW = Math.PI / 3;
+        const r = this.bodyR * 6;
+        ctx.strokeStyle = '#f00';
+        ctx.beginPath();
+        ctx.moveTo(this.pos.x, this.pos.y);
+        ctx.arc(this.pos.x, this.pos.y, r, this.angle + Math.PI - backW, this.angle + Math.PI + backW);
+        ctx.closePath();
+        ctx.stroke();
+      }
       ctx.restore();
     }
     if (game.debugHit) {
@@ -1282,13 +1492,18 @@ Object.assign(Unit.prototype, {
   clericStartBeam,
   clericBeamTick,
   castPrayer,
-  castHex,
-  castFamiliar,
-  updateGuerreiro,
-  guerreiroParryAgainst,
-  castTurret,
-  castMine,
-  updateArtifice,
-  artificeTookDamage
-});
+    castHex,
+    castFamiliar,
+    updateGuerreiro,
+    guerreiroParryAgainst,
+    castTurret,
+    castMine,
+    updateArtifice,
+    artificeTookDamage,
+    updateDruida,
+    druidaRegisterCombat,
+    updateLadino,
+    tryLadinoRoll,
+    tryStealthAttack
+  });
 

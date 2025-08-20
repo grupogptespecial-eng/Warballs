@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 560" width="300" height="300" role="img" aria-label="Rogue hood logo (cutout editable)" style="opacity: 1;">
+<title>Rogue hood logo (cutout editable)</title>
+<defs>
+<linearGradient id="hoodGradient" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="512" y2="0" gradientTransform="rotate(0 256 256)">
+<stop offset="0%" stop-color="#0b0b0b"/>
+<stop offset="100%" stop-color="#3f3f46"/>
+</linearGradient>
+<filter id="fx" x="-20%" y="-20%" width="140%" height="140%">
+<feGaussianBlur in="SourceGraphic" stdDeviation="0.2" result="blur"/>
+<feDropShadow dx="-1" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0"/>
+</filter>
+<mask id="faceHole">
+<rect width="100%" height="100%" fill="white"/>
+<g transform="translate(256 210) rotate(0) scale(1.12 0.9) translate(-256 -210)">
+<path d="M256 110
+ C 220 115, 190 150, 186 195
+ C 182 230, 198 260, 214 278
+ C 230 296, 244 304, 256 304
+ C 268 304, 282 296, 298 278
+ C 314 260, 330 230, 326 195
+ C 322 150, 292 115, 256 110 Z" fill="black"/>
+</g>
+</mask>
+</defs>
+<g mask="url(#faceHole)" filter="url(#fx)">
+<g transform="translate(256 256) rotate(0) skewX(0) skewY(1) scale(0.8 0.8) translate(-256 -256)">
+<path d="M256 40
+ C 190 50, 140 110, 130 180
+ C 120 230, 140 280, 170 315
+ C 140 332, 118 360, 110 400
+ C 168 360, 215 352, 256 352
+ C 297 352, 344 360, 402 400
+ C 394 360, 372 332, 342 315
+ C 372 280, 392 230, 382 180
+ C 372 110, 322 50, 256 40 Z" fill="#0b0b0b"/>
+</g>
+<g transform="translate(256 256) rotate(0) scale(1) translate(-256 -256)" opacity="1">
+<path d="M176 336
+ C 156 344, 145 366, 152 392
+ C 170 374, 178 360, 176 336 Z" fill="#0b0b0b"/>
+<path d="M336 336
+ C 356 344, 367 366, 360 392
+ C 342 374, 334 360, 336 336 Z" fill="#0b0b0b"/>
+</g>
+</g>
+</svg>

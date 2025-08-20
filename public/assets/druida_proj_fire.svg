@@ -1,0 +1,112 @@
+<svg width="320" height="420" viewBox="0 0 320 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pedra de runas de fogo sem sombra">
+  <defs>
+    <!-- Pedra -->
+    <linearGradient id="stoneGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#616771"/>
+      <stop offset="55%" stop-color="#3D424A"/>
+      <stop offset="100%" stop-color="#26292E"/>
+    </linearGradient>
+    <radialGradient id="stoneHi" cx="30%" cy="20%" r="70%">
+      <stop offset="0%" stop-color="#8A9099" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#8A9099" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Fogo -->
+    <linearGradient id="fireFill" x1="0" y1="0" x2="0" y2="1">
+      <stop id="fireStop1" offset="0%"   stop-color="#FFF6B0"/>
+      <stop id="fireStop2" offset="50%"  stop-color="#FF9F3C"/>
+      <stop id="fireStop3" offset="100%" stop-color="#E23600"/>
+    </linearGradient>
+
+    <!-- Brilho externo do fogo (não é sombra) -->
+    <filter id="fireGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Brilho interno -->
+    <filter id="innerGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="g"/>
+      <feBlend in="SourceGraphic" in2="g" mode="screen"/>
+    </filter>
+  </defs>
+
+  <!-- Fundo opcional escuro (descomente se quiser) -->
+  <!-- <rect width="100%" height="100%" fill="#0f0f12"/> -->
+
+  <!-- ===== Pedra ===== -->
+  <g id="stone">
+    <path d="M170 35
+             C122 44, 80 78, 66 124
+             C52 170, 60 232, 84 284
+             C106 330, 142 360, 184 360
+             C220 360, 256 336, 274 300
+             C292 264, 298 214, 288 168
+             C276 114, 232 46, 170 35 Z"
+          fill="url(#stoneGrad)"/>
+    <path d="M170 35
+             C122 44, 80 78, 66 124
+             C52 170, 60 232, 84 284
+             C106 330, 142 360, 184 360
+             C220 360, 256 336, 274 300
+             C292 264, 298 214, 288 168
+             C276 114, 232 46, 170 35 Z"
+          fill="url(#stoneHi)"/>
+    <!-- rachaduras -->
+    <g stroke="#9aa0a9" stroke-opacity="0.25" stroke-width="2" fill="none" stroke-linecap="round">
+      <path d="M120 130 C110 150, 108 172, 116 188
+               C122 200, 124 214, 116 226"/>
+      <path d="M210 120 C220 140, 224 162, 216 178
+               C210 190, 210 206, 220 220"/>
+      <path d="M160 250 C150 262, 148 276, 156 286"/>
+    </g>
+  </g>
+
+  <!-- ===== Runa de fogo ===== -->
+  <g id="rune" filter="url(#fireGlow)" opacity="0.95">
+    <path d="M160 105
+             C146 126, 148 150, 162 166
+             C178 184, 176 206, 156 222
+             C140 236, 144 260, 166 268
+             C190 276, 214 260, 218 240
+             C222 220, 210 202, 192 190
+             C176 178, 174 156, 192 138
+             C210 120, 208 98, 190 92
+             C176 88, 166 92, 160 105 Z"
+          fill="url(#fireFill)" filter="url(#innerGlow)"/>
+    <path d="M174 132
+             C166 144, 170 156, 180 164
+             C192 174, 190 188, 176 198
+             C164 206, 168 220, 184 224
+             C202 228, 214 214, 212 202
+             C210 190, 200 182, 192 176
+             C182 168, 182 154, 192 146
+             C204 136, 200 126, 190 124
+             C182 122, 178 124, 174 132 Z"
+          fill="url(#fireFill)" opacity="0.9"/>
+  </g>
+
+  <!-- ===== Faíscas (animação opcional) ===== -->
+  <g id="embers">
+    <circle cx="128" cy="150" r="2.6" fill="url(#fireFill)">
+      <animate attributeName="opacity" values="0.2;1;0.2" dur="1.8s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="150;130;150" dur="1.8s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="214" cy="170" r="2.2" fill="url(#fireFill)">
+      <animate attributeName="opacity" values="0.2;0.9;0.2" dur="2s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="170;150;170" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="154" cy="210" r="1.8" fill="url(#fireFill)">
+      <animate attributeName="opacity" values="0.2;1;0.2" dur="1.6s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="210;192;210" dur="1.6s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <!-- Reflexo suave no topo -->
+  <path d="M122 96 C140 82, 166 80, 184 88
+           C168 88, 150 92, 136 100 Z"
+        fill="#FFFFFF" opacity="0.08"/>
+</svg>
