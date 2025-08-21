@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" role="img" aria-label="Runa sombria II em pedra com glifos roxos brilhantes">
+  <title>Runa Sombria II — letras roxas</title>
+  <desc>Placa de pedra escura com selo circular e glifos roxos brilhantes no centro.</desc>
+
+  <defs>
+    <!-- Pedra escura -->
+    <linearGradient id="stone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2b2d35"/>
+      <stop offset="60%" stop-color="#1a1b22"/>
+      <stop offset="100%" stop-color="#0e0f14"/>
+    </linearGradient>
+
+    <!-- Vinheta leve na pedra -->
+    <radialGradient id="vignette" cx="50%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.25"/>
+    </radialGradient>
+
+    <!-- Núcleo roxo das letras -->
+    <linearGradient id="runeCore" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#D7B3FF"/>
+      <stop offset="50%" stop-color="#B46CFF"/>
+      <stop offset="100%" stop-color="#8A36FF"/>
+    </linearGradient>
+
+    <!-- Brilho externo roxo -->
+    <filter id="purpleGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <style>
+      .stone { fill: url(#stone); stroke: #11141a; stroke-width: 6; }
+      .crack { stroke: #393c47; stroke-width: 2.5; stroke-linecap: round; opacity: .55; }
+      .rune-core { fill: url(#runeCore); stroke: #E6D7FF; stroke-width: 2.5; }
+      .rune-core-stroke { fill: none; stroke: url(#runeCore); stroke-width: 6; }
+      .rune-outline { fill: none; stroke: #9C5BFF; stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; opacity: .9; }
+    </style>
+  </defs>
+
+  <!-- Pedra irregular (formato diferente da anterior) -->
+  <path class="stone"
+        d="M115 150 L470 110 L540 250 L510 660 L230 735 L80 520 Z"/>
+  <!-- Vinheta -->
+  <path fill="url(#vignette)"
+        d="M115 150 L470 110 L540 250 L510 660 L230 735 L80 520 Z"/>
+
+  <!-- Trincas sutis -->
+  <path class="crack" d="M170 300 C205 285, 255 295, 285 285"/>
+  <path class="crack" d="M350 525 C380 510, 410 520, 430 505"/>
+  <path class="crack" d="M420 360 C400 350, 365 360, 345 350"/>
+
+  <!-- Selo e glifos roxos -->
+  <g filter="url(#purpleGlow)" transform="translate(300,420)">
+    <!-- Anel externo (aura) -->
+    <circle r="98" class="rune-outline"/>
+    <!-- Anel interno (núcleo roxo) -->
+    <circle r="92" class="rune-core-stroke"/>
+
+    <!-- Glifo central: flecha ascendente (chefe + haste) -->
+    <path class="rune-outline" d="M0 -100 L0 60 M0 -100 L-28 -65 M0 -100 L28 -65"/>
+    <path class="rune-core"
+          d="M-6 -100 L6 -100 L6 60 L-6 60 Z
+             M0 -100 L-28 -65 L-20 -60 L0 -85 Z
+             M0 -100 L28 -65 L20 -60 L0 -85 Z"/>
+
+    <!-- Braços laterais curvos (crescente duplo) -->
+    <path class="rune-outline" d="M-70 -10 Q -95 0 -70 10 M70 -10 Q 95 0 70 10"/>
+    <path class="rune-core-stroke" d="M-66 -8 Q -86 0 -66 8 M66 -8 Q 86 0 66 8"/>
+
+    <!-- Diamante inferior com cauda -->
+    <path class="rune-outline" d="M0 70 L18 90 L0 110 L-18 90 Z M0 110 L0 140"/>
+    <path class="rune-core"
+          d="M0 76 L12 90 L0 104 L-12 90 Z
+             M-6 110 L-6 140 L6 140 L6 110 Z"/>
+  </g>
+</svg>

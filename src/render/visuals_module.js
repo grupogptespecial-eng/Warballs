@@ -1,5 +1,5 @@
 // Generated visuals module for class items and weapons
-import { CLASS_VISUALS, ITEM_ALIASES, CLASS_ITEM_SCALE_DEFAULT, GLOBAL_ITEM_SCALE_MULT, LEVEL_SAFE_RADIUS_MULT, BARBARIAN_PALETTE, CLASSES } from '../config/cfg.js';
+import { CLASS_VISUALS, WEAPON_VISUALS, ITEM_ALIASES, CLASS_ITEM_SCALE_DEFAULT, GLOBAL_ITEM_SCALE_MULT, LEVEL_SAFE_RADIUS_MULT } from '../config/cfg.js';
 
 export const TAU = Math.PI * 2;
 
@@ -31,6 +31,39 @@ function initMonkBeadGrad(ctx) {
   MONK_BEAD_GRAD.addColorStop(0, '#c47a4a');
   MONK_BEAD_GRAD.addColorStop(0.55, '#8d4d2d');
   MONK_BEAD_GRAD.addColorStop(1, '#4a2416');
+}
+
+export const druidHornsImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
+if (druidHornsImg.src !== undefined) druidHornsImg.src = 'assets/druida_horns.svg';
+export const druidStaffImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
+export const paladinHelmImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
+if (paladinHelmImg.src !== undefined) paladinHelmImg.src = 'assets/capacete_paladino.svg';
+if (druidStaffImg.src !== undefined) druidStaffImg.src = 'assets/druida_staff.svg';
+export const clericDiademImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
+if (clericDiademImg.src !== undefined) clericDiademImg.src = 'assets/diadema_clerigo.svg';
+export const warriorShoulderImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
+if (warriorShoulderImg.src !== undefined) warriorShoulderImg.src = 'assets/ombreira_couro.svg';
+export const clericMaceImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
+if (clericMaceImg.src !== undefined) clericMaceImg.src = 'assets/maca_clerigo.svg';
+export const paladinSwordImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
+if (paladinSwordImg.src !== undefined) paladinSwordImg.src = 'assets/espada_paladino.svg';
+export const warlockBookImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
+if (warlockBookImg.src !== undefined) warlockBookImg.src = 'assets/grimorio_bruxo.svg';
+export const ladinoShadowDaggerImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
+if (ladinoShadowDaggerImg.src !== undefined) ladinoShadowDaggerImg.src = 'assets/ladino_dagger_shadow.svg';
+export const ladinoSerpentDaggerImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
+if (ladinoSerpentDaggerImg.src !== undefined) ladinoSerpentDaggerImg.src = 'assets/ladino_dagger_serpent.svg';
+export const ladinoHoodImg = (typeof Image !== 'undefined') ? new Image() : { complete: false };
+if (ladinoHoodImg.src !== undefined) ladinoHoodImg.src = 'assets/ladino_hood.svg';
+export const bruxoRuneImgs = [
+  (typeof Image !== 'undefined') ? new Image() : { complete: false },
+  (typeof Image !== 'undefined') ? new Image() : { complete: false },
+  (typeof Image !== 'undefined') ? new Image() : { complete: false }
+];
+if (bruxoRuneImgs[0].src !== undefined) {
+  bruxoRuneImgs[0].src = 'assets/bruxo_rune1.svg';
+  bruxoRuneImgs[1].src = 'assets/bruxo_rune2.svg';
+  bruxoRuneImgs[2].src = 'assets/bruxo_rune3.svg';
 }
 
 // ===== Helpers
@@ -260,6 +293,62 @@ export function drawItemSprite(ctx, id, scale, pal, now){
     ctx.stroke();
     return;
   }
+
+  if (useId === 'druida_horns') {
+    const w = 900, h = 360;
+    const s = scale / w;
+    ctx.save();
+    ctx.scale(s, s);
+    if (druidHornsImg && druidHornsImg.complete && druidHornsImg.naturalWidth) {
+      ctx.drawImage(druidHornsImg, -w / 2, -h / 2, w, h);
+    }
+    ctx.restore();
+    return;
+  }
+  if (useId === 'diadema_clerigo') {
+    const w = 900, h = 360;
+    const s = scale / w;
+    ctx.save();
+    ctx.scale(s, s);
+    if (clericDiademImg && clericDiademImg.complete && clericDiademImg.naturalWidth) {
+      ctx.drawImage(clericDiademImg, -w / 2, -h / 2, w, h);
+    }
+    ctx.restore();
+    return;
+  }
+  if (useId === 'ladino_hood') {
+    const w = 512, h = 560;
+    const s = scale / w;
+    ctx.save();
+    ctx.scale(s, s);
+    if (ladinoHoodImg && ladinoHoodImg.complete && ladinoHoodImg.naturalWidth) {
+      ctx.drawImage(ladinoHoodImg, -w / 2, -h / 2, w, h);
+    }
+    ctx.restore();
+    return;
+  }
+  if (useId === 'ombreira_couro') {
+    const w = 900, h = 900;
+    const s = scale / w;
+    ctx.save();
+    ctx.scale(s, s);
+    if (warriorShoulderImg && warriorShoulderImg.complete && warriorShoulderImg.naturalWidth) {
+      ctx.drawImage(warriorShoulderImg, -w / 2, -h / 2, w, h);
+    }
+    ctx.restore();
+    return;
+  }
+  if (useId === 'capacete_paladino') {
+    const w = 900, h = 900;
+    const s = scale / w;
+    ctx.save();
+    ctx.scale(s, s);
+    if (paladinHelmImg && paladinHelmImg.complete && paladinHelmImg.naturalWidth) {
+      ctx.drawImage(paladinHelmImg, -w / 2, -h / 2, w, h);
+    }
+    ctx.restore();
+    return;
+  }
 }
 
 // ===== Armas
@@ -301,10 +390,45 @@ export function drawAxeDoubleBitV2(ctx, S){
   blade(154, 17, 90);
 }
 
-export function drawSword(ctx,S,pal){ const [metal,gold]=pal||['#dfe5ee','#e6d27a']; rr(ctx,-S*0.04,-S*0.5,S*0.08,S*0.9,S*0.04); ctx.fillStyle=metal; ctx.fill(); rr(ctx,-S*0.18,-S*0.15,S*0.36,S*0.10,S*0.05); ctx.fillStyle=gold; ctx.fill(); rr(ctx,-S*0.04,S*0.4,S*0.08,S*0.2,S*0.04); ctx.fillStyle=shade(gold,-0.45); ctx.fill(); }
-export function drawMace(ctx,unit,S,pal){ const [metal]=pal||['#cfd5dd']; rr(ctx,-S*0.04,-S*0.4,S*0.08,S*0.7,S*0.04); ctx.fillStyle=shade(metal,-0.2); ctx.fill(); ctx.beginPath(); const headR = unit?.weaponTipR ?? S*0.12; ctx.arc(0,-S*0.45,headR,0,TAU); ctx.fillStyle=metal; ctx.fill(); }
+export function drawSword(ctx,S){
+  if (!paladinSwordImg || !paladinSwordImg.complete || !paladinSwordImg.naturalWidth) return;
+  const w = 900, h = 900;
+  const s = S / h;
+  ctx.save();
+  ctx.scale(s, s);
+  ctx.drawImage(paladinSwordImg, -w / 2, -h / 2, w, h);
+  ctx.restore();
+}
+
+export function drawLadinoDagger(ctx,S,which){
+  const img = which === 0 ? ladinoShadowDaggerImg : ladinoSerpentDaggerImg;
+  if (!img || !img.complete || !img.naturalWidth) return;
+  const w = 640, h = 240;
+  const s = S / w;
+  ctx.save();
+  ctx.scale(s, s);
+  ctx.drawImage(img, -w / 2, -h / 2, w, h);
+  ctx.restore();
+}
+export function drawMace(ctx,unit,S){
+  if (!clericMaceImg || !clericMaceImg.complete || !clericMaceImg.naturalWidth) return;
+  const w = 900, h = 900;
+  const s = S / h;
+  ctx.save();
+  ctx.scale(s, s);
+  ctx.drawImage(clericMaceImg, -w / 2, -h / 2, w, h);
+  ctx.restore();
+}
 export function drawBow(ctx,S,pal){ const [wood,string]=pal||['#6e4a2b','#d9c7b0']; ctx.lineWidth=3; ctx.strokeStyle=shade(wood,-0.1); ctx.beginPath(); ctx.moveTo(-S*0.4,-S*0.4); ctx.quadraticCurveTo(0,0,-S*0.4,S*0.4); ctx.stroke(); ctx.lineWidth=1.6; ctx.strokeStyle=string; ctx.beginPath(); ctx.moveTo(-S*0.4,-S*0.4); ctx.lineTo(-S*0.4,S*0.4); ctx.stroke(); }
-export function drawBook(ctx,S,pal){ const [cover,spine]=pal||['#6f5aa3','#4d3f73']; rr(ctx,-S*0.22,-S*0.16,S*0.44,S*0.32,S*0.04); ctx.fillStyle=cover; ctx.fill(); rr(ctx,-S*0.22,-S*0.16,S*0.08,S*0.32,S*0.04); ctx.fillStyle=spine; ctx.fill(); }
+export function drawBook(ctx,S){
+  if (!warlockBookImg || !warlockBookImg.complete || !warlockBookImg.naturalWidth) return;
+  const w = 900, h = 700;
+  const s = S / h;
+  ctx.save();
+  ctx.scale(s, s);
+  ctx.drawImage(warlockBookImg, -w / 2, -h / 2, w, h);
+  ctx.restore();
+}
 export function drawSpear(ctx,S,pal){
   const [metal]=pal||['#dfe5ee'];
   rr(ctx,-S*0.48,-S*0.03,S*0.8,S*0.06,S*0.03);
@@ -412,22 +536,123 @@ export function drawFlute(ctx,S,pal){
   for(const x of holes){ ctx.beginPath(); ctx.arc(x,0,S*0.05,0,TAU); ctx.fill(); }
 }
 
-// ===== Escolha de arma por classe/override
-export function drawWeaponForUnit(ctx, unit, S){
-  const cfg = CLASS_VISUALS[unit.className] || {};
-  if (cfg.weaponOverride === 'axe_double_bit_v2') return drawAxeDoubleBitV2(ctx,S,cfg.palette);
-  if (cfg.weaponOverride === 'arcane_cannon') return drawArcaneCannon(ctx,S,cfg.palette);
-  if (cfg.weaponOverride === 'flauta') return drawFlute(ctx,S,cfg.palette);
-  switch(unit.className){
-    case 'ranger': return drawBow(ctx,S,cfg.palette);
-    case 'paladino': return drawSword(ctx,S,cfg.palette);
-    case 'clerigo': return drawMace(ctx,unit,S,cfg.palette);
-    case 'bruxo': return drawBook(ctx,S,cfg.palette);
-    case 'guerreiro': return drawSpear(ctx,S,cfg.palette);
-    case 'artifice': return drawArcaneCannon(ctx,S,cfg.palette);
-    case 'bardo': return drawFlute(ctx,S,cfg.palette);
-    case 'monge': return;
-    default: return drawMace(ctx,unit,S,cfg.palette);
+export function drawDruidaStaff(ctx,S){
+  if (!druidStaffImg || !druidStaffImg.complete || !druidStaffImg.naturalWidth) return;
+  const w = 260, h = 520;
+  const s = S / h;
+  ctx.save();
+  ctx.scale(s, s);
+  ctx.drawImage(druidStaffImg, -w / 2, -h / 2, w, h);
+  ctx.restore();
+}
+
+// Mapa para renderização de armas por chave textual
+export const WEAPON_DRAWERS = {
+  axe: (ctx,S,p,u)=>drawAxeDoubleBitV2(ctx,S,p),
+  bow: (ctx,S,p,u)=>drawBow(ctx,S,p),
+  sword: (ctx,S,p,u)=>drawSword(ctx,S),
+  mace: (ctx,S,p,u)=>drawMace(ctx,u,S),
+  book: (ctx,S,p,u)=>drawBook(ctx,S),
+  flute: (ctx,S,p,u)=>drawFlute(ctx,S,p),
+  arcaneCannon: (ctx,S,p,u)=>drawArcaneCannon(ctx,S,p),
+  spear: (ctx,S,p,u)=>drawSpear(ctx,S,p),
+  druidaStaff: (ctx,S,p,u)=>drawDruidaStaff(ctx,S,p),
+  ladinoDaggers: (ctx,S,p,u,which)=>drawLadinoDagger(ctx,S,which)
+};
+
+// Generic helper to draw an item using config values
+export function drawItem(ctx, unit, ic, now){
+  const itemId = ic.item;
+  const pal = ic.palette || [];
+  const scaleBase = (unit.bodyR * 2) * GLOBAL_ITEM_SCALE_MULT;
+  const scaleFactor = ic.scale ?? CLASS_ITEM_SCALE_DEFAULT;
+  const iRot = (ic.internalRotation ?? 0) * Math.PI / 180;
+  const offX = unit.bodyR * (ic.itemOffsetX ?? 0);
+  const offY = unit.bodyR * (ic.itemOffsetY ?? 0);
+  const anchorPix = ic.itemAnchor || [0, 0];
+
+  ctx.save();
+  ctx.translate(unit.pos.x + offX, unit.pos.y + offY);
+
+  // special sprites that hug the body center
+  if (itemId === 'colar_monge' || ITEM_ALIASES[itemId] === 'saia_barbaro') {
+    ctx.rotate(iRot);
+    applyMicroAnim(ctx, ic.microAnim, now);
+    if (ic.flipX) ctx.scale(-1, 1);
+    ctx.scale(scaleFactor, scaleFactor);
+    if (anchorPix[0] || anchorPix[1]) ctx.translate(-anchorPix[0] * scaleBase, -anchorPix[1] * scaleBase);
+    drawItemSprite(ctx, itemId, scaleBase, pal, now);
+    ctx.restore();
+    return;
+  }
+
+  const safeR = LEVEL_SAFE_RADIUS_MULT * unit.bodyR;
+  const anchor = (ic.anchorDeg || 0) * Math.PI / 180;
+  let dist = unit.bodyR * (ic.distanceFromCenter ?? 0.82);
+  if (dist < safeR) dist = safeR;
+
+  ctx.rotate(anchor);
+  ctx.translate(dist, 0);
+  ctx.rotate(iRot);
+  applyMicroAnim(ctx, ic.microAnim, now);
+  if (ic.flipX) ctx.scale(-1, 1);
+  ctx.scale(scaleFactor, scaleFactor);
+  if (anchorPix[0] || anchorPix[1]) ctx.translate(-anchorPix[0] * scaleBase, -anchorPix[1] * scaleBase);
+  drawItemSprite(ctx, itemId, scaleBase, pal, now);
+  ctx.restore();
+}
+
+// Helper para desenhar a arma de uma unidade a partir de CLASS_VISUALS
+export function drawWeapon(ctx, unit){
+  const vis = CLASS_VISUALS[unit.className];
+  const wv = WEAPON_VISUALS[unit.className];
+  if (!wv) return;
+  const base = unit.bodyR * 1.2;
+  const configs = Array.isArray(wv) ? wv : [wv];
+  for (const cfg of configs) {
+    const pal = cfg.palette || vis?.palette;
+    let scaleFactor = cfg.scale ?? 1;
+    if (cfg.weaponReach != null) {
+      scaleFactor *= cfg.weaponReach / base;
+    }
+    const aDeg = cfg.anchorAngleDeg ?? cfg.weaponAngleDeg ?? cfg.anchorDeg ?? 0;
+    const anchorAng = (unit.angle ?? 0) + aDeg * Math.PI / 180;
+    const dist = unit.weaponOffset !== undefined ? unit.weaponOffset : unit.bodyR * (cfg.distanceFromCenter ?? 1);
+    const iRot = (cfg.internalRotation ?? 0) * Math.PI / 180;
+    const anchor = cfg.weaponAnchor || [0,0];
+    const key = cfg.draw || 'mace';
+    const drawFn = WEAPON_DRAWERS[key] || WEAPON_DRAWERS.mace;
+    ctx.save();
+    ctx.translate(unit.pos.x, unit.pos.y);
+    ctx.rotate(anchorAng);
+    ctx.translate(dist, 0);
+    ctx.rotate(iRot);
+    ctx.scale(scaleFactor, scaleFactor);
+    if (anchor[0] || anchor[1]) ctx.translate(-anchor[0] * base, -anchor[1] * base);
+    drawFn(ctx, base, pal, unit, cfg.which);
+    ctx.restore();
+  }
+}
+
+export function drawBruxoRunes(ctx, unit, now){
+  const cfg = CLASS_VISUALS.bruxo;
+  const runes = (cfg.items || []).filter(it => it.item && it.item.startsWith('bruxo_rune'));
+  const baseAng = now / 1000;
+  for (let i = 0; i < runes.length; i++) {
+    const ic = runes[i];
+    const img = bruxoRuneImgs[i];
+    if (!img.complete || !img.naturalWidth) continue;
+    const dist = unit.bodyR * (ic.distanceFromCenter || 1.6);
+    const size = unit.bodyR * (ic.scale || 1.1);
+    const ang = baseAng + (ic.anchorDeg || 0) * Math.PI / 180;
+    const rot = baseAng + (ic.internalRotation || 0) * Math.PI / 180;
+    const x = unit.pos.x + Math.cos(ang) * dist;
+    const y = unit.pos.y + Math.sin(ang) * dist;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    ctx.drawImage(img, -size / 2, -size / 2, size, size);
+    ctx.restore();
   }
 }
 
@@ -454,68 +679,15 @@ export function renderUnitPreview(ctx, unit, teamColor, now){
   // 3) itens
   const cfg=CLASS_VISUALS[unit.className];
   if (cfg){
-    const items=cfg.items || [cfg];
+    const items=cfg.items || (cfg.item ? [cfg.item] : []);
     for(const ic of items){
-      const pal=ic.palette||[];
-      const baseScale=(ic.scale ?? CLASS_ITEM_SCALE_DEFAULT)*(unit.bodyR*2)*GLOBAL_ITEM_SCALE_MULT;
-      const iRot=(ic.internalRotationDeg ?? 0)*Math.PI/180;
-      if (ic.item==='colar_monge' || (ITEM_ALIASES[ic.item]==='saia_barbaro')){
-        ctx.save();
-        const offX=unit.bodyR*(ic.itemOffsetX ?? 0);
-        const offY=unit.bodyR*(ic.itemOffsetY ?? 0);
-        ctx.translate(unit.pos.x+offX,unit.pos.y+offY);
-        ctx.rotate(iRot);
-        applyMicroAnim(ctx,ic.microAnim,now);
-        if (ic.flipX) ctx.scale(-1,1);
-        drawItemSprite(ctx,ic.item, baseScale, pal, now);
-        ctx.restore();
-      } else {
-        const safeR=LEVEL_SAFE_RADIUS_MULT*unit.bodyR;
-        const anchor=(ic.anchorAngleDeg||0)*Math.PI/180;
-        let dist=unit.bodyR*(ic.distanceFromCenter ?? 0.82);
-        if(dist<safeR) dist=safeR;
-        const offX=unit.bodyR*(ic.itemOffsetX ?? 0);
-        const offY=unit.bodyR*(ic.itemOffsetY ?? 0);
-        const x=unit.pos.x+Math.cos(anchor)*dist+offX;
-        const y=unit.pos.y+Math.sin(anchor)*dist+offY;
-        ctx.save();
-        ctx.translate(x,y);
-        ctx.rotate(anchor);
-        ctx.rotate(iRot);
-        applyMicroAnim(ctx,ic.microAnim,now);
-        if (ic.flipX) ctx.scale(-1,1);
-        drawItemSprite(ctx,ic.item,baseScale,pal,now);
-        ctx.restore();
-      }
+      drawItem(ctx, unit, ic, now);
     }
   }
-  // 4) arma (omitida para classes sem arma, ex.: monge)
-  if (unit.className !== 'monge') {
-    ctx.save();
-    ctx.translate(unit.pos.x, unit.pos.y);
-    const wAng = (cfg?.weaponAngleDeg ?? 30) * Math.PI / 180;
-    let wScale, wOff;
-    if (unit.className === 'guerreiro') {
-      const base = CLASSES[unit.className] || {};
-      const wLen = (base.weaponLen || 0) * (cfg?.weaponScale ?? 1);
-      wScale = wLen / 0.88;
-      wOff = unit.bodyR * (cfg?.weaponOffsetMult ?? 1.4);
-      ctx.rotate(wAng);
-      ctx.translate(wOff + 0.48 * wScale, 0);
-    } else {
-      wScale = unit.bodyR * 1.2 * (cfg?.weaponScale ?? 1);
-      wOff = unit.bodyR * (cfg?.weaponOffsetMult ?? 1.4);
-      if (unit.className === 'paladino' || unit.className === 'clerigo') {
-        ctx.rotate(0);
-        ctx.translate(wOff, 0);
-        ctx.rotate(wAng);
-      } else {
-        ctx.rotate(wAng);
-        ctx.translate(wOff, 0);
-      }
-    }
-    drawWeaponForUnit(ctx, unit, wScale);
-    ctx.restore();
+  // 4) arma (omitida para classes sem arma)
+  drawWeapon(ctx, unit);
+  if (unit.className === 'bruxo') {
+    drawBruxoRunes(ctx, unit, now);
   }
   // 5) destaque
   ctx.save(); ctx.globalAlpha=0.25; ctx.beginPath(); ctx.arc(unit.pos.x-unit.bodyR*0.35, unit.pos.y-unit.bodyR*0.35, unit.bodyR*0.45, 0, TAU); ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.fill(); ctx.restore();

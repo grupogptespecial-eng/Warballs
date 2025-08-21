@@ -1,0 +1,170 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900" role="img" aria-label="Espada de paladino complexa, sem símbolos e sem sombra">
+  <title>Espada de Paladino — versão complexa</title>
+  <desc>Lâmina com triplo fuller segmentado, chanfros definidos e ricasso; guarda em múltiplas camadas com langets duplos; punho com risers e tachas; pomo facetado com canais concêntricos. Sem sombras e sem iconografia.</desc>
+
+  <defs>
+    <!-- Aço -->
+    <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#f8fbff"/>
+      <stop offset="50%" stop-color="#d6dce6"/>
+      <stop offset="100%" stop-color="#aab2be"/>
+    </linearGradient>
+    <!-- Bordas/linhas do aço -->
+    <linearGradient id="steelEdge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#8e98a5"/>
+      <stop offset="100%" stop-color="#6d7682"/>
+    </linearGradient>
+    <!-- Brilho lateral -->
+    <linearGradient id="hi" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity=".9"/>
+      <stop offset="70%"  stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Ouro -->
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#fff1b8"/>
+      <stop offset="45%" stop-color="#f0c65a"/>
+      <stop offset="85%" stop-color="#c6972a"/>
+      <stop offset="100%" stop-color="#996f1e"/>
+    </linearGradient>
+    <linearGradient id="goldEdge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#b18227"/>
+      <stop offset="100%" stop-color="#7e5c19"/>
+    </linearGradient>
+
+    <!-- Couro -->
+    <linearGradient id="leather" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#6f472b"/>
+      <stop offset="60%" stop-color="#4b301d"/>
+      <stop offset="100%" stop-color="#342115"/>
+    </linearGradient>
+    <pattern id="wrap" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
+      <rect width="16" height="16" fill="transparent"/>
+      <rect x="0" y="0" width="6" height="16" fill="#7b5132" opacity=".38"/>
+    </pattern>
+
+    <!-- Regras de traço -->
+    <style>
+      .metal-fill { fill: url(#steel); }
+      .metal-line { stroke: url(#steelEdge); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+      .gold-fill  { fill: url(#gold); }
+      .gold-line  { stroke: url(#goldEdge); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+      .line { stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+  </defs>
+
+  <!-- ===== LÂMINA (perfil detalhado) ===== -->
+  <g id="blade">
+    <!-- Perfil com ponta romboidal e ombros definidos -->
+    <path class="metal-fill" d="
+      M 450 58
+      L 432 102
+      L 424 152
+      L 424 626
+      L 438 640
+      L 462 640
+      L 476 626
+      L 476 152
+      L 468 102
+      L 450 58 Z"/>
+    <path d="M 432 102 L 424 152 L 424 626 M 468 102 L 476 152 L 476 626" class="metal-line"/>
+
+    <!-- Ricasso rebaixado com chanfrado -->
+    <rect x="436" y="152" width="28" height="54" rx="6" fill="#e9eef6" stroke="#c7cfdb" stroke-width="2"/>
+    <path d="M 436 152 h 28" stroke="#c7cfdb" stroke-width="2"/>
+
+    <!-- Triplo fuller: central longo + secundários que terminam antes da ponta -->
+    <rect x="444" y="214" width="12" height="370" rx="6" fill="#eef2f8" stroke="#c8cfda" stroke-width="2"/>
+    <rect x="434" y="230" width="6"  height="330" rx="3" fill="#f2f6fb" stroke="#d2d8e3" stroke-width="1.5"/>
+    <rect x="460" y="230" width="6"  height="330" rx="3" fill="#f2f6fb" stroke="#d2d8e3" stroke-width="1.5"/>
+
+    <!-- Segmentação do fuller na ponta (spatulate termination) -->
+    <path d="M 444 584 q 6 10 12 0" fill="none" stroke="#c8cfda" stroke-width="2"/>
+
+    <!-- Filetes/arestas de chanfro -->
+    <path d="M 440 136 L 440 620" stroke="url(#hi)" stroke-width="9" class="line"/>
+    <path d="M 460 136 L 460 620" stroke="url(#hi)" stroke-width="6" class="line" opacity=".6"/>
+  </g>
+
+  <!-- ===== GUARDA MULTICAMADAS ===== -->
+  <g id="guard" transform="translate(450,652)">
+    <!-- Subplaca de aço (base) -->
+    <ellipse rx="94" ry="18" class="metal-fill"/>
+    <ellipse rx="94" ry="18" fill="none" class="metal-line"/>
+
+    <!-- Guarda principal dourada, com 2 níveis e pontas em folha -->
+    <g>
+      <!-- nível inferior -->
+      <path d="M -196 0 Q -130 -32 -68 -14 L -68 14 Q -130 32 -196 0 Z"
+            class="gold-fill"/>
+      <path d="M -196 0 Q -130 -32 -68 -14 L -68 14 Q -130 32 -196 0 Z"
+            fill="none" class="gold-line"/>
+      <!-- nível superior -->
+      <path d="M 196 0 Q 130 -32 68 -14 L 68 14 Q 130 32 196 0 Z"
+            class="gold-fill"/>
+      <path d="M 196 0 Q 130 -32 68 -14 L 68 14 Q 130 32 196 0 Z"
+            fill="none" class="gold-line"/>
+    </g>
+
+    <!-- Bloco central escalonado -->
+    <g>
+      <rect x="-44" y="-18" width="88" height="36" rx="10" class="gold-fill"/>
+      <rect x="-44" y="-18" width="88" height="36" rx="10" fill="none" class="gold-line"/>
+      <rect x="-34" y="-12" width="68" height="24" rx="8" class="metal-fill" />
+      <rect x="-34" y="-12" width="68" height="24" rx="8" fill="none" class="metal-line"/>
+    </g>
+
+    <!-- Langets duplos (descem pela lâmina) -->
+    <g>
+      <rect x="-5"  y="18" width="10" height="38" rx="4" class="metal-fill"/><rect x="-5"  y="18" width="10" height="38" rx="4" fill="none" class="metal-line"/>
+      <rect x="-17" y="18" width="7"  height="30" rx="3" class="metal-fill" opacity=".85"/>
+      <rect x="10"  y="18" width="7"  height="30" rx="3" class="metal-fill" opacity=".85"/>
+    </g>
+
+    <!-- Anéis de reforço laterais (detalhe sem símbolos) -->
+    <g>
+      <ellipse cx="-120" cy="0" rx="10" ry="6" class="metal-fill"/><ellipse cx="-120" cy="0" rx="10" ry="6" fill="none" class="metal-line"/>
+      <ellipse cx="120" cy="0"  rx="10" ry="6" class="metal-fill"/><ellipse cx="120" cy="0"  rx="10" ry="6" fill="none" class="metal-line"/>
+    </g>
+  </g>
+
+  <!-- ===== PUNHO (grip) ===== -->
+  <g id="grip" transform="translate(450,684)">
+    <!-- Risers (salientes) superior e inferior -->
+    <g>
+      <ellipse rx="32" ry="9" class="metal-fill"/><ellipse rx="32" ry="9" fill="none" class="metal-line"/>
+      <ellipse cy="150" rx="34" ry="10" class="metal-fill"/><ellipse cy="150" rx="34" ry="10" fill="none" class="metal-line"/>
+    </g>
+    <!-- Corpo do grip ligeiramente abaloado -->
+    <path d="M -18 6 L 18 6 L 24 144 L -24 144 Z" fill="url(#leather)" stroke="#26180f" stroke-width="4"/>
+    <path d="M -18 6 L 18 6 L 24 144 L -24 144 Z" fill="url(#wrap)" opacity=".9"/>
+    <!-- Tachas decorativas (sem iconografia) -->
+    <g fill="#c9a45a" stroke="#816126" stroke-width="2">
+      <circle r="3.5" cx="0"  cy="30"/>
+      <circle r="3.5" cx="0"  cy="60"/>
+      <circle r="3.5" cx="0"  cy="90"/>
+      <circle r="3.5" cx="0"  cy="120"/>
+    </g>
+  </g>
+
+  <!-- ===== POMO (roda facetada complexa) ===== -->
+  <g id="pommel" transform="translate(450,856)">
+    <!-- roda -->
+    <circle r="32" class="metal-fill"/>
+    <circle r="32" fill="none" class="metal-line"/>
+    <!-- canais concêntricos -->
+    <circle r="25" fill="none" stroke="#e8edf4" stroke-width="5"/>
+    <circle r="18" fill="none" stroke="#d7dde7" stroke-width="3"/>
+    <!-- 6 facetas radiais (chanfros) -->
+    <g stroke="url(#steelEdge)" stroke-width="3" class="line" opacity=".9">
+      <line x1="0" y1="-32" x2="0" y2="-18"/>
+      <line x1="27.7" y1="-16" x2="15.6" y2="-9"/>
+      <line x1="27.7" y1="16"  x2="15.6" y2="9"/>
+      <line x1="0" y1="32"    x2="0" y2="18"/>
+      <line x1="-27.7" y1="16" x2="-15.6" y2="9"/>
+      <line x1="-27.7" y1="-16" x2="-15.6" y2="-9"/>
+    </g>
+    <!-- espigão rebatido -->
+    <circle r="6.5" fill="#c1c7d2" stroke="#86909e" stroke-width="2"/>
+  </g>
+</svg>

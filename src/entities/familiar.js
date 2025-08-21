@@ -1,11 +1,12 @@
 // Familiar invocado pelo Bruxo
 
 import { V } from '../math/vec.js';
-import { CFG } from '../config/cfg.js';
+import { CFG, CLASS_VISUALS } from '../config/cfg.js';
 import { randAng } from '../utils/rand.js';
 import { clamp } from '../utils/misc.js';
 import { Projectile } from './projectile.js';
 import { drawRoundedRect } from '../utils/geometry.js';
+import { drawItem } from '../render/visuals_module.js';
 import { game } from '../core/game.js';
 
 export class Familiar {
@@ -85,6 +86,15 @@ export class Familiar {
     ctx.arc(this.pos.x, this.pos.y, this.bodyR * 0.9, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+
+    // chifres do familiar usando configuração do Bruxo
+    const vis = CLASS_VISUALS.bruxo;
+    if (vis?.items) {
+      const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+      for (const ic of vis.items) {
+        drawItem(ctx, this, ic, now);
+      }
+    }
 
     const w = 36, h = 4, x = this.pos.x - w / 2, y = this.pos.y - this.bodyR - 10;
     drawRoundedRect(ctx, x, y, w, h, 3);
