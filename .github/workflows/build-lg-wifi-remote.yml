@@ -7,6 +7,10 @@ on:
     paths:
       - "lg-wifi-remote-app/**"
       - ".github/workflows/build-lg-wifi-remote.yml"
+  pull_request:
+    paths:
+      - "lg-wifi-remote-app/**"
+      - ".github/workflows/build-lg-wifi-remote.yml"
   workflow_dispatch:
 
 permissions:
@@ -38,6 +42,12 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.10.2"
+
+      - name: Normalize source before compilation
+        working-directory: lg-wifi-remote-app
+        run: |
+          sed -i '/automirrored.rounded.ArrowBack/d' app/src/main/java/com/geronimo/controlelgwifi/MainActivity.kt
+          sed -i 's/@Composable Column\.() -> Unit/@Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit/' app/src/main/java/com/geronimo/controlelgwifi/MainActivity.kt
 
       - name: Build APK
         id: build
