@@ -1,7 +1,51 @@
-# Controle LG Wi-Fi
+# Libre Remote
 
-Aplicativo Android pessoal, sem anúncios, para controlar TVs LG webOS pela rede local.
+Controle remoto Android gratuito e local-first para TVs LG webOS.
 
-A primeira conexão exige aceitar o pareamento exibido na TV. O aplicativo tenta descoberta SSDP, conexão WebSocket nas portas 3000 e 3001, touchpad, volume, canais, mídia, HDMI, abertura de apps, texto e Wake-on-LAN.
+## Princípios
 
-Compatibilidade preparada para Android 16 e para diferentes gerações de LG webOS.
+- sem anúncios;
+- sem conta;
+- sem telemetria;
+- sem servidor externo;
+- comunicação direta pela rede local;
+- código preparado para publicação open source.
+
+## Recursos da versão 0.2
+
+- interface Jetpack Compose com Material 3;
+- controle direcional circular e botões arredondados;
+- resposta tátil opcional;
+- envio no momento em que o dedo toca o botão;
+- repetição de volume e canal ao manter pressionado;
+- conexão WebSocket persistente;
+- disputa rápida entre portas 3000 e 3001 e memorização da melhor rota;
+- touchpad com movimentos conflados para evitar fila e atraso;
+- rolagem dedicada;
+- teclado numérico e botões coloridos;
+- controles de mídia;
+- descoberta SSDP e conexão manual por IP;
+- lista dinâmica de aplicativos e entradas HDMI;
+- envio de texto para a TV;
+- Wake-on-LAN;
+- chave de pareamento guardada em preferências criptografadas;
+- verificação TOFU da impressão digital do certificado local;
+- tema claro e escuro;
+- interface em português e estrutura pronta para tradução.
+
+## Primeira conexão
+
+1. Mantenha celular e TV na mesma rede.
+2. Abra Ajustes e toque em Buscar.
+3. Escolha a TV.
+4. Aceite o pareamento mostrado na tela da LG.
+
+Alguns roteadores bloqueiam multicast ou isolam dispositivos. Nesses casos, informe manualmente o IP da televisão.
+
+## Estado do projeto
+
+Esta é uma versão beta funcional criada para testes comunitários. Compatibilidade pode variar entre gerações do webOS. O projeto não é afiliado à LG Electronics.
+
+## Licença pretendida
+
+GPL-3.0-or-later para o aplicativo oficial. Antes da publicação pública, o repositório deve receber o texto completo da licença, política de marca, política de privacidade, guia de contribuição e avisos de terceiros.
