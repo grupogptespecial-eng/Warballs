@@ -1,6 +1,7 @@
 # Checklist final do Google Play Console
 
 Versão preparada: Libre Remote 1.0.0 RC1, applicationId `io.github.grupogptespecialeng.libreremote`.
+Build de validação: testes unitários, lint, APK assinado e Android App Bundle.
 
 ## Identidade
 
