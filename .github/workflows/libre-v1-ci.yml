@@ -35,11 +35,44 @@ jobs:
             sed -i '/import androidx.compose.foundation.gestures.detectDragGestures/i import androidx.compose.foundation.gestures.awaitFirstDown' "$CONTROLS"
           fi
           sed -i 's/androidx.compose.foundation.gestures.awaitEachGesture {/awaitEachGesture {/' "$CONTROLS"
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/RemoteControls.kt")
+          text = path.read_text()
+          old = '''                    awaitEachGesture {
+                        awaitPointerEventScope {
+                            awaitFirstDown(requireUnconsumed = false)
+                            pressed = true
+                            if (haptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onPress()
+                            do {
+                                val event = awaitPointerEvent()
+                                val stillPressed = event.changes.any { it.pressed }
+                            } while (stillPressed)
+                            pressed = false
+                            onRelease()
+                        }
+                    }'''
+          new = '''                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        pressed = true
+                        if (haptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onPress()
+                        do {
+                            val event = awaitPointerEvent()
+                            val stillPressed = event.changes.any { it.pressed }
+                        } while (stillPressed)
+                        pressed = false
+                        onRelease()
+                    }'''
+          if old in text:
+              path.write_text(text.replace(old, new))
+          PY
           if ! git diff --quiet; then
             git config user.name "Libre Remote CI"
             git config user.email "actions@users.noreply.github.com"
             git add "$FAST" "$CONTROLS"
-            git commit -m "Fix release compilation imports [skip ci]"
+            git commit -m "Fix Compose gesture scope [skip ci]"
             git push origin HEAD:build/libre-remote-v1-rc1
           fi
 
