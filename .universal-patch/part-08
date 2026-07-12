@@ -1,0 +1,191 @@
+supportLevel: TvSupportLevel,
++    val displayName: String,
++    val accountRequired: Boolean,
++    val localOnly: Boolean,
++    val notes: String
++)
++
++interface TvBackendListener {
++    fun onConnectionState(state: ConnectionState, message: String, reconnectAttempt: Int = 0)
++    fun onApps(apps: List<TvApp>)
++    fun onInputs(inputs: List<TvInput>)
++    fun onVolume(volume: Int?, muted: Boolean)
++    fun onCapabilities(capabilities: Set<TvCapability>)
++}
++
++interface TvBackend {
++    val metadata: TvBackendMetadata
++    val defaultCapabilities: Set<TvCapability>
++
++    fun connect(device: TvDevice, userInitiated: Boolean = true)
++    fun close()
++    fun forgetDevice(device: TvDevice)
++    fun send(action: RemoteAction)
++
++    fun setMute(muted: Boolean) = Unit
++    fun movePointer(dx: Int, dy: Int) = Unit
++    fun clickPointer() = Unit
++    fun scrollPointer(delta: Int) = Unit
++    fun launchApp(app: TvApp) = Unit
++    fun switchInput(input: TvInput) = Unit
++    fun insertText(text: String) = Unit
++    fun deleteText() = Unit
++    fun sendNumber(number: Int) = Unit
++    fun sendColor(color: String) = Unit
++    fun refreshDeviceData() = Unit
++}
++
++class LgWebOsBackend(
++    context: Context,
++    private val listener: TvBackendListener
++) : TvBackend, FastLgWebOsClient.Listener {
++    private val client = FastLgWebOsClient(context, this)
++
++    override val metadata = TvBackendMetadata(
++        platform = TvPlatform.LgWebOs,
++        supportLevel = TvSupportLevel.StableFull,
++        displayName = "LG webOS",
++        accountRequired = false,
++        localOnly = true,
++        notes = "Controle completo pela rede local; ligar depende de Wake-on-LAN e do modelo."
++    )
++
++    override val defaultCapabilities: Set<TvCapability> = TvCapability.lgDefaults
++
++    override fun connect(device: TvDevice, userInitiated: Boolean) = client.connect(device, userInitiated)
++    override fun close() = client.close()
++    override fun forgetDevice(device: TvDevice) = client.forgetDevice(device.ip)
++    override fun send(action: RemoteAction) = client.send(action)
++    override fun setMute(muted: Boolean) = client.setMute(muted)
++    override fun movePointer(dx: Int, dy: Int) = client.move(dx, dy)
++    override fun clickPointer() = client.click()
++    override fun scrollPointer(delta: Int) = client.scroll(delta)
++    override fun launchApp(app: TvApp) = client.launchApp(app.id)
++    override fun switchInput(input: TvInput) = client.switchInput(input.id)
++    override fun insertText(text: String) = client.insertText(text)
++    override fun deleteText() = client.deleteText()
++    override fun sendNumber(number: Int) = client.sendNumber(number)
++    override fun sendColor(color: String) = client.sendColor(color)
++    override fun refreshDeviceData() = client.refreshDeviceData()
++
++    override fun onConnectionState(state: ConnectionState, message: String, reconnectAttempt: Int) =
++        listener.onConnectionState(state, message, reconnectAttempt)
++
++    override fun onApps(apps: List<TvApp>) = listener.onApps(apps)
++    override fun onInputs(inputs: List<TvInput>) = listener.onInputs(inputs)
++    override fun onVolume(volume: Int?, muted: Boolean) = listener.onVolume(volume, muted)
++    override fun onCapabilities(capabilities: Set<TvCapability>) = listener.onCapabilities(capabilities)
++}
++
++class TvBackendRegistry(
++    context: Context,
++    listener: TvBackendListener
++) {
++    private val backends: Map<TvPlatform, TvBackend> = listOf(
++        LgWebOsBackend(context, listener),
++        SamsungTizenBackend(context, listener),
++        DlnaBackend(context, listener)
++    ).associateBy { it.metadata.platform }
++
++    fun backendFor(device: TvDevice): TvBackend? = backends[device.platform]
++    fun backendFor(platform: TvPlatform): TvBackend? = backends[platform]
++    fun isImplemented(platform: TvPlatform): Boolean = platform in backends
++
++    fun availableMetadata(): List<TvBackendMetadata> = listOf(
++        backends.getValue(TvPlatform.LgWebOs).metadata,
++        backends.getValue(TvPlatform.SamsungTizenLocal).metadata,
++        TvBackendMetadata(
++            TvPlatform.SamsungSmartThings,
++            TvSupportLevel.BetaFull,
++            "Samsung SmartThings",
++            accountRequired = true,
++            localOnly = false,
++            notes = "Integração oficial em nuvem; exige cadastro OAuth e autorização da conta."
++        ),
++        backends.getValue(TvPlatform.DlnaMedia).metadata,
++        TvBackendMetadata(
++            TvPlatform.GoogleCast,
++            TvSupportLevel.StableMediaOnly,
++            "Google Cast",
++            accountRequired = false,
++            localOnly = false,
++            notes = "O SDK oficial controla sessões de mídia, não a interface completa da TV."
++        ),
++        TvBackendMetadata(
++            TvPlatform.AndroidTvExperimental,
++            TvSupportLevel.Experimental,
++            "Android / Google TV",
++            accountRequired = false,
++            localOnly = true,
++            notes = "Não existe API pública oficial para um controle remoto completo genérico."
++        ),
++        TvBackendMetadata(
++            TvPlatform.FireTvMedia,
++            TvSupportLevel.Experimental,
++            "Fire TV",
++            accountRequired = false,
++            localOnly = false,
++            notes = "Somente integrações de mídia oficialmente autorizadas serão ativadas."
++        ),
++        TvBackendMetadata(
++            TvPlatform.PhilipsJointSpaceExperimental,
++            TvSupportLevel.Experimental,
++            "Philips TV",
++            accountRequired = false,
++            localOnly = true,
++            notes = "Detectado, mas o controle permanece desativado até testes físicos e auditoria do protocolo."
++        ),
++        TvBackendMetadata(
++            TvPlatform.HisenseVidaaExperimental,
++            TvSupportLevel.Experimental,
++            "Hisense VIDAA",
++            accountRequired = false,
++            localOnly = true,
++            notes = "Detectado, mas sem backend público estável confirmado."
++        ),
++        TvBackendMetadata(
++            TvPlatform.RokuBlockedByPolicy,
++            TvSupportLevel.BlockedByVendorPolicy,
++            "Roku",
++            accountRequired = false,
++            localOnly = true,
++            notes = "Não ativado no aplicativo público enquanto a política da Roku proibir ECP em apps móveis de terceiros."
++        )
++    )
++
++    fun closeAll() = backends.values.forEach(TvBackend::close)
++}
+diff -ruN '--exclude=.kotlin' '--exclude=build.log' libre_original/source/app/src/main/java/com/geronimo/controlelgwifi/TvDiscovery.kt libre_universal_work/appsrc/app/src/main/java/com/geronimo/controlelgwifi/TvDiscovery.kt
+--- libre_original/source/app/src/main/java/com/geronimo/controlelgwifi/TvDiscovery.kt	2026-07-12 19:58:51.000000000 +0000
++++ libre_universal_work/appsrc/app/src/main/java/com/geronimo/controlelgwifi/TvDiscovery.kt	2026-07-12 22:17:48.335576221 +0000
+@@ -24,41 +24,93 @@
+     private val searchTargets = listOf(
+         "urn:lge-com:service:webos-second-screen:1",
+         "urn:schemas-upnp-org:device:MediaRenderer:1",
++        "urn:schemas-upnp-org:device:MediaRenderer:2",
++        "urn:schemas-upnp-org:device:MediaRenderer:3",
++        "urn:dial-multiscreen-org:service:dial:1",
+         "ssdp:all"
+     )
+ 
++    private data class UpnpService(
++        val serviceType: String,
++        val controlUrl: String
++    )
++
++    private data class DeviceDescription(
++        val friendlyName: String?,
++        val modelName: String?,
++        val manufacturer: String?,
++        val deviceType: String?,
++        val udn: String?,
++        val services: List<UpnpService>
++    )
++
+     suspend fun discover(
+         context: Context,
+         knownDevices: List<TvDevice> = emptyList(),
+-        durationMs: Long = 2_700
++        durationMs: Long = 2_900
+     ): List<TvDevice> = coroutineScope {
+         val ssdp = async(Dispatchers.IO) {
