@@ -48,6 +48,7 @@ jobs:
         continue-on-error: true
         working-directory: lg-wifi-remote-app
         run: |
+          sed -i 's/singleLine = true/setSingleLine(true)/g' app/src/main/java/com/geronimo/controlelgwifi/MainActivity.kt
           set -o pipefail
           gradle --no-daemon --stacktrace :app:assembleDebug 2>&1 | tee build.log
 
