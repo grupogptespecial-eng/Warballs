@@ -7,6 +7,12 @@ on:
     paths:
       - "lg-wifi-remote-app/**"
       - ".github/workflows/build-lg-wifi-remote.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "lg-wifi-remote-app/**"
+      - ".github/workflows/build-lg-wifi-remote.yml"
   workflow_dispatch:
 
 permissions:
