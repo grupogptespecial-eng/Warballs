@@ -1,0 +1,184 @@
+
++                if (manuallyClosed || currentGeneration != generation) return
++                if (webSocket == socket) {
++                    scheduleReconnect()
++                } else if (endpointFailures.incrementAndGet() >= endpointCount && !endpointChosen.get()) {
++                    scheduleReconnect(initialFailure = true)
++                }
++            }
++
++            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
++                if (!manuallyClosed && currentGeneration == generation && webSocket == socket) {
++                    scheduleReconnect()
++                }
++            }
++        })
++    }
++
++    private fun handleMessage(raw: String) {
++        val message = runCatching { JSONObject(raw) }.getOrNull() ?: return
++        when (message.optString("event")) {
++            "ms.channel.connect" -> {
++                val data = message.optJSONObject("data")
++                val token = data?.optString("token").orEmpty()
++                val ip = device?.ip
++                if (!ip.isNullOrBlank() && token.isNotBlank()) {
++                    securePreferences.edit().putString("samsung_token_$ip", token).apply()
++                }
++                connected = true
++                reconnectAttempt = 0
++                listener.onCapabilities(defaultCapabilities)
++                listener.onApps(emptyList())
++                listener.onInputs(emptyList())
++                listener.onConnectionState(ConnectionState.Connected, "Conectada a ${device?.displayName ?: "Samsung TV"}")
++            }
++            "ms.channel.unauthorized" -> {
++                connected = false
++                listener.onConnectionState(ConnectionState.Error, "A TV recusou o pareamento. Remova o dispositivo na TV e tente novamente.")
++            }
++        }
++    }
++
++    override fun send(action: RemoteAction) {
++        val key = keyFor(action) ?: return
++        sendKey(key)
++    }
++
++    override fun setMute(muted: Boolean) = sendKey("KEY_MUTE")
++    override fun sendNumber(number: Int) = sendKey("KEY_${number.coerceIn(0, 9)}")
++    override fun sendColor(color: String) = sendKey("KEY_${color.uppercase()}")
++    override fun refreshDeviceData() = listener.onCapabilities(defaultCapabilities)
++
++    private fun sendKey(key: String) {
++        if (!connected) return
++        val payload = JSONObject()
++            .put("method", "ms.remote.control")
++            .put(
++                "params",
++                JSONObject()
++                    .put("Cmd", "Click")
++                    .put("DataOfCmd", key)
++                    .put("Option", "false")
++                    .put("TypeOfRemote", "SendRemoteKey")
++            )
++        socket?.send(payload.toString())
++    }
++
++    internal fun keyFor(action: RemoteAction): String? = when (action) {
++        RemoteAction.Up -> "KEY_UP"
++        RemoteAction.Down -> "KEY_DOWN"
++        RemoteAction.Left -> "KEY_LEFT"
++        RemoteAction.Right -> "KEY_RIGHT"
++        RemoteAction.Enter -> "KEY_ENTER"
++        RemoteAction.Back -> "KEY_RETURN"
++        RemoteAction.Home -> "KEY_HOME"
++        RemoteAction.Menu, RemoteAction.Settings -> "KEY_MENU"
++        RemoteAction.Info -> "KEY_INFO"
++        RemoteAction.Guide -> "KEY_GUIDE"
++        RemoteAction.Exit -> "KEY_EXIT"
++        RemoteAction.VolumeUp -> "KEY_VOLUP"
++        RemoteAction.VolumeDown -> "KEY_VOLDOWN"
++        RemoteAction.Mute -> "KEY_MUTE"
++        RemoteAction.ChannelUp -> "KEY_CHUP"
++        RemoteAction.ChannelDown -> "KEY_CHDOWN"
++        RemoteAction.Play -> "KEY_PLAY"
++        RemoteAction.Pause -> "KEY_PAUSE"
++        RemoteAction.PlayPause -> "KEY_PLAYPAUSE"
++        RemoteAction.Rewind -> "KEY_REWIND"
++        RemoteAction.FastForward -> "KEY_FF"
++        RemoteAction.Stop -> "KEY_STOP"
++        RemoteAction.Previous -> "KEY_PRECH"
++        RemoteAction.Next -> "KEY_NEXT"
++        RemoteAction.PowerOff -> "KEY_POWER"
++    }
++
++    private fun scheduleReconnect(initialFailure: Boolean = false) {
++        if (manuallyClosed || reconnectJob?.isActive == true) return
++        connected = false
++        val waits = longArrayOf(300, 700, 1_500, 3_000, 6_000)
++        reconnectAttempt = (reconnectAttempt + 1).coerceAtMost(waits.size)
++        listener.onConnectionState(
++            ConnectionState.Reconnecting,
++            if (initialFailure && reconnectAttempt >= 3) "Samsung não respondeu. Verifique se Controle por IP está permitido." else "Reconectando à Samsung…",
++            reconnectAttempt
++        )
++        reconnectJob = scope.launch {
++            delay(waits[(reconnectAttempt - 1).coerceIn(waits.indices)])
++            device?.let { connect(it, userInitiated = false) }
++        }
++    }
++
++    override fun forgetDevice(device: TvDevice) {
++        securePreferences.edit()
++            .remove("samsung_token_${device.ip}")
++            .remove("samsung_endpoint_${device.ip}")
++            .remove("samsung_cert_${device.ip}")
++            .apply()
++    }
++
++    override fun close() {
++        manuallyClosed = true
++        reconnectJob?.cancel()
++        closeSocket(notify = true)
++    }
++
++    private fun closeSocket(notify: Boolean) {
++        connected = false
++        socket?.close(1000, "Closing")
++        socket = null
++        if (notify) listener.onConnectionState(ConnectionState.Idle, "Desconectada")
++    }
++
++    private fun verifyOrStoreCertificate(response: Response): Boolean {
++        val ip = device?.ip ?: return false
++        val encoded = response.handshake?.peerCertificates?.firstOrNull()?.encoded ?: return true
++        val digest = MessageDigest.getInstance("SHA-256")
++            .digest(encoded)
++            .joinToString("") { "%02x".format(it) }
++        val key = "samsung_cert_$ip"
++        val saved = securePreferences.getString(key, null)
++        return if (saved == null) {
++            securePreferences.edit().putString(key, digest).apply()
++            true
++        } else {
++            saved == digest
++        }
++    }
++
++    private fun createSecurePreferences(context: Context) = EncryptedSharedPreferences.create(
++        "libre_remote_samsung_secure",
++        MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC),
++        context,
++        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
++        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
++    )
++
++    private fun createLocalTlsClient(): OkHttpClient {
++        val trustManager = object : X509TrustManager {
++            override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
++            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
++            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
++        }
++        val sslContext = SSLContext.getInstance("TLS")
++        sslContext.init(null, arrayOf<TrustManager>(trustManager), SecureRandom())
++        return OkHttpClient.Builder()
++            .sslSocketFactory(sslContext.socketFactory, trustManager)
++            .hostnameVerifier { hostname, _ -> hostname == device?.ip }
++            .connectTimeout(1_500, TimeUnit.MILLISECONDS)
++            .readTimeout(0, TimeUnit.MILLISECONDS)
++            .pingInterval(15, TimeUnit.SECONDS)
++            .retryOnConnectionFailure(true)
++            .build()
++    }
++}
+diff -ruN '--exclude=.kotlin' '--exclude=build.log' libre_original/source/app/src/main/java/com/geronimo/controlelgwifi/TvBackend.kt libre_universal_work/appsrc/app/src/main/java/com/geronimo/controlelgwifi/TvBackend.kt
+--- libre_original/source/app/src/main/java/com/geronimo/controlelgwifi/TvBackend.kt	1970-01-01 00:00:00.000000000 +0000
++++ libre_universal_work/appsrc/app/src/main/java/com/geronimo/controlelgwifi/TvBackend.kt	2026-07-12 22:15:31.753890052 +0000
+@@ -0,0 +1,163 @@
++package com.geronimo.controlelgwifi
++
++import android.content.Context
++
++data class TvBackendMetadata(
++    val platform: TvPlatform,
++    val 
