@@ -1,0 +1,186 @@
+                  devices.isEmpty() -> state.copy(
+@@ -69,19 +72,20 @@
+                         showDevicePicker = false
+                     )
+                     devices.size == 1 -> state.copy(
++                        connectionState = ConnectionState.Idle,
+                         discoveredDevices = devices,
+                         showDevicePicker = false,
+-                        statusText = "TV encontrada: ${devices.first().displayName}"
++                        statusText = "Encontrada: ${devices.first().displayName} • ${devices.first().supportLabel}"
+                     )
+                     else -> state.copy(
+                         connectionState = ConnectionState.Idle,
+                         discoveredDevices = devices,
+                         showDevicePicker = true,
+-                        statusText = "${devices.size} TVs encontradas"
++                        statusText = "${devices.size} dispositivos encontrados"
+                     )
+                 }
+             }
+-            if (devices.size == 1) connect(devices.first(), userInitiated = true)
++            if (usable.size == 1 && devices.size == 1) connect(usable.first(), userInitiated = true)
+         }
+     }
+ 
+@@ -97,24 +101,68 @@
+             }
+             return
+         }
+-        connect(TvDevice(ip = ip), userInitiated = true)
++        _uiState.update {
++            it.copy(
++                connectionState = ConnectionState.Discovering,
++                statusText = "Identificando o sistema da TV…",
++                lastError = null
++            )
++        }
++        viewModelScope.launch(Dispatchers.IO) {
++            val device = TvDiscovery.identifyManual(getApplication(), ip)
++            if (!device.connectable || !backendRegistry.isImplemented(device.platform)) {
++                _uiState.update {
++                    it.copy(
++                        connectionState = ConnectionState.Error,
++                        statusText = "A TV respondeu, mas não foi possível identificar um protocolo compatível.",
++                        lastError = "Sistema não suportado pelo IP manual"
++                    )
++                }
++            } else {
++                connect(device, userInitiated = true)
++            }
++        }
+     }
+ 
+     fun connect(device: TvDevice, userInitiated: Boolean = true) {
+-        preferences.selectDevice(device.ip)
++        val backend = backendRegistry.backendFor(device)
++        if (backend == null || !device.connectable) {
++            _uiState.update {
++                it.copy(
++                    connectionState = ConnectionState.Error,
++                    statusText = when (device.supportLevel) {
++                        TvSupportLevel.BlockedByVendorPolicy -> "${device.platformLabel} foi detectada, mas esse protocolo não pode ser ativado no aplicativo público."
++                        else -> "${device.platformLabel} foi detectada, mas ainda não possui backend habilitado."
++                    },
++                    lastError = "Backend indisponível"
++                )
++            }
++            return
++        }
++
++        stopAllRepeating()
++        if (activePlatform != device.platform) {
++            activeBackend?.close()
++        }
++        activeBackend = backend
++        activePlatform = device.platform
++        preferences.selectDevice(device)
+         val saved = preferences.saveDevice(device)
+         _uiState.update {
+             it.copy(
+                 currentDevice = device,
+                 savedDevices = saved,
++                capabilities = device.capabilities,
++                apps = emptyList(),
++                inputs = emptyList(),
+                 showDevicePicker = false,
+                 showConnectSheet = false,
+                 connectionState = if (userInitiated) ConnectionState.Connecting else ConnectionState.Reconnecting,
+-                statusText = "Conectando a ${device.displayName}…",
++                statusText = "Conectando a ${device.displayName} por ${device.platformLabel}…",
+                 lastError = null
+             )
+         }
+-        client.connect(device, userInitiated)
++        backend.connect(device, userInitiated)
+     }
+ 
+     fun reconnect() {
+@@ -124,7 +172,7 @@
+ 
+     fun disconnect() {
+         stopAllRepeating()
+-        client.close()
++        activeBackend?.close()
+         _uiState.update {
+             it.copy(
+                 connectionState = ConnectionState.Idle,
+@@ -135,14 +183,20 @@
+     }
+ 
+     fun forgetDevice(device: TvDevice) {
+-        client.forgetDevice(device.ip)
+-        val saved = preferences.removeDevice(device.ip)
+-        val wasCurrent = _uiState.value.currentDevice?.ip == device.ip
+-        if (wasCurrent) client.close()
++        backendRegistry.backendFor(device)?.forgetDevice(device)
++        val saved = preferences.removeDevice(device)
++        val wasCurrent = _uiState.value.currentDevice?.stableId == device.stableId
++        if (wasCurrent) {
++            activeBackend?.close()
++            activeBackend = null
++            activePlatform = null
++            preferences.selectDevice(null)
++        }
+         _uiState.update {
+             it.copy(
+                 savedDevices = saved,
+                 currentDevice = if (wasCurrent) null else it.currentDevice,
++                capabilities = if (wasCurrent) emptySet() else it.capabilities,
+                 connectionState = if (wasCurrent) ConnectionState.Idle else it.connectionState,
+                 statusText = if (wasCurrent) "TV removida" else it.statusText
+             )
+@@ -162,12 +216,13 @@
+ 
+     fun send(action: RemoteAction) {
+         if (!_uiState.value.connected) return
++        val backend = activeBackend ?: return
+         if (action == RemoteAction.Mute) {
+             val muted = !_uiState.value.muted
+             _uiState.update { it.copy(muted = muted) }
+-            client.setMute(muted)
++            backend.setMute(muted)
+         } else {
+-            client.send(action)
++            backend.send(action)
+         }
+     }
+ 
+@@ -196,16 +251,16 @@
+         _uiState.update { it.copy(controlSurface = surface) }
+     }
+ 
+-    fun movePointer(dx: Int, dy: Int) = client.move(dx, dy)
+-    fun clickPointer() = client.click()
+-    fun scrollPointer(delta: Int) = client.scroll(delta)
+-    fun launchApp(app: TvApp) = client.launchApp(app.id)
+-    fun switchInput(input: TvInput) = client.switchInput(input.id)
+-    fun sendText(text: String) = client.insertText(text)
+-    fun deleteText() = client.deleteText()
+-    fun sendNumber(number: Int) = client.sendNumber(number)
+-    fun sendColor(color: String) = client.sendColor(color)
+-    fun refresh() = client.refreshDeviceData()
++    fun movePointer(dx: Int, dy: Int) = activeBackend?.movePointer(dx, dy)
++    fun clickPointer() = activeBackend?.clickPointer()
++    fun scrollPointer(delta: Int) = activeBackend?.scrollPointer(delta)
++    fun launchApp(app: TvApp) = activeBackend?.launchApp(app)
++    fun switchInput(input: TvInput) = activeBackend?.switchInput(input)
++    fun sendText(text: String) = activeBackend?.insertText(text)
++    fun deleteText() = activeBackend?.deleteText()
++    fun sendNumber(number: Int) = activeBackend?.sendNumber(number)
++    fun sendColor(color: String) = activeBackend?.sendColor(color)
++    fun refresh() = activeBackend?.refreshDeviceData()
+ 
+     fun wake(device: TvDevice? = _uiState.value.currentDevice, macOverride: String? = null) {
+         val mac = macOverride?.trim()?.takeIf(String::isNotBlank) ?: device?.mac
+@@ -243,11 +298,7 @@
+         val state = _uiState.value
+         val preset = state.selectedPreset
+         if (!preset.id.isCustom) return
+-        val modules = if (module in preset.modules) {
+-            preset.modules - module
+-        } else {
+-            preset.modules + module
+-        }
++        val modules = if (module in preset.modules) preset.modules - module else preset.modules + module
+         savePreset(preset.copy(modules = modules.ifEm
