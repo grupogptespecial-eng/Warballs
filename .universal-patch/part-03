@@ -1,0 +1,155 @@
+ val port3000Reachable: Boolean? = null,
+     val port3001Reachable: Boolean? = null,
++    val testedPorts: Map<Int, Boolean> = emptyMap(),
++    val platform: TvPlatform? = null,
+     val summary: String = "Pronto para verificar a rede"
+ )
+ 
+@@ -174,7 +251,7 @@
+     val discoveredDevices: List<TvDevice> = emptyList(),
+     val apps: List<TvApp> = emptyList(),
+     val inputs: List<TvInput> = emptyList(),
+-    val capabilities: Set<TvCapability> = TvCapability.lgDefaults,
++    val capabilities: Set<TvCapability> = emptySet(),
+     val volume: Int? = null,
+     val muted: Boolean = false,
+     val hapticsEnabled: Boolean = true,
+diff -ruN '--exclude=.kotlin' '--exclude=build.log' libre_original/source/app/src/main/java/com/geronimo/controlelgwifi/RemotePreferences.kt libre_universal_work/appsrc/app/src/main/java/com/geronimo/controlelgwifi/RemotePreferences.kt
+--- libre_original/source/app/src/main/java/com/geronimo/controlelgwifi/RemotePreferences.kt	2026-07-12 19:58:51.000000000 +0000
++++ libre_universal_work/appsrc/app/src/main/java/com/geronimo/controlelgwifi/RemotePreferences.kt	2026-07-12 22:18:13.835881674 +0000
+@@ -16,9 +16,14 @@
+             prefs.getString("selected_preset", null),
+             RemotePresetId.Normal
+         )
++        val selectedId = prefs.getString("current_tv_id", null)
++        val legacyIp = prefs.getString("current_tv_ip", null)
++        val current = devices.firstOrNull { it.stableId == selectedId }
++            ?: devices.firstOrNull { it.ip == legacyIp }
+         return RemoteUiState(
+             savedDevices = devices,
+-            currentDevice = devices.firstOrNull { it.ip == prefs.getString("current_tv_ip", null) },
++            currentDevice = current,
++            capabilities = current?.capabilities.orEmpty(),
+             hapticsEnabled = prefs.getBoolean("haptics", true),
+             soundEnabled = prefs.getBoolean("sound", false),
+             compactMode = prefs.getBoolean("compact", false),
+@@ -33,11 +38,15 @@
+     }
+ 
+     fun saveDevice(device: TvDevice): List<TvDevice> {
+-        val updated = (loadDevices().filterNot { it.ip == device.ip } + device.copy(lastSeenAt = System.currentTimeMillis()))
++        val updated = (
++            loadDevices().filterNot { it.stableId == device.stableId || (it.ip == device.ip && it.platform == device.platform) } +
++                device.copy(lastSeenAt = System.currentTimeMillis())
++            )
+             .sortedByDescending { it.lastSeenAt }
+-            .take(12)
++            .take(24)
+         prefs.edit()
+-            .putString("devices", devicesToJson(updated).toString())
++            .putString("devices_v2", devicesToJson(updated).toString())
++            .putString("current_tv_id", device.stableId)
+             .putString("current_tv_ip", device.ip)
+             .apply()
+         return updated
+@@ -45,17 +54,25 @@
+ 
+     fun updateDevice(device: TvDevice): List<TvDevice> = saveDevice(device)
+ 
+-    fun removeDevice(ip: String): List<TvDevice> {
+-        val updated = loadDevices().filterNot { it.ip == ip }
+-        val editor = prefs.edit().putString("devices", devicesToJson(updated).toString())
+-        if (prefs.getString("current_tv_ip", null) == ip) editor.remove("current_tv_ip")
++    fun removeDevice(device: TvDevice): List<TvDevice> {
++        val updated = loadDevices().filterNot { it.stableId == device.stableId }
++        val editor = prefs.edit().putString("devices_v2", devicesToJson(updated).toString())
++        if (prefs.getString("current_tv_id", null) == device.stableId) {
++            editor.remove("current_tv_id").remove("current_tv_ip")
++        }
+         editor.apply()
+         return updated
+     }
+ 
+-    fun selectDevice(ip: String?) {
++    fun selectDevice(device: TvDevice?) {
+         prefs.edit().apply {
+-            if (ip == null) remove("current_tv_ip") else putString("current_tv_ip", ip)
++            if (device == null) {
++                remove("current_tv_id")
++                remove("current_tv_ip")
++            } else {
++                putString("current_tv_id", device.stableId)
++                putString("current_tv_ip", device.ip)
++            }
+         }.apply()
+     }
+ 
+@@ -87,7 +104,9 @@
+     }
+ 
+     private fun loadDevices(): List<TvDevice> {
+-        val raw = prefs.getString("devices", null) ?: return migrateLegacyDevice()
++        val raw = prefs.getString("devices_v2", null)
++            ?: prefs.getString("devices", null)
++            ?: return migrateLegacyDevice()
+         return runCatching {
+             val array = JSONArray(raw)
+             buildList {
+@@ -95,19 +114,50 @@
+                     val item = array.optJSONObject(index) ?: continue
+                     val ip = item.optString("ip")
+                     if (ip.isBlank()) continue
++                    val platform = enumValueOrDefault(
++                        item.optString("platform").takeIf(String::isNotBlank),
++                        TvPlatform.LgWebOs
++                    )
++                    val support = enumValueOrDefault(
++                        item.optString("supportLevel").takeIf(String::isNotBlank),
++                        when (platform) {
++                            TvPlatform.LgWebOs -> TvSupportLevel.StableFull
++                            TvPlatform.SamsungTizenLocal -> TvSupportLevel.Experimental
++                            TvPlatform.DlnaMedia -> TvSupportLevel.BetaMediaOnly
++                            TvPlatform.RokuBlockedByPolicy -> TvSupportLevel.BlockedByVendorPolicy
++                            else -> TvSupportLevel.Experimental
++                        }
++                    )
+                     val capabilities = buildSet {
+                         val values = item.optJSONArray("capabilities") ?: JSONArray()
+                         for (i in 0 until values.length()) {
+                             runCatching { add(TvCapability.valueOf(values.optString(i))) }
+                         }
+-                    }.ifEmpty { TvCapability.lgDefaults }
++                    }.ifEmpty { TvCapability.defaultsFor(platform) }
++                    val backendData = buildMap {
++                        val data = item.optJSONObject("backendData") ?: JSONObject()
++                        val keys = data.keys()
++                        while (keys.hasNext()) {
++                            val key = keys.next()
++                            data.optString(key).takeIf(String::isNotBlank)?.let { put(key, it) }
++                        }
++                    }
++                    val stableId = item.optString("stableId")
++                        .takeIf(String::isNotBlank)
++                        ?: "${platform.name}:$ip"
+                     add(
+                         TvDevice(
+                             ip = ip,
+-                            name = item.optString("name", "LG webOS TV"),
++                            name = item.optString("name", defaultName(platform)),
+                             model = item.optString("model").takeIf(String::isNotBlank),
++                            manufacturer = item.optString("manufacturer").takeIf(String::isNotBlank),
+                             room = item.optString("room"),
+                             mac = item.optString("mac").takeIf(String::isNotBlank),
++                            platform = platform,
++                            supportLevel = support,
++                            stableId = stableId,
++                            descriptionUrl = item.optString("descriptionUrl").takeIf(String::isNotBlank),
++                            backendData = backendData,
+                             lastSeenAt = item.optLong("lastSeenAt", 0L),
+                             capabilities = capabilities
+                         )
+@@ -121,11 +171,21 @@
+         val legacyIp = prefs.getString("last_ip", null)
+             ?: legacyPrefs.getString("last_ip", null)
+         val legacyName = legacyPrefs.getString("last_name", "LG webOS TV") ?: "LG webOS TV"
+-        val migrated = legacy
