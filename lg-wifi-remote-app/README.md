@@ -1,6 +1,6 @@
 # Libre Remote
 
-Controle remoto Android gratuito e local-first para TVs LG webOS.
+Controle remoto Android gratuito, local-first e open source para TVs LG webOS.
 
 ## Princípios
 
@@ -9,7 +9,7 @@ Controle remoto Android gratuito e local-first para TVs LG webOS.
 - sem telemetria;
 - sem servidor externo;
 - comunicação direta pela rede local;
-- código preparado para publicação open source.
+- código aberto sob GPL-3.0-or-later.
 
 ## Recursos da versão 0.2
 
@@ -46,6 +46,8 @@ Alguns roteadores bloqueiam multicast ou isolam dispositivos. Nesses casos, info
 
 Esta é uma versão beta funcional criada para testes comunitários. Compatibilidade pode variar entre gerações do webOS. O projeto não é afiliado à LG Electronics.
 
-## Licença pretendida
+O APK beta é assinado com uma chave de depuração. Uma publicação oficial deverá usar uma chave de lançamento estável, testes ampliados e um repositório próprio separado do projeto usado temporariamente para compilação.
 
-GPL-3.0-or-later para o aplicativo oficial. Antes da publicação pública, o repositório deve receber o texto completo da licença, política de marca, política de privacidade, guia de contribuição e avisos de terceiros.
+## Licença e documentação
+
+O código é disponibilizado sob GPL-3.0-or-later. Consulte `LICENSE.md`, `PRIVACY.md`, `SECURITY.md`, `CONTRIBUTING.md`, `CHANGELOG.md` e `THIRD_PARTY_NOTICES.md`.
