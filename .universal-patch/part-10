@@ -1,0 +1,165 @@
+     TvPlatform.SamsungSmartThings -> 80
++        TvPlatform.DlnaMedia -> 60
++        TvPlatform.GoogleCast -> 55
++        TvPlatform.FireTvMedia -> 45
++        TvPlatform.PhilipsJointSpaceExperimental, TvPlatform.HisenseVidaaExperimental -> 30
++        TvPlatform.AndroidTvExperimental -> 25
++        TvPlatform.RokuBlockedByPolicy -> 5
++        TvPlatform.Unknown -> 0
++    }
+ 
+     private fun discoverSsdp(context: Context, durationMs: Long): List<TvDevice> {
+-        val devices = linkedMapOf<String, TvDevice>()
++        val devices = mutableListOf<TvDevice>()
++        val processedLocations = mutableSetOf<String>()
+         val wifi = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+-        val multicastLock = wifi.createMulticastLock("libre-remote-discovery").apply { setReferenceCounted(false) }
++        val multicastLock = wifi.createMulticastLock("libre-remote-universal-discovery").apply { setReferenceCounted(false) }
+         try {
+             multicastLock.acquire()
+             DatagramSocket(null).use { socket ->
+@@ -123,30 +233,28 @@
+                         }.toByteArray(Charsets.UTF_8)
+                         socket.send(DatagramPacket(request, request.size, multicastAddress, 1900))
+                     }
+-                    if (round == 0) Thread.sleep(80)
++                    if (round == 0) Thread.sleep(90)
+                 }
++
+                 val deadline = System.currentTimeMillis() + durationMs
+-                val buffer = ByteArray(12_288)
++                val buffer = ByteArray(16_384)
+                 while (System.currentTimeMillis() < deadline) {
+                     try {
+                         val packet = DatagramPacket(buffer, buffer.size)
+                         socket.receive(packet)
+                         val response = String(packet.data, 0, packet.length, Charsets.UTF_8)
+-                        val lower = response.lowercase(Locale.ROOT)
+-                        if (!looksLikeLgTv(lower)) continue
+                         val headers = parseHeaders(response)
+                         val location = headers["location"]
+                         val ip = runCatching { location?.let { URI(it).host } }.getOrNull()
+                             ?: packet.address.hostAddress
+                             ?: continue
+-                        val details = location?.let(::fetchDescription)
+-                        val name = details?.first
+-                            ?: headers["dlna.devicename.lge.com"]
+-                            ?: headers["server"]?.takeIf { it.contains("LG", true) }
+-                            ?: "LG webOS TV"
+-                        devices[ip] = TvDevice(ip = ip, name = cleanName(name), model = details?.second)
++                        val normalizedLocation = location?.takeIf(::isLocalHttpUrl)
++                        val description = normalizedLocation
++                            ?.takeIf { processedLocations.add(it) }
++                            ?.let(::fetchDescription)
++                        classify(response, headers, ip, normalizedLocation, description)?.let(devices::add)
+                     } catch (_: SocketTimeoutException) {
+-                        // Keep collecting until the deadline.
++                        // Continue collecting until the deadline.
+                     }
+                 }
+             }
+@@ -155,9 +263,177 @@
+         } finally {
+             if (multicastLock.isHeld) multicastLock.release()
+         }
+-        return devices.values.toList()
++        return devices
++    }
++
++    private fun classify(
++        response: String,
++        headers: Map<String, String>,
++        ip: String,
++        location: String?,
++        description: DeviceDescription?
++    ): TvDevice? {
++        val serviceTypes = description?.services?.joinToString(" ") { it.serviceType }.orEmpty()
++        val haystack = listOf(
++            response,
++            headers.values.joinToString(" "),
++            description?.friendlyName,
++            description?.manufacturer,
++            description?.modelName,
++            description?.deviceType,
++            serviceTypes
++        ).joinToString(" ").lowercase(Locale.ROOT)
++
++        val name = cleanName(
++            description?.friendlyName
++                ?: headers["dlna.devicename.lge.com"]
++                ?: description?.modelName
++                ?: "Smart TV"
++        )
++        val udn = description?.udn?.removePrefix("uuid:")?.takeIf(String::isNotBlank)
++        val isMediaRenderer = haystack.contains("mediarenderer") ||
++            description?.services?.any { it.serviceType.contains("AVTransport", true) || it.serviceType.contains("RenderingControl", true) } == true
++        val dlnaData = buildDlnaData(location, description)
++
++        if (haystack.contains("webos") || haystack.contains("lge") || haystack.contains("lg electronics")) {
++            return TvDevice(
++                ip = ip,
++                name = name.ifBlank { "LG webOS TV" },
++                model = description?.modelName,
++                manufacturer = description?.manufacturer ?: "LG",
++                platform = TvPlatform.LgWebOs,
++                supportLevel = TvSupportLevel.StableFull,
++                stableId = udn?.let { "lg:$it" } ?: "${TvPlatform.LgWebOs.name}:$ip",
++                descriptionUrl = location,
++                backendData = dlnaData,
++                capabilities = TvCapability.lgDefaults
++            )
++        }
++
++        if (haystack.contains("samsung")) {
++            val localControl = canConnect(ip, 8002, 220) || canConnect(ip, 8001, 220)
++            if (localControl) {
++                return TvDevice(
++                    ip = ip,
++                    name = name.ifBlank { "Samsung Tizen TV" },
++                    model = description?.modelName,
++                    manufacturer = description?.manufacturer ?: "Samsung",
++                    platform = TvPlatform.SamsungTizenLocal,
++                    supportLevel = TvSupportLevel.Experimental,
++                    stableId = udn?.let { "samsung:$it" } ?: "${TvPlatform.SamsungTizenLocal.name}:$ip",
++                    descriptionUrl = location,
++                    backendData = dlnaData,
++                    capabilities = TvCapability.samsungTizenDefaults
++                )
++            }
++        }
++
++        if (haystack.contains("roku")) {
++            return TvDevice(
++                ip = ip,
++                name = name.ifBlank { "Roku TV" },
++                model = description?.modelName,
++                manufacturer = description?.manufacturer ?: "Roku",
++                platform = TvPlatform.RokuBlockedByPolicy,
++                supportLevel = TvSupportLevel.BlockedByVendorPolicy,
++                stableId = udn?.let { "roku:$it" } ?: "${TvPlatform.RokuBlockedByPolicy.name}:$ip",
++                descriptionUrl = location,
++                backendData = dlnaData,
++                capabilities = emptySet()
++            )
++        }
++
++        if (isMediaRenderer && dlnaData.isNotEmpty()) {
++            return TvDevice(
++                ip = ip,
++                name = name,
++                model = description?.modelName,
++                manufacturer = description?.manufacturer,
++                platform = TvPlatform.DlnaMedia,
++                supportLevel = TvSupportLevel.BetaMediaOnly,
++                stableId = udn?.let { "dlna:$it" } ?: "${TvPlatform.DlnaMedia.name}:$ip",
++                descriptionUrl = location,
++                backendData = dlnaData,
++                capabilities = TvCapability.dlnaDefaults
++            )
++        }
++
++        val experimentalPlatform = when {
++            haystack.contains("philips") -> TvPlatform.PhilipsJointSpaceExperimental
++            haystack.contains("hisense") || haystack.contains("vidaa") -> TvPlatform.HisenseVidaaExperimental
++            haystack.contains("amazon") || haystack.contains("fire tv") -> TvPlatform.FireTvMedia
++            haystack.contai
