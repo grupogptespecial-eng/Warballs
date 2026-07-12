@@ -1,9 +1,9 @@
-name: Build Libre Remote v0.2
+name: Build Libre Remote 1.0 RC
 
 on:
   push:
     branches:
-      - build/libre-remote-v02
+      - build/libre-remote-v1-rc1
     paths:
       - "lg-wifi-remote-app/**"
       - ".github/workflows/build-lg-wifi-remote.yml"
@@ -17,9 +17,9 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  validate-and-package:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -43,47 +43,95 @@ jobs:
         with:
           gradle-version: "8.10.2"
 
-      - name: Normalize source before compilation
-        working-directory: lg-wifi-remote-app
+      - name: Generate private Play upload key
+        shell: bash
         run: |
-          sed -i 's/@Composable Column\.() -> Unit/@Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit/' app/src/main/java/com/geronimo/controlelgwifi/MainActivity.kt
+          set -euo pipefail
+          PASSWORD="$(openssl rand -hex 18)"
+          ALIAS="libre-remote-upload"
+          echo "::add-mask::$PASSWORD"
+          keytool -genkeypair -v \
+            -keystore "$GITHUB_WORKSPACE/libre-remote-upload-key.jks" \
+            -storepass "$PASSWORD" \
+            -keypass "$PASSWORD" \
+            -alias "$ALIAS" \
+            -keyalg RSA -keysize 4096 -validity 10000 \
+            -dname "CN=Libre Remote Upload, OU=Open Source, O=Libre Remote Community, L=Rio de Janeiro, ST=RJ, C=BR"
+          echo "LIBRE_KEYSTORE_PATH=$GITHUB_WORKSPACE/libre-remote-upload-key.jks" >> "$GITHUB_ENV"
+          echo "LIBRE_KEYSTORE_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
+          echo "LIBRE_KEY_ALIAS=$ALIAS" >> "$GITHUB_ENV"
+          echo "LIBRE_KEY_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
+          mkdir -p "$GITHUB_WORKSPACE/private-key"
+          cat > "$GITHUB_WORKSPACE/private-key/LEIA-ME.txt" <<EOF
+          LIBRE REMOTE - CHAVE PRIVADA DE UPLOAD DO GOOGLE PLAY
 
-      - name: Build APK
+          Arquivo: libre-remote-upload-key.jks
+          Alias: $ALIAS
+          Senha do keystore: $PASSWORD
+          Senha da chave: $PASSWORD
+
+          Guarde este pacote em local seguro e fora do repositório público.
+          Esta é uma chave de UPLOAD, não a chave final de assinatura gerenciada pelo Play App Signing.
+          EOF
+          cp "$GITHUB_WORKSPACE/libre-remote-upload-key.jks" "$GITHUB_WORKSPACE/private-key/"
+
+      - name: Unit tests, lint and release build
         id: build
         continue-on-error: true
         working-directory: lg-wifi-remote-app
         run: |
           set -o pipefail
-          gradle --no-daemon --stacktrace :app:assembleDebug 2>&1 | tee build.log
+          gradle --no-daemon --stacktrace \
+            :app:testDebugUnitTest \
+            :app:lintRelease \
+            :app:assembleRelease \
+            :app:bundleRelease 2>&1 | tee build.log
 
-      - name: Upload build log
+      - name: Upload validation log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Libre-Remote-build-log
-          path: lg-wifi-remote-app/build.log
-          retention-days: 7
+          name: Libre-Remote-1.0-RC-build-log
+          path: |
+            lg-wifi-remote-app/build.log
+            lg-wifi-remote-app/app/build/reports/lint-results-release.html
+            lg-wifi-remote-app/app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 14
 
-      - name: Prepare distributables
+      - name: Verify and package release
         if: steps.build.outcome == 'success'
+        shell: bash
         run: |
-          mkdir -p output/source
-          cp lg-wifi-remote-app/app/build/outputs/apk/debug/app-debug.apk output/Libre-Remote-v0.2.apk
-          sha256sum output/Libre-Remote-v0.2.apk > output/Libre-Remote-v0.2.sha256
-          rsync -a --exclude build --exclude .gradle lg-wifi-remote-app/ output/source/
+          set -euo pipefail
+          mkdir -p output/source output/store
+          APK="lg-wifi-remote-app/app/build/outputs/apk/release/app-release.apk"
+          AAB="lg-wifi-remote-app/app/build/outputs/bundle/release/app-release.aab"
+          cp "$APK" output/Libre-Remote-1.0.0-rc1.apk
+          cp "$AAB" output/Libre-Remote-1.0.0-rc1.aab
+          apksigner verify --verbose --print-certs output/Libre-Remote-1.0.0-rc1.apk > output/APK-SIGNATURE.txt
+          sha256sum output/Libre-Remote-1.0.0-rc1.apk output/Libre-Remote-1.0.0-rc1.aab > output/SHA256SUMS.txt
+          rsync -a --exclude build --exclude .gradle --exclude local.properties lg-wifi-remote-app/ output/source/
           cd output
-          zip -qr Libre-Remote-v0.2-source.zip source
+          zip -qr Libre-Remote-1.0.0-rc1-source.zip source
           rm -rf source
+          cd "$GITHUB_WORKSPACE"
+          (cd private-key && zip -qr ../output/PRIVATE-Libre-Remote-upload-key.zip .)
+          if [ -d "lg-wifi-remote-app/store-listing" ]; then
+            cp -r lg-wifi-remote-app/store-listing/* output/store/ || true
+            (cd output && zip -qr Libre-Remote-Play-Store-listing.zip store)
+            rm -rf output/store
+          fi
 
-      - name: Upload APK and source
+      - name: Upload release candidate
         if: steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: Libre-Remote-v0.2
+          name: Libre-Remote-1.0.0-RC1
           path: output/*
           if-no-files-found: error
           retention-days: 30
 
-      - name: Fail when compilation failed
+      - name: Fail when validation failed
         if: steps.build.outcome == 'failure'
         run: exit 1
