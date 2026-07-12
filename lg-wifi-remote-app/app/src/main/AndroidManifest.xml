@@ -8,16 +8,18 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
-        android:allowBackup="true"
-        android:label="Controle LG Wi-Fi"
+        android:allowBackup="false"
+        android:enableOnBackInvokedCallback="true"
+        android:icon="@drawable/ic_libre_remote"
+        android:label="Libre Remote"
+        android:roundIcon="@drawable/ic_libre_remote"
         android:supportsRtl="true"
         android:theme="@style/Theme.ControleLGWiFi"
         android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:configChanges="keyboardHidden|orientation|screenSize"
-            android:exported="true"
-            android:screenOrientation="portrait">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
