@@ -1,0 +1,106 @@
++A versão 1.1.0-alpha1 é uma prévia técnica da arquitetura universal. LG continua sendo o backend mais testado. Samsung local e DLNA precisam de uma matriz maior de televisores reais antes de serem promovidos para estáveis.
+ 
+-O APK beta é assinado com uma chave de depuração. Uma publicação oficial deverá usar uma chave de lançamento estável, testes ampliados e um repositório próprio separado do projeto usado temporariamente para compilação.
++O projeto não é afiliado à LG Electronics, Samsung Electronics, Google, Amazon, Roku, Philips ou Hisense.
+ 
+ ## Licença e documentação
+ 
+-O código é disponibilizado sob GPL-3.0-or-later. Consulte `LICENSE.md`, `PRIVACY.md`, `SECURITY.md`, `CONTRIBUTING.md`, `CHANGELOG.md` e `THIRD_PARTY_NOTICES.md`.
++Consulte `LICENSE.md`, `PRIVACY.md`, `SECURITY.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `THIRD_PARTY_NOTICES.md` e `UNIVERSAL_COMPATIBILITY.md`.
+diff -ruN '--exclude=.kotlin' '--exclude=build.log' libre_original/source/UNIVERSAL_COMPATIBILITY.md libre_universal_work/appsrc/UNIVERSAL_COMPATIBILITY.md
+--- libre_original/source/UNIVERSAL_COMPATIBILITY.md	1970-01-01 00:00:00.000000000 +0000
++++ libre_universal_work/appsrc/UNIVERSAL_COMPATIBILITY.md	2026-07-12 22:20:48.777375133 +0000
+@@ -0,0 +1,36 @@
++# Compatibilidade universal
++
++## Implementado
++
++### LG webOS — estável
++
++Backend local WebSocket com pareamento, reconexão, ponteiro, teclado, apps, entradas, volume, canais, mídia e desligamento.
++
++### Samsung Tizen local — experimental
++
++Backend WebSocket local nas portas 8001/8002, pareamento na TV, token criptografado, reconexão e mapeamento de teclas. O protocolo varia entre gerações e não é tratado como API pública estável.
++
++### DLNA / UPnP AV — beta de mídia
++
++Descoberta de `MediaRenderer`, leitura de `AVTransport` e `RenderingControl` no XML de descrição e envio de SOAP para transporte, volume e mudo. Não oferece Home, D-pad, apps ou entradas.
++
++## Detectado, mas não habilitado
++
++- Android / Google TV: não há backend genérico público de controle completo integrado;
++- Google Cast: exige integração do Cast Application Framework e controla mídia, não a interface completa;
++- SmartThings: exige OAuth, cadastro de integração e revisão da política de privacidade;
++- Fire TV: somente APIs oficialmente autorizadas serão consideradas;
++- Philips JointSpace e Hisense VIDAA: aguardam auditoria e testes físicos;
++- Roku: detectado, porém desativado por política pública do fabricante.
++
++## Critérios de promoção
++
++Um backend sai de Experimental/Beta somente após:
++
++- testes em várias gerações e modelos;
++- pareamento aceito, negado e expirado;
++- reconexão após queda de Wi-Fi e troca de IP;
++- TV por Wi-Fi e Ethernet;
++- rede de convidados e isolamento de clientes;
++- comandos não suportados sem travar o app;
++- revisão de segurança e termos do fabricante.
+diff -ruN '--exclude=.kotlin' '--exclude=build.log' libre_original/source/app/build.gradle.kts libre_universal_work/appsrc/app/build.gradle.kts
+--- libre_original/source/app/build.gradle.kts	2026-07-12 19:58:51.000000000 +0000
++++ libre_universal_work/appsrc/app/build.gradle.kts	2026-07-12 22:20:06.229258214 +0000
+@@ -12,8 +12,8 @@
+         applicationId = "io.github.grupogptespecialeng.libreremote"
+         minSdk = 23
+         targetSdk = 35
+-        versionCode = 10
+-        versionName = "1.0.0-rc1"
++        versionCode = 11
++        versionName = "1.1.0-alpha1"
+         vectorDrawables.useSupportLibrary = true
+     }
+ 
+diff -ruN '--exclude=.kotlin' '--exclude=build.log' libre_original/source/app/src/main/java/com/geronimo/controlelgwifi/DlnaBackend.kt libre_universal_work/appsrc/app/src/main/java/com/geronimo/controlelgwifi/DlnaBackend.kt
+--- libre_original/source/app/src/main/java/com/geronimo/controlelgwifi/DlnaBackend.kt	1970-01-01 00:00:00.000000000 +0000
++++ libre_universal_work/appsrc/app/src/main/java/com/geronimo/controlelgwifi/DlnaBackend.kt	2026-07-12 22:16:42.494508863 +0000
+@@ -0,0 +1,242 @@
++package com.geronimo.controlelgwifi
++
++import android.content.Context
++import kotlinx.coroutines.CoroutineScope
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.SupervisorJob
++import kotlinx.coroutines.launch
++import java.net.HttpURLConnection
++import java.net.URL
++
++/**
++ * Standards-based UPnP AV / DLNA MediaRenderer backend.
++ *
++ * It controls the renderer's active media session. It does not navigate the TV UI,
++ * open arbitrary installed apps, or replace a full vendor remote protocol.
++ */
++class DlnaBackend(
++    context: Context,
++    private val listener: TvBackendListener
++) : TvBackend {
++    private val appContext = context.applicationContext
++    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
++
++    @Volatile private var device: TvDevice? = null
++    @Volatile private var connected = false
++    @Volatile private var lastVolume: Int? = null
++    @Volatile private var lastMuted = false
++
++    override val metadata = TvBackendMetadata(
++        platform = TvPlatform.DlnaMedia,
++        supportLevel = TvSupportLevel.BetaMediaOnly,
++        displayName = "DLNA / UPnP AV",
++        accountRequired = false,
++        localOnly = true,
++        notes = "Controla transporte e volume da sessão de mídia anunciada pelo MediaRenderer."
++    )
++
++    override val defaultCapabilities: Set<TvCapability> = TvCapability.dlnaDefaults
++
