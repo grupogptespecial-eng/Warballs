@@ -27,15 +27,19 @@ jobs:
           FAST="lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/FastLgWebOsClient.kt"
           CONTROLS="lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/RemoteControls.kt"
           sed -i 's/while (pointerQueue.size >= 24) pointerQueue.removeFirstOrNull()/while (pointerQueue.size >= 24 \&\& pointerQueue.isNotEmpty()) pointerQueue.removeFirst()/' "$FAST"
-          if ! grep -q 'import androidx.compose.foundation.gestures.awaitEachGesture' "$CONTROLS"; then
-            sed -i '/import androidx.compose.foundation.gestures.detectDragGestures/i import androidx.compose.foundation.gestures.awaitEachGesture\nimport androidx.compose.foundation.gestures.awaitFirstDown' "$CONTROLS"
+          sed -i 's/^import awaitEachGesture$/import androidx.compose.foundation.gestures.awaitEachGesture/' "$CONTROLS"
+          if ! grep -q '^import androidx.compose.foundation.gestures.awaitEachGesture$' "$CONTROLS"; then
+            sed -i '/import androidx.compose.foundation.gestures.detectDragGestures/i import androidx.compose.foundation.gestures.awaitEachGesture' "$CONTROLS"
           fi
-          sed -i 's/androidx.compose.foundation.gestures.awaitEachGesture/awaitEachGesture/' "$CONTROLS"
+          if ! grep -q '^import androidx.compose.foundation.gestures.awaitFirstDown$' "$CONTROLS"; then
+            sed -i '/import androidx.compose.foundation.gestures.detectDragGestures/i import androidx.compose.foundation.gestures.awaitFirstDown' "$CONTROLS"
+          fi
+          sed -i 's/androidx.compose.foundation.gestures.awaitEachGesture {/awaitEachGesture {/' "$CONTROLS"
           if ! git diff --quiet; then
             git config user.name "Libre Remote CI"
             git config user.email "actions@users.noreply.github.com"
             git add "$FAST" "$CONTROLS"
-            git commit -m "Fix release compilation [skip ci]"
+            git commit -m "Fix release compilation imports [skip ci]"
             git push origin HEAD:build/libre-remote-v1-rc1
           fi
 
