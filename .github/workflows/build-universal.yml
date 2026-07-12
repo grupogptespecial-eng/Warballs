@@ -9,6 +9,12 @@ on:
       - ".universal-payload/**"
       - "lg-wifi-remote-app/**"
       - ".github/workflows/build-universal.yml"
+  pull_request:
+    paths:
+      - ".universal-patch/**"
+      - ".universal-payload/**"
+      - "lg-wifi-remote-app/**"
+      - ".github/workflows/build-universal.yml"
   workflow_dispatch:
 
 permissions:
