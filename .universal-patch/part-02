@@ -1,0 +1,211 @@
+TROL_URL,
++            action = "GetVolume",
++            body = "<InstanceID>0</InstanceID><Channel>Master</Channel>"
++        )
++        return Regex("<(?:[A-Za-z0-9_]+:)?CurrentVolume>(\\d+)</", RegexOption.IGNORE_CASE)
++            .find(response)?.groupValues?.getOrNull(1)?.toIntOrNull()
++            ?: throw IllegalStateException("CurrentVolume ausente")
++    }
++
++    private fun getMuteInternal(): Boolean {
++        val response = soap(
++            serviceTypeKey = KEY_RENDERING_CONTROL_TYPE,
++            controlUrlKey = KEY_RENDERING_CONTROL_URL,
++            action = "GetMute",
++            body = "<InstanceID>0</InstanceID><Channel>Master</Channel>"
++        )
++        val raw = Regex("<(?:[A-Za-z0-9_]+:)?CurrentMute>([^<]+)</", RegexOption.IGNORE_CASE)
++            .find(response)?.groupValues?.getOrNull(1)?.trim()?.lowercase()
++            ?: throw IllegalStateException("CurrentMute ausente")
++        return raw == "1" || raw == "true"
++    }
++
++    private fun soap(
++        serviceTypeKey: String,
++        controlUrlKey: String,
++        action: String,
++        body: String
++    ): String {
++        val current = device ?: throw IllegalStateException("Nenhuma TV selecionada")
++        val serviceType = current.backendData[serviceTypeKey]
++            ?: throw IllegalStateException("Tipo de serviço ausente")
++        val controlUrl = current.backendData[controlUrlKey]
++            ?: throw IllegalStateException("URL de controle ausente")
++        require(isLocalHttpUrl(controlUrl)) { "URL DLNA fora da rede local" }
++
++        val envelope = buildSoapEnvelope(serviceType, action, body)
++        val connection = URL(controlUrl).openConnection() as HttpURLConnection
++        connection.requestMethod = "POST"
++        connection.connectTimeout = 1_200
++        connection.readTimeout = 1_800
++        connection.instanceFollowRedirects = false
++        connection.doOutput = true
++        connection.setRequestProperty("Content-Type", "text/xml; charset=\"utf-8\"")
++        connection.setRequestProperty("SOAPACTION", "\"$serviceType#$action\"")
++        connection.outputStream.use { it.write(envelope.toByteArray(Charsets.UTF_8)) }
++        val code = connection.responseCode
++        val stream = if (code in 200..299) connection.inputStream else connection.errorStream
++        val response = stream?.bufferedReader()?.use { it.readText().take(300_000) }.orEmpty()
++        if (code !in 200..299) throw IllegalStateException("DLNA HTTP $code")
++        return response
++    }
++
++    internal fun buildSoapEnvelope(serviceType: String, action: String, body: String): String =
++        "<?xml version=\"1.0\" encoding=\"utf-8\"?>" +
++            "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">" +
++            "<s:Body><u:$action xmlns:u=\"$serviceType\">$body</u:$action></s:Body></s:Envelope>"
++
++    override fun close() {
++        connected = false
++        listener.onConnectionState(ConnectionState.Idle, "Desconectada")
++    }
++
++    override fun forgetDevice(device: TvDevice) = Unit
++
++    private fun isLocalHttpUrl(value: String): Boolean = runCatching {
++        val url = URL(value)
++        if (url.protocol !in setOf("http", "https")) return@runCatching false
++        val address = java.net.InetAddress.getByName(url.host)
++        address.isSiteLocalAddress || address.isLinkLocalAddress || address.isLoopbackAddress
++    }.getOrDefault(false)
++
++    companion object {
++        const val KEY_AV_TRANSPORT_URL = "dlna.avTransport.controlUrl"
++        const val KEY_AV_TRANSPORT_TYPE = "dlna.avTransport.serviceType"
++        const val KEY_RENDERING_CONTROL_URL = "dlna.renderingControl.controlUrl"
++        const val KEY_RENDERING_CONTROL_TYPE = "dlna.renderingControl.serviceType"
++    }
++}
+diff -ruN '--exclude=.kotlin' '--exclude=build.log' libre_original/source/app/src/main/java/com/geronimo/controlelgwifi/RemoteModels.kt libre_universal_work/appsrc/app/src/main/java/com/geronimo/controlelgwifi/RemoteModels.kt
+--- libre_original/source/app/src/main/java/com/geronimo/controlelgwifi/RemoteModels.kt	2026-07-12 19:58:51.000000000 +0000
++++ libre_universal_work/appsrc/app/src/main/java/com/geronimo/controlelgwifi/RemoteModels.kt	2026-07-12 22:15:11.556542703 +0000
+@@ -2,18 +2,53 @@
+ 
+ import androidx.compose.runtime.Immutable
+ 
++enum class TvPlatform(val displayName: String) {
++    LgWebOs("LG webOS"),
++    SamsungTizenLocal("Samsung Tizen"),
++    SamsungSmartThings("Samsung SmartThings"),
++    DlnaMedia("DLNA / UPnP"),
++    GoogleCast("Google Cast"),
++    AndroidTvExperimental("Android / Google TV"),
++    FireTvMedia("Fire TV"),
++    PhilipsJointSpaceExperimental("Philips TV"),
++    HisenseVidaaExperimental("Hisense VIDAA"),
++    RokuBlockedByPolicy("Roku TV"),
++    Unknown("Smart TV")
++}
++
++enum class TvSupportLevel(val label: String) {
++    StableFull("Controle completo"),
++    BetaFull("Controle completo beta"),
++    StableMediaOnly("Controle de mídia"),
++    BetaMediaOnly("Controle de mídia beta"),
++    Experimental("Experimental"),
++    BlockedByVendorPolicy("Indisponível por política"),
++    Unsupported("Não compatível")
++}
++
+ @Immutable
+ data class TvDevice(
+     val ip: String,
+-    val name: String = "LG webOS TV",
++    val name: String = "Smart TV",
+     val model: String? = null,
++    val manufacturer: String? = null,
+     val room: String = "",
+     val mac: String? = null,
++    val platform: TvPlatform = TvPlatform.LgWebOs,
++    val supportLevel: TvSupportLevel = TvSupportLevel.StableFull,
++    val stableId: String = "${platform.name}:$ip",
++    val descriptionUrl: String? = null,
++    val backendData: Map<String, String> = emptyMap(),
+     val lastSeenAt: Long = System.currentTimeMillis(),
+-    val capabilities: Set<TvCapability> = TvCapability.lgDefaults
++    val capabilities: Set<TvCapability> = TvCapability.defaultsFor(platform)
+ ) {
+     val displayName: String
+         get() = room.takeIf { it.isNotBlank() }?.let { "$it • $name" } ?: name
++
++    val platformLabel: String get() = platform.displayName
++    val supportLabel: String get() = supportLevel.label
++    val connectable: Boolean
++        get() = supportLevel !in setOf(TvSupportLevel.BlockedByVendorPolicy, TvSupportLevel.Unsupported)
+ }
+ 
+ enum class ConnectionState {
+@@ -34,15 +69,24 @@
+     Navigation,
+     Pointer,
+     Volume,
++    AbsoluteVolume,
+     Channels,
+     Media,
++    Seek,
++    Queue,
+     Apps,
++    AppLaunch,
+     Inputs,
+     Keyboard,
+     NumericKeys,
+     ColoredKeys,
+     Info,
+-    Guide;
++    Guide,
++    Captions,
++    AudioTrack,
++    DeviceInfo,
++    WakeOnLan,
++    CloudControl;
+ 
+     companion object {
+         val lgDefaults = setOf(
+@@ -53,12 +97,43 @@
+             Channels,
+             Media,
+             Apps,
++            AppLaunch,
+             Inputs,
+             Keyboard,
+             NumericKeys,
+             ColoredKeys,
+-            Info
++            Info,
++            WakeOnLan
++        )
++
++        val samsungTizenDefaults = setOf(
++            PowerOff,
++            Navigation,
++            Volume,
++            Channels,
++            Media,
++            NumericKeys,
++            ColoredKeys,
++            Info,
++            Guide
++        )
++
++        val dlnaDefaults = setOf(
++            Volume,
++            AbsoluteVolume,
++            Media,
++            Seek,
++            DeviceInfo
+         )
++
++        fun defaultsFor(platform: TvPlatform): Set<TvCapability> = when (platform) {
++            TvPlatform.LgWebOs -> lgDefaults
++            TvPlatform.SamsungTizenLocal -> samsungTizenDefaults
++            TvPlatform.SamsungSmartThings -> samsungTizenDefaults + setOf(CloudControl, PowerOn)
++            TvPlatform.DlnaMedia -> dlnaDefaults
++            TvPlatform.GoogleCast, TvPlatform.FireTvMedia -> setOf(Media, Seek, Queue, Volume)
++            else -> emptySet()
++        }
+     }
+ }
+ 
+@@ -162,6 +237,8 @@
+     val tvReachable: Boolean? = null,
+    
