@@ -1,0 +1,142 @@
+Ip?.takeIf(String::isNotBlank)?.let { listOf(TvDevice(ip = it, name = legacyName)) }
+-            ?: emptyList()
++        val migrated = legacyIp?.takeIf(String::isNotBlank)?.let {
++            listOf(
++                TvDevice(
++                    ip = it,
++                    name = legacyName,
++                    platform = TvPlatform.LgWebOs,
++                    supportLevel = TvSupportLevel.StableFull,
++                    capabilities = TvCapability.lgDefaults
++                )
++            )
++        } ?: emptyList()
+         if (migrated.isNotEmpty()) {
+             prefs.edit()
+-                .putString("devices", devicesToJson(migrated).toString())
++                .putString("devices_v2", devicesToJson(migrated).toString())
++                .putString("current_tv_id", migrated.first().stableId)
+                 .putString("current_tv_ip", migrated.first().ip)
+                 .apply()
+         }
+@@ -136,17 +196,30 @@
+         devices.forEach { device ->
+             put(
+                 JSONObject()
++                    .put("stableId", device.stableId)
+                     .put("ip", device.ip)
+                     .put("name", device.name)
+                     .put("model", device.model ?: "")
++                    .put("manufacturer", device.manufacturer ?: "")
+                     .put("room", device.room)
+                     .put("mac", device.mac ?: "")
++                    .put("platform", device.platform.name)
++                    .put("supportLevel", device.supportLevel.name)
++                    .put("descriptionUrl", device.descriptionUrl ?: "")
++                    .put("backendData", JSONObject().apply { device.backendData.forEach { (key, value) -> put(key, value) } })
+                     .put("lastSeenAt", device.lastSeenAt)
+                     .put("capabilities", JSONArray().apply { device.capabilities.forEach { put(it.name) } })
+             )
+         }
+     }
+ 
++    private fun defaultName(platform: TvPlatform): String = when (platform) {
++        TvPlatform.LgWebOs -> "LG webOS TV"
++        TvPlatform.SamsungTizenLocal, TvPlatform.SamsungSmartThings -> "Samsung TV"
++        TvPlatform.DlnaMedia -> "MediaRenderer"
++        else -> platform.displayName
++    }
++
+     private fun loadPreset(id: RemotePresetId): RemotePreset {
+         val fallback = RemotePreset.defaultFor(id)
+         val raw = prefs.getString("preset_${id.name}", null) ?: return fallback
+diff -ruN '--exclude=.kotlin' '--exclude=build.log' libre_original/source/app/src/main/java/com/geronimo/controlelgwifi/RemoteSheets.kt libre_universal_work/appsrc/app/src/main/java/com/geronimo/controlelgwifi/RemoteSheets.kt
+--- libre_original/source/app/src/main/java/com/geronimo/controlelgwifi/RemoteSheets.kt	2026-07-12 19:58:51.000000000 +0000
++++ libre_universal_work/appsrc/app/src/main/java/com/geronimo/controlelgwifi/RemoteSheets.kt	2026-07-12 22:19:06.920514642 +0000
+@@ -143,18 +143,18 @@
+ 
+             if (state.discoveredDevices.isNotEmpty()) {
+                 item { SectionTitle("Encontradas agora") }
+-                items(state.discoveredDevices, key = { "found-${it.ip}" }) { device ->
+-                    DeviceRow(device, connected = state.currentDevice?.ip == device.ip && state.connected) {
++                items(state.discoveredDevices, key = { "found-${it.stableId}" }) { device ->
++                    DeviceRow(device, connected = state.currentDevice?.stableId == device.stableId && state.connected) {
+                         viewModel.connect(device)
+                     }
+                 }
+             }
+ 
+-            val offlineSaved = state.savedDevices.filter { saved -> state.discoveredDevices.none { it.ip == saved.ip } }
++            val offlineSaved = state.savedDevices.filter { saved -> state.discoveredDevices.none { it.stableId == saved.stableId } }
+             if (offlineSaved.isNotEmpty()) {
+                 item { SectionTitle("Salvas") }
+-                items(offlineSaved, key = { "saved-${it.ip}" }) { device ->
+-                    DeviceRow(device, connected = state.currentDevice?.ip == device.ip && state.connected) {
++                items(offlineSaved, key = { "saved-${it.stableId}" }) { device ->
++                    DeviceRow(device, connected = state.currentDevice?.stableId == device.stableId && state.connected) {
+                         viewModel.connect(device)
+                     }
+                 }
+@@ -193,7 +193,7 @@
+ @Composable
+ private fun DeviceRow(device: TvDevice, connected: Boolean, onClick: () -> Unit) {
+     Card(
+-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
++        modifier = Modifier.fillMaxWidth().clickable(enabled = device.connectable, onClick = onClick),
+         shape = RoundedCornerShape(20.dp),
+         colors = CardDefaults.cardColors(
+             containerColor = if (connected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+@@ -210,9 +210,9 @@
+             Column(Modifier.weight(1f)) {
+                 Text(device.displayName, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                 Text(
+-                    listOfNotNull(device.model, device.ip).joinToString(" • "),
++                    listOfNotNull(device.platformLabel, device.supportLabel, device.model, device.ip).joinToString(" • "),
+                     fontSize = 12.sp,
+-                    color = MaterialTheme.colorScheme.onSurfaceVariant
++                    color = if (device.connectable) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
+                 )
+             }
+             if (connected) {
+diff -ruN '--exclude=.kotlin' '--exclude=build.log' libre_original/source/app/src/main/java/com/geronimo/controlelgwifi/RemoteViewModel.kt libre_universal_work/appsrc/app/src/main/java/com/geronimo/controlelgwifi/RemoteViewModel.kt
+--- libre_original/source/app/src/main/java/com/geronimo/controlelgwifi/RemoteViewModel.kt	2026-07-12 19:58:51.000000000 +0000
++++ libre_universal_work/appsrc/app/src/main/java/com/geronimo/controlelgwifi/RemoteViewModel.kt	2026-07-12 22:18:54.724575445 +0000
+@@ -12,9 +12,11 @@
+ import kotlinx.coroutines.flow.update
+ import kotlinx.coroutines.launch
+ 
+-class RemoteViewModel(application: Application) : AndroidViewModel(application), FastLgWebOsClient.Listener {
++class RemoteViewModel(application: Application) : AndroidViewModel(application), TvBackendListener {
+     private val preferences = RemotePreferences(application)
+-    private val client = FastLgWebOsClient(application, this)
++    private val backendRegistry by lazy { TvBackendRegistry(application, this) }
++    private var activeBackend: TvBackend? = null
++    private var activePlatform: TvPlatform? = null
+     private val repeatJobs = mutableMapOf<RemoteAction, Job>()
+ 
+     private val _uiState = MutableStateFlow(
+@@ -31,7 +33,7 @@
+ 
+     init {
+         val state = _uiState.value
+-        if (state.autoConnect && state.currentDevice != null) {
++        if (state.autoConnect && state.currentDevice != null && state.currentDevice.connectable) {
+             viewModelScope.launch {
+                 delay(100)
+                 connect(state.currentDevice, userInitiated = false)
+@@ -52,7 +54,7 @@
+         _uiState.update {
+             it.copy(
+                 connectionState = ConnectionState.Discovering,
+-                statusText = "Procurando TVs na sua rede…",
++                statusText = "Procurando TVs e dispositivos de mídia na rede…",
+                 discoveredDevices = emptyList(),
+                 lastError = null
+             )
+@@ -60,6 +62,7 @@
+         viewModelScope.launch(Dispatchers.IO) {
+             val known = _uiState.value.savedDevices
+             val devices = TvDiscovery.discover(getApplication(), known)
++            val usable = devices.filter { it.connectable && backendRegistry.isImplemented(it.platform) }
+             _uiState.update { state ->
+                 when {
