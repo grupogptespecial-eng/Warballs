@@ -1,0 +1,114 @@
+diff -ruN '--exclude=.kotlin' '--exclude=build.log' libre_original/source/CHANGELOG.md libre_universal_work/appsrc/CHANGELOG.md
+--- libre_original/source/CHANGELOG.md	2026-07-12 19:58:51.000000000 +0000
++++ libre_universal_work/appsrc/CHANGELOG.md	2026-07-12 22:20:49.814596924 +0000
+@@ -1,5 +1,18 @@
+ # Changelog
+ 
++## 1.1.0-alpha1
++
++- adiciona arquitetura `TvBackend` orientada por capacidades;
++- preserva LG webOS como backend estável;
++- adiciona Samsung Tizen local experimental com token criptografado e WSS TOFU;
++- adiciona DLNA/UPnP AV para transporte de mídia, volume e mudo;
++- transforma a descoberta SSDP em multiprotocolo;
++- identifica fabricante, modelo, serviços e nível de suporte;
++- deduplica aparelhos encontrados por mais de um protocolo;
++- migra dispositivos LG salvos sem perder pareamento;
++- desabilita conexão em plataformas sem backend ou bloqueadas por política;
++- exibe plataforma e nível de suporte no seletor de TVs.
++
+ All notable changes to Libre Remote will be documented here.
+ 
+ ## 0.2.0-beta — 2026-07-12
+diff -ruN '--exclude=.kotlin' '--exclude=build.log' libre_original/source/README.md libre_universal_work/appsrc/README.md
+--- libre_original/source/README.md	2026-07-12 19:58:51.000000000 +0000
++++ libre_universal_work/appsrc/README.md	2026-07-12 22:20:48.770993314 +0000
+@@ -1,53 +1,66 @@
+ # Libre Remote
+ 
+-Controle remoto Android gratuito, local-first e open source para TVs LG webOS.
++Controle remoto Android gratuito, local-first e open source para Smart TVs.
+ 
+ ## Princípios
+ 
+ - sem anúncios;
+-- sem conta;
+ - sem telemetria;
+-- sem servidor externo;
+-- comunicação direta pela rede local;
++- sem servidor próprio;
++- comunicação local sempre que o sistema da TV permitir;
++- recursos mostrados de acordo com as capacidades reais do aparelho;
+ - código aberto sob GPL-3.0-or-later.
+ 
+-## Recursos da versão 0.2
++## Compatibilidade da versão 1.1.0-alpha1
+ 
+-- interface Jetpack Compose com Material 3;
+-- controle direcional circular e botões arredondados;
+-- resposta tátil opcional;
+-- envio no momento em que o dedo toca o botão;
+-- repetição de volume e canal ao manter pressionado;
+-- conexão WebSocket persistente;
+-- disputa rápida entre portas 3000 e 3001 e memorização da melhor rota;
+-- touchpad com movimentos conflados para evitar fila e atraso;
+-- rolagem dedicada;
+-- teclado numérico e botões coloridos;
+-- controles de mídia;
+-- descoberta SSDP e conexão manual por IP;
+-- lista dinâmica de aplicativos e entradas HDMI;
+-- envio de texto para a TV;
+-- Wake-on-LAN;
+-- chave de pareamento guardada em preferências criptografadas;
+-- verificação TOFU da impressão digital do certificado local;
+-- tema claro e escuro;
+-- interface em português e estrutura pronta para tradução.
++| Sistema | Estado | Recursos |
++|---|---|---|
++| LG webOS | Estável | Controle completo, touchpad, apps, entradas, teclado e mídia |
++| Samsung Tizen local | Experimental | Navegação, volume, canais, mídia, números e botões coloridos |
++| DLNA / UPnP MediaRenderer | Beta | Play, pause, stop, próximo/anterior, volume e mudo da sessão de mídia |
++| Samsung SmartThings | Planejado | Exige OAuth, cadastro de integração e conta do usuário |
++| Google Cast | Planejado | Controle oficial de sessão de mídia; não é controle completo da TV |
++| Android / Google TV | Detectável/experimental | Sem backend completo público habilitado |
++| Philips e Hisense VIDAA | Detectáveis/experimentais | Sem comandos habilitados até auditoria e testes físicos |
++| Roku | Bloqueado no app público | Backend não ativado por política do fabricante |
++| TVs sem rede | Não suportadas sem hardware | Futuro Libre Bridge Wi-Fi para IR/HDMI-CEC |
++
++## Arquitetura universal
++
++A interface não conhece marcas. Ela usa um contrato `TvBackend` e um conjunto de `TvCapability`. Cada backend declara o que suporta; botões incompatíveis ficam ocultos.
++
++Backends implementados:
++
++- `LgWebOsBackend`;
++- `SamsungTizenBackend`;
++- `DlnaBackend`.
++
++A descoberta SSDP agora classifica fabricante, modelo, tipo de dispositivo e serviços UPnP, deduplica a mesma TV encontrada por múltiplos protocolos e prefere o backend com maior capacidade.
++
++## Segurança
++
++- conexões locais são limitadas a endereços privados;
++- chaves LG e tokens Samsung ficam em preferências criptografadas;
++- certificados locais WSS usam trust-on-first-use por aparelho;
++- URLs DLNA externas são rejeitadas;
++- nenhum backend experimental é anunciado como estável;
++- Roku permanece desativado.
+ 
+ ## Primeira conexão
+ 
+ 1. Mantenha celular e TV na mesma rede.
+-2. Abra Ajustes e toque em Buscar.
+-3. Escolha a TV.
+-4. Aceite o pareamento mostrado na tela da LG.
++2. Toque em **Conectar TV**.
++3. Escolha o aparelho identificado.
++4. Aceite o pareamento exibido na televisão, quando solicitado.
+ 
+-Alguns roteadores bloqueiam multicast ou isolam dispositivos. Nesses casos, informe manualmente o IP da televisão.
++O campo de IP manual tenta primeiro identificar LG pelas portas 3000/3001 e Samsung Tizen pelas portas 8001/8002.
+ 
+ ## Estado do projeto
+ 
+-Esta é uma versão beta funcional criada para testes comunitários. Compatibilidade pode variar entre gerações do webOS. O projeto não é afiliado à LG Electronics.
