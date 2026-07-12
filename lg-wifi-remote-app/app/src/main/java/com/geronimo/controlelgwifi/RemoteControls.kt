@@ -116,7 +116,6 @@ fun PressControl(
                 .pointerInput(enabled, haptics) {
                     if (!enabled) return@pointerInput
                     awaitEachGesture {
-                        awaitPointerEventScope {
                             awaitFirstDown(requireUnconsumed = false)
                             pressed = true
                             if (haptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -126,8 +125,7 @@ fun PressControl(
                                 val stillPressed = event.changes.any { it.pressed }
                             } while (stillPressed)
                             pressed = false
-                            onRelease()
-                        }
+                        onRelease()
                     }
                 },
             shape = CircleShape,
