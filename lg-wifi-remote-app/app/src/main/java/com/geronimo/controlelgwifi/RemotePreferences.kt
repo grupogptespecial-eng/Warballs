@@ -5,7 +5,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 class RemotePreferences(context: Context) {
-    private val prefs = context.getSharedPreferences("libre_remote_product", Context.MODE_PRIVATE)
+    private val appContext = context.applicationContext
+    private val prefs = appContext.getSharedPreferences("libre_remote_product", Context.MODE_PRIVATE)
+    private val legacyPrefs = appContext.getSharedPreferences("libre_remote_ui", Context.MODE_PRIVATE)
 
     fun loadState(): RemoteUiState {
         val devices = loadDevices()
@@ -116,15 +118,19 @@ class RemotePreferences(context: Context) {
     }
 
     private fun migrateLegacyDevice(): List<TvDevice> {
-        val legacy = prefs.getString("last_ip", null)
-            ?: runCatching {
-                val old = prefs.contextFallback()
-                old.getString("last_ip", null)
-            }.getOrNull()
-        return legacy?.takeIf(String::isNotBlank)?.let { listOf(TvDevice(ip = it)) } ?: emptyList()
+        val legacyIp = prefs.getString("last_ip", null)
+            ?: legacyPrefs.getString("last_ip", null)
+        val legacyName = legacyPrefs.getString("last_name", "LG webOS TV") ?: "LG webOS TV"
+        val migrated = legacyIp?.takeIf(String::isNotBlank)?.let { listOf(TvDevice(ip = it, name = legacyName)) }
+            ?: emptyList()
+        if (migrated.isNotEmpty()) {
+            prefs.edit()
+                .putString("devices", devicesToJson(migrated).toString())
+                .putString("current_tv_ip", migrated.first().ip)
+                .apply()
+        }
+        return migrated
     }
-
-    private fun android.content.SharedPreferences.contextFallback(): android.content.SharedPreferences = this
 
     private fun devicesToJson(devices: List<TvDevice>): JSONArray = JSONArray().apply {
         devices.forEach { device ->
