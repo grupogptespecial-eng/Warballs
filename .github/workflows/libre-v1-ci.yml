@@ -1,0 +1,105 @@
+name: Validate Libre Remote 1.0 RC
+
+on:
+  pull_request:
+    paths:
+      - "lg-wifi-remote-app/**"
+      - ".github/workflows/libre-v1-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Generate private upload key
+        shell: bash
+        run: |
+          set -euo pipefail
+          PASSWORD="$(openssl rand -hex 18)"
+          ALIAS="libre-remote-upload"
+          echo "::add-mask::$PASSWORD"
+          keytool -genkeypair -v \
+            -keystore "$GITHUB_WORKSPACE/libre-remote-upload-key.jks" \
+            -storepass "$PASSWORD" -keypass "$PASSWORD" -alias "$ALIAS" \
+            -keyalg RSA -keysize 4096 -validity 10000 \
+            -dname "CN=Libre Remote Upload, OU=Open Source, O=Libre Remote Community, L=Rio de Janeiro, ST=RJ, C=BR"
+          echo "LIBRE_KEYSTORE_PATH=$GITHUB_WORKSPACE/libre-remote-upload-key.jks" >> "$GITHUB_ENV"
+          echo "LIBRE_KEYSTORE_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
+          echo "LIBRE_KEY_ALIAS=$ALIAS" >> "$GITHUB_ENV"
+          echo "LIBRE_KEY_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
+          mkdir -p "$GITHUB_WORKSPACE/private-key"
+          printf 'Arquivo: libre-remote-upload-key.jks\nAlias: %s\nSenha do keystore: %s\nSenha da chave: %s\n' "$ALIAS" "$PASSWORD" "$PASSWORD" > "$GITHUB_WORKSPACE/private-key/LEIA-ME.txt"
+          cp "$GITHUB_WORKSPACE/libre-remote-upload-key.jks" "$GITHUB_WORKSPACE/private-key/"
+
+      - name: Test, lint and build
+        id: build
+        continue-on-error: true
+        working-directory: lg-wifi-remote-app
+        run: |
+          set -o pipefail
+          gradle --no-daemon --stacktrace \
+            :app:testDebugUnitTest \
+            :app:lintRelease \
+            :app:assembleRelease \
+            :app:bundleRelease 2>&1 | tee build.log
+
+      - name: Upload validation log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Libre-Remote-v1-build-log
+          path: |
+            lg-wifi-remote-app/build.log
+            lg-wifi-remote-app/app/build/reports/lint-results-release.html
+            lg-wifi-remote-app/app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Package outputs
+        if: steps.build.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output/source output/store
+          cp lg-wifi-remote-app/app/build/outputs/apk/release/app-release.apk output/Libre-Remote-1.0.0-rc1.apk
+          cp lg-wifi-remote-app/app/build/outputs/bundle/release/app-release.aab output/Libre-Remote-1.0.0-rc1.aab
+          apksigner verify --verbose --print-certs output/Libre-Remote-1.0.0-rc1.apk > output/APK-SIGNATURE.txt
+          sha256sum output/Libre-Remote-1.0.0-rc1.apk output/Libre-Remote-1.0.0-rc1.aab > output/SHA256SUMS.txt
+          rsync -a --exclude build --exclude .gradle --exclude local.properties lg-wifi-remote-app/ output/source/
+          (cd output && zip -qr Libre-Remote-1.0.0-rc1-source.zip source && rm -rf source)
+          (cd private-key && zip -qr ../output/PRIVATE-Libre-Remote-upload-key.zip .)
+          if [ -d lg-wifi-remote-app/store-listing ]; then
+            cp -r lg-wifi-remote-app/store-listing/* output/store/ || true
+            (cd output && zip -qr Libre-Remote-Play-Store-listing.zip store && rm -rf store)
+          fi
+
+      - name: Upload release outputs
+        if: steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Libre-Remote-1.0.0-RC1
+          path: output/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Fail if validation failed
+        if: steps.build.outcome == 'failure'
+        run: exit 1
