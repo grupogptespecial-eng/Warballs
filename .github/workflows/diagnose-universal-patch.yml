@@ -1,0 +1,39 @@
+name: Diagnose Universal Patch Fragments
+
+on:
+  push:
+    branches:
+      - feature/libre-remote-universal-core
+    paths:
+      - ".universal-patch/**"
+      - ".github/workflows/diagnose-universal-patch.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/libre-remote-universal-core
+      - name: Generate fragment manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          wc -c .universal-patch/part-* | tee patch-parts-size.txt
+          sha256sum .universal-patch/part-* | tee patch-parts-sha256.txt
+          cat .universal-patch/part-* > universal.patch
+          wc -c universal.patch | tee patch-total-size.txt
+          sha256sum universal.patch | tee patch-total-sha256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: universal-patch-fragment-manifest
+          path: |
+            patch-parts-size.txt
+            patch-parts-sha256.txt
+            patch-total-size.txt
+            patch-total-sha256.txt
+          retention-days: 7
