@@ -1,0 +1,34 @@
+Libre Remote is a free and open-source remote control for LG webOS TVs.
+
+It is designed to work from the first launch: find your TV on the local network, approve the pairing request shown on the television, and start controlling it. On later launches, the app reconnects automatically whenever possible.
+
+FEATURES
+• Direction pad with OK, Back, Home, Menu and Info
+• Volume, mute and channel controls with hold-to-repeat
+• Low-latency touchpad and scrolling
+• Media playback controls
+• Numeric keypad and colored buttons
+• Installed app launcher
+• HDMI and other available inputs
+• Text input on the TV
+• Wake-on-LAN on compatible models
+• Multiple TVs with custom names and rooms
+• Simple, Normal, Advanced and three custom layouts
+• Light, dark, AMOLED and multiple accent themes
+• Optional haptic feedback
+• Network diagnostics and manual IP fallback
+
+REAL PRIVACY
+• No ads
+• No account
+• No in-app purchases
+• No telemetry or trackers
+• No external server
+• Direct communication between phone and TV on the local network
+
+COMPATIBILITY
+Version 1.0 focuses on LG TVs running webOS with mobile-device control enabled. Some functions, especially powering on the TV, vary by model, webOS version and network configuration.
+
+Libre Remote is an independent community project and is not affiliated with, sponsored by or endorsed by LG Electronics.
+
+Source code is distributed under GPL-3.0-or-later.
