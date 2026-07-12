@@ -1,0 +1,188 @@
+- reconexão após queda de Wi-Fi e troca de IP;
++- TV por Wi-Fi e Ethernet;
++- rede de convidados e isolamento de clientes;
++- comandos não suportados sem travar o app;
++- revisão de segurança e termos do fabricante.
+diff -ruN '--exclude=.kotlin' '--exclude=build.log' libre_original/source/app/build.gradle.kts libre_universal_work/appsrc/app/build.gradle.kts
+--- libre_original/source/app/build.gradle.kts	2026-07-12 19:58:51.000000000 +0000
++++ libre_universal_work/appsrc/app/build.gradle.kts	2026-07-12 22:20:06.229258214 +0000
+@@ -12,8 +12,8 @@
+         applicationId = "io.github.grupogptespecialeng.libreremote"
+         minSdk = 23
+         targetSdk = 35
+-        versionCode = 10
+-        versionName = "1.0.0-rc1"
++        versionCode = 11
++        versionName = "1.1.0-alpha1"
+         vectorDrawables.useSupportLibrary = true
+     }
+ 
+diff -ruN '--exclude=.kotlin' '--exclude=build.log' libre_original/source/app/src/main/java/com/geronimo/controlelgwifi/DlnaBackend.kt libre_universal_work/appsrc/app/src/main/java/com/geronimo/controlelgwifi/DlnaBackend.kt
+--- libre_original/source/app/src/main/java/com/geronimo/controlelgwifi/DlnaBackend.kt	1970-01-01 00:00:00.000000000 +0000
++++ libre_universal_work/appsrc/app/src/main/java/com/geronimo/controlelgwifi/DlnaBackend.kt	2026-07-12 22:16:42.494508863 +0000
+@@ -0,0 +1,242 @@
++package com.geronimo.controlelgwifi
++
++import android.content.Context
++import kotlinx.coroutines.CoroutineScope
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.SupervisorJob
++import kotlinx.coroutines.launch
++import java.net.HttpURLConnection
++import java.net.URL
++
++/**
++ * Standards-based UPnP AV / DLNA MediaRenderer backend.
++ *
++ * It controls the renderer's active media session. It does not navigate the TV UI,
++ * open arbitrary installed apps, or replace a full vendor remote protocol.
++ */
++class DlnaBackend(
++    context: Context,
++    private val listener: TvBackendListener
++) : TvBackend {
++    private val appContext = context.applicationContext
++    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
++
++    @Volatile private var device: TvDevice? = null
++    @Volatile private var connected = false
++    @Volatile private var lastVolume: Int? = null
++    @Volatile private var lastMuted = false
++
++    override val metadata = TvBackendMetadata(
++        platform = TvPlatform.DlnaMedia,
++        supportLevel = TvSupportLevel.BetaMediaOnly,
++        displayName = "DLNA / UPnP AV",
++        accountRequired = false,
++        localOnly = true,
++        notes = "Controla transporte e volume da sessão de mídia anunciada pelo MediaRenderer."
++    )
++
++    override val defaultCapabilities: Set<TvCapability> = TvCapability.dlnaDefaults
++
++    override fun connect(device: TvDevice, userInitiated: Boolean) {
++        this.device = device
++        connected = false
++        listener.onConnectionState(
++            if (userInitiated) ConnectionState.Connecting else ConnectionState.Reconnecting,
++            "Conectando ao MediaRenderer de ${device.displayName}…"
++        )
++        scope.launch {
++            val hasTransport = device.backendData[KEY_AV_TRANSPORT_URL].isNullOrBlank().not()
++            val hasRendering = device.backendData[KEY_RENDERING_CONTROL_URL].isNullOrBlank().not()
++            if (!hasTransport && !hasRendering) {
++                listener.onConnectionState(ConnectionState.Error, "A TV anunciou DLNA, mas não informou serviços de controle.")
++                return@launch
++            }
++
++            val reachable = when {
++                hasRendering -> runCatching { getVolumeInternal() }.isSuccess
++                hasTransport -> runCatching { getTransportInfo() }.isSuccess
++                else -> false
++            }
++            if (!reachable) {
++                listener.onConnectionState(ConnectionState.Error, "A TV não respondeu aos comandos DLNA.")
++                return@launch
++            }
++
++            connected = true
++            val capabilities = buildSet {
++                add(TvCapability.DeviceInfo)
++                if (hasTransport) addAll(setOf(TvCapability.Media, TvCapability.Seek))
++                if (hasRendering) addAll(setOf(TvCapability.Volume, TvCapability.AbsoluteVolume))
++            }
++            listener.onCapabilities(capabilities)
++            listener.onApps(emptyList())
++            listener.onInputs(emptyList())
++            listener.onConnectionState(ConnectionState.Connected, "Conectada a ${device.displayName} em modo mídia")
++            refreshDeviceData()
++        }
++    }
++
++    override fun send(action: RemoteAction) {
++        if (!connected) return
++        when (action) {
++            RemoteAction.Play, RemoteAction.PlayPause -> transportAction("Play", "<Speed>1</Speed>")
++            RemoteAction.Pause -> transportAction("Pause")
++            RemoteAction.Stop -> transportAction("Stop")
++            RemoteAction.Previous -> transportAction("Previous")
++            RemoteAction.Next -> transportAction("Next")
++            RemoteAction.VolumeUp -> adjustVolume(2)
++            RemoteAction.VolumeDown -> adjustVolume(-2)
++            RemoteAction.Mute -> setMute(!lastMuted)
++            else -> Unit
++        }
++    }
++
++    override fun setMute(muted: Boolean) {
++        if (!connected) return
++        scope.launch {
++            runCatching {
++                soap(
++                    serviceTypeKey = KEY_RENDERING_CONTROL_TYPE,
++                    controlUrlKey = KEY_RENDERING_CONTROL_URL,
++                    action = "SetMute",
++                    body = "<InstanceID>0</InstanceID><Channel>Master</Channel><DesiredMute>${if (muted) 1 else 0}</DesiredMute>"
++                )
++            }.onSuccess {
++                lastMuted = muted
++                listener.onVolume(lastVolume, muted)
++            }
++        }
++    }
++
++    private fun adjustVolume(delta: Int) {
++        scope.launch {
++            val current = runCatching { getVolumeInternal() }.getOrElse { lastVolume ?: 20 }
++            val target = (current + delta).coerceIn(0, 100)
++            runCatching {
++                soap(
++                    serviceTypeKey = KEY_RENDERING_CONTROL_TYPE,
++                    controlUrlKey = KEY_RENDERING_CONTROL_URL,
++                    action = "SetVolume",
++                    body = "<InstanceID>0</InstanceID><Channel>Master</Channel><DesiredVolume>$target</DesiredVolume>"
++                )
++            }.onSuccess {
++                lastVolume = target
++                listener.onVolume(target, lastMuted)
++            }
++        }
++    }
++
++    private fun transportAction(action: String, extra: String = "") {
++        scope.launch {
++            runCatching {
++                soap(
++                    serviceTypeKey = KEY_AV_TRANSPORT_TYPE,
++                    controlUrlKey = KEY_AV_TRANSPORT_URL,
++                    action = action,
++                    body = "<InstanceID>0</InstanceID>$extra"
++                )
++            }.onFailure {
++                listener.onConnectionState(ConnectionState.Error, "A TV não aceitou o comando DLNA $action.")
++            }
++        }
++    }
++
++    override fun refreshDeviceData() {
++        if (!connected) return
++        scope.launch {
++            val volume = runCatching { getVolumeInternal() }.getOrNull()
++            val muted = runCatching { getMuteInternal() }.getOrNull()
++            if (volume != null) lastVolume = volume
++            if (muted != null) lastMuted = muted
++            listener.onVolume(lastVolume, lastMuted)
++        }
++    }
++
++    private fun getTransportInfo(): String = soap(
++        serviceTypeKey = KEY_AV_TRANSPORT_TYPE,
++        controlUrlKey = KEY_AV_TRANSPORT_URL,
++        action = "GetTransportInfo",
++        body = "<InstanceID>0</InstanceID>"
++    )
++
++    private fun getVolumeInternal(): Int {
++        val response = soap(
++            serviceTypeKey = KEY_RENDERING_CONTROL_TYPE,
++            controlUrlKey = KEY_RENDERING_CON
