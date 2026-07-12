@@ -8,8 +8,6 @@ on:
       - "lg-wifi-remote-app/**"
       - ".github/workflows/build-lg-wifi-remote.yml"
   pull_request:
-    branches:
-      - main
     paths:
       - "lg-wifi-remote-app/**"
       - ".github/workflows/build-lg-wifi-remote.yml"
@@ -46,19 +44,38 @@ jobs:
           gradle-version: "8.10.2"
 
       - name: Build installable APK
+        id: build
+        continue-on-error: true
         working-directory: lg-wifi-remote-app
-        run: gradle --no-daemon --stacktrace :app:assembleDebug
+        run: |
+          set -o pipefail
+          gradle --no-daemon --stacktrace :app:assembleDebug 2>&1 | tee build.log
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Controle-LG-WiFi-build-log
+          path: lg-wifi-remote-app/build.log
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Prepare APK
+        if: steps.build.outcome == 'success'
         run: |
           mkdir -p output
           cp lg-wifi-remote-app/app/build/outputs/apk/debug/app-debug.apk output/Controle-LG-WiFi.apk
           sha256sum output/Controle-LG-WiFi.apk > output/Controle-LG-WiFi.sha256
 
       - name: Upload APK
+        if: steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: Controle-LG-WiFi-APK
           path: output/*
           if-no-files-found: error
           retention-days: 30
+
+      - name: Fail workflow when build failed
+        if: steps.build.outcome == 'failure'
+        run: exit 1
