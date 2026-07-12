@@ -3,6 +3,8 @@ package com.geronimo.controlelgwifi
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -113,7 +115,7 @@ fun PressControl(
                 }
                 .pointerInput(enabled, haptics) {
                     if (!enabled) return@pointerInput
-                    androidx.compose.foundation.gestures.awaitEachGesture {
+                    awaitEachGesture {
                         awaitPointerEventScope {
                             awaitFirstDown(requireUnconsumed = false)
                             pressed = true

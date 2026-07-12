@@ -391,7 +391,7 @@ class FastLgWebOsClient(
         if (pointerReady && pointerSocket?.send(message) == true) return
         synchronized(pointerLock) {
             if (critical) {
-                while (pointerQueue.size >= 24) pointerQueue.removeFirstOrNull()
+                while (pointerQueue.size >= 24 && pointerQueue.isNotEmpty()) pointerQueue.removeFirst()
                 pointerQueue.addLast(message)
             } else {
                 if (pointerQueue.size < 24) pointerQueue.addLast(message)
