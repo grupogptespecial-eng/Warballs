@@ -1,13 +1,9 @@
-name: Build LG Wi-Fi Remote APK
+name: Build Libre Remote v0.2
 
 on:
   push:
     branches:
-      - build/lg-wifi-remote
-    paths:
-      - "lg-wifi-remote-app/**"
-      - ".github/workflows/build-lg-wifi-remote.yml"
-  pull_request:
+      - build/libre-remote-v02
     paths:
       - "lg-wifi-remote-app/**"
       - ".github/workflows/build-lg-wifi-remote.yml"
@@ -17,9 +13,9 @@ permissions:
   contents: read
 
 jobs:
-  build-apk:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,7 +29,7 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android 35 SDK
+      - name: Install Android SDK
         run: |
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
@@ -43,12 +39,11 @@ jobs:
         with:
           gradle-version: "8.10.2"
 
-      - name: Build installable APK
+      - name: Build APK
         id: build
         continue-on-error: true
         working-directory: lg-wifi-remote-app
         run: |
-          sed -i 's/singleLine = true/setSingleLine(true)/g' app/src/main/java/com/geronimo/controlelgwifi/MainActivity.kt
           set -o pipefail
           gradle --no-daemon --stacktrace :app:assembleDebug 2>&1 | tee build.log
 
@@ -56,27 +51,30 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Controle-LG-WiFi-build-log
+          name: Libre-Remote-build-log
           path: lg-wifi-remote-app/build.log
-          if-no-files-found: error
           retention-days: 7
 
-      - name: Prepare APK
+      - name: Prepare distributables
         if: steps.build.outcome == 'success'
         run: |
-          mkdir -p output
-          cp lg-wifi-remote-app/app/build/outputs/apk/debug/app-debug.apk output/Controle-LG-WiFi.apk
-          sha256sum output/Controle-LG-WiFi.apk > output/Controle-LG-WiFi.sha256
+          mkdir -p output/source
+          cp lg-wifi-remote-app/app/build/outputs/apk/debug/app-debug.apk output/Libre-Remote-v0.2.apk
+          sha256sum output/Libre-Remote-v0.2.apk > output/Libre-Remote-v0.2.sha256
+          rsync -a --exclude build --exclude .gradle lg-wifi-remote-app/ output/source/
+          cd output
+          zip -qr Libre-Remote-v0.2-source.zip source
+          rm -rf source
 
-      - name: Upload APK
+      - name: Upload APK and source
         if: steps.build.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: Controle-LG-WiFi-APK
+          name: Libre-Remote-v0.2
           path: output/*
           if-no-files-found: error
           retention-days: 30
 
-      - name: Fail workflow when build failed
+      - name: Fail when compilation failed
         if: steps.build.outcome == 'failure'
         run: exit 1
