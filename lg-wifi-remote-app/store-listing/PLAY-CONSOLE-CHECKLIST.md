@@ -2,6 +2,7 @@
 
 Versão preparada: Libre Remote 1.0.0 RC1, applicationId `io.github.grupogptespecialeng.libreremote`.
 Build de validação: testes unitários, lint, APK assinado e Android App Bundle.
+O código-fonte entregue deve compilar sem correções externas.
 
 ## Identidade
 
