@@ -1,0 +1,167 @@
+ { discoverSsdp(context, durationMs) }
+         val known = knownDevices.map { device ->
+-            async(Dispatchers.IO) { device.takeIf { isTvReachable(it.ip, 420) } }
++            async(Dispatchers.IO) { device.takeIf { isTvReachable(it, 500) } }
+         }
+-        val hostname = async(Dispatchers.IO) {
++        val lgHostname = async(Dispatchers.IO) {
+             runCatching {
+                 InetAddress.getByName("lgwebostv").hostAddress
+-                    ?.takeIf { isTvReachable(it, 420) }
+-                    ?.let { TvDevice(ip = it, name = "LG webOS TV") }
++                    ?.takeIf { canConnect(it, 3000, 420) || canConnect(it, 3001, 420) }
++                    ?.let {
++                        TvDevice(
++                            ip = it,
++                            name = "LG webOS TV",
++                            platform = TvPlatform.LgWebOs,
++                            supportLevel = TvSupportLevel.StableFull,
++                            capabilities = TvCapability.lgDefaults
++                        )
++                    }
+             }.getOrNull()
+         }
+ 
+         val all = buildList {
+             addAll(ssdp.await())
+             addAll(known.awaitAll().filterNotNull())
+-            hostname.await()?.let(::add)
++            lgHostname.await()?.let(::add)
+         }
+-        all.groupBy(TvDevice::ip).map { (_, variants) ->
+-            val discovered = variants.firstOrNull { it.name != "LG webOS TV" } ?: variants.first()
+-            val saved = knownDevices.firstOrNull { it.ip == discovered.ip }
+-            discovered.copy(
+-                room = saved?.room.orEmpty(),
+-                mac = saved?.mac,
+-                capabilities = saved?.capabilities ?: discovered.capabilities,
+-                lastSeenAt = System.currentTimeMillis()
++
++        mergeDevices(all, knownDevices)
++    }
++
++    suspend fun identifyManual(context: Context, ip: String): TvDevice = withContext(Dispatchers.IO) {
++        val lg3000 = canConnect(ip, 3000, 650)
++        val lg3001 = canConnect(ip, 3001, 650)
++        if (lg3000 || lg3001) {
++            return@withContext TvDevice(
++                ip = ip,
++                name = "LG webOS TV",
++                platform = TvPlatform.LgWebOs,
++                supportLevel = TvSupportLevel.StableFull,
++                capabilities = TvCapability.lgDefaults
++            )
++        }
++
++        val samsung8001 = canConnect(ip, 8001, 650)
++        val samsung8002 = canConnect(ip, 8002, 650)
++        if (samsung8001 || samsung8002) {
++            return@withContext TvDevice(
++                ip = ip,
++                name = "Samsung Tizen TV",
++                manufacturer = "Samsung",
++                platform = TvPlatform.SamsungTizenLocal,
++                supportLevel = TvSupportLevel.Experimental,
++                capabilities = TvCapability.samsungTizenDefaults
+             )
+-        }.sortedWith(compareByDescending<TvDevice> { knownDevices.any { saved -> saved.ip == it.ip } }.thenBy { it.displayName })
++        }
++
++        TvDevice(
++            ip = ip,
++            name = "Smart TV em $ip",
++            platform = TvPlatform.Unknown,
++            supportLevel = TvSupportLevel.Unsupported,
++            capabilities = emptySet()
++        )
+     }
+ 
+     suspend fun diagnose(context: Context, device: TvDevice?): NetworkDiagnostic = withContext(Dispatchers.IO) {
+@@ -72,38 +124,96 @@
+             val raw = wifi.connectionInfo.ipAddress
+             if (raw == 0) null else listOf(0, 8, 16, 24).joinToString(".") { shift -> ((raw shr shift) and 0xFF).toString() }
+         }.getOrNull()
++
+         val target = device?.ip
+-        val port3000 = target?.let { canConnect(it, 3000, 650) }
+-        val port3001 = target?.let { canConnect(it, 3001, 650) }
++        val ports = when (device?.platform) {
++            TvPlatform.LgWebOs -> listOf(3000, 3001)
++            TvPlatform.SamsungTizenLocal -> listOf(8001, 8002)
++            else -> emptyList()
++        }
++        val tested = if (target == null) emptyMap() else ports.associateWith { canConnect(target, it, 650) }
++        val descriptionReachable = device?.descriptionUrl?.let(::canReadLocalUrl)
+         val reachable = when {
+             target == null -> null
+-            port3000 == true || port3001 == true -> true
++            tested.values.any { it } -> true
++            descriptionReachable == true -> true
+             else -> false
+         }
++
+         val summary = when {
+             !wifiConnected -> "O celular não está conectado a uma rede Wi-Fi ou Ethernet."
+             target == null -> "Rede pronta. Selecione uma TV para testar a conexão."
+-            reachable == true -> "A TV respondeu na rede local."
++            device?.supportLevel == TvSupportLevel.BlockedByVendorPolicy -> "A TV foi identificada, mas esse protocolo não pode ser ativado no aplicativo público."
++            device?.supportLevel == TvSupportLevel.Unsupported -> "A TV foi identificada, mas ainda não existe um backend compatível."
++            reachable == true -> "A TV respondeu pelo backend ${device?.platformLabel ?: "local"}."
+             else -> "A TV não respondeu. Verifique se está ligada e se o roteador não isola dispositivos."
+         }
++
+         NetworkDiagnostic(
+             wifiConnected = wifiConnected,
+             multicastAvailable = null,
+             localAddress = localAddress,
+             tvReachable = reachable,
+-            port3000Reachable = port3000,
+-            port3001Reachable = port3001,
++            port3000Reachable = tested[3000],
++            port3001Reachable = tested[3001],
++            testedPorts = tested,
++            platform = device?.platform,
+             summary = summary
+         )
+     }
+ 
+-    fun isTvReachable(ip: String, timeoutMs: Int = 500): Boolean =
+-        canConnect(ip, 3000, timeoutMs) || canConnect(ip, 3001, timeoutMs)
++    fun isTvReachable(device: TvDevice, timeoutMs: Int = 500): Boolean = when (device.platform) {
++        TvPlatform.LgWebOs -> canConnect(device.ip, 3000, timeoutMs) || canConnect(device.ip, 3001, timeoutMs)
++        TvPlatform.SamsungTizenLocal -> canConnect(device.ip, 8001, timeoutMs) || canConnect(device.ip, 8002, timeoutMs)
++        TvPlatform.DlnaMedia -> device.descriptionUrl?.let(::canReadLocalUrl) == true
++        else -> device.descriptionUrl?.let(::canReadLocalUrl) == true
++    }
++
++    private fun mergeDevices(found: List<TvDevice>, knownDevices: List<TvDevice>): List<TvDevice> {
++        val grouped = found.groupBy { it.ip }
++        return grouped.map { (_, variants) ->
++            val discovered = variants.maxByOrNull(::priority) ?: variants.first()
++            val saved = knownDevices.firstOrNull {
++                it.stableId == discovered.stableId || (it.ip == discovered.ip && it.platform == discovered.platform)
++            } ?: knownDevices.firstOrNull { it.ip == discovered.ip && it.platform == TvPlatform.LgWebOs && discovered.platform == TvPlatform.LgWebOs }
++
++            val mergedData = buildMap {
++                variants.forEach { putAll(it.backendData) }
++                saved?.backendData?.let(::putAll)
++            }
++            discovered.copy(
++                stableId = saved?.stableId ?: discovered.stableId,
++                room = saved?.room.orEmpty(),
++                mac = saved?.mac,
++                backendData = mergedData,
++                capabilities = if (discovered.capabilities.isNotEmpty()) discovered.capabilities else saved?.capabilities.orEmpty(),
++                lastSeenAt = System.currentTimeMillis()
++            )
++        }.sortedWith(
++            compareByDescending<TvDevice> { knownDevices.any { saved -> saved.stableId == it.stableId } }
++                .thenByDescending(::priority)
++                .thenBy { it.displayName }
++        )
++    }
++
++    private fun priority(device: TvDevice): Int = when (device.platform) {
++        TvPlatform.LgWebOs -> 100
++        TvPlatform.SamsungTizenLocal -> 90
++
