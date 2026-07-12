@@ -1,11 +1,13 @@
 # Checklist final do Google Play Console
 
+Versão preparada: Libre Remote 1.0.0 RC1, applicationId `io.github.grupogptespecialeng.libreremote`.
+
 ## Identidade
 
 - [ ] Criar/confirmar a conta do desenvolvedor.
 - [ ] Confirmar o nome público do desenvolvedor.
 - [ ] Informar e-mail de suporte público.
-- [ ] Confirmar o applicationId: `io.github.grupogptespecialeng.libreremote`.
+- [x] Confirmar o applicationId: `io.github.grupogptespecialeng.libreremote`.
 - [ ] Guardar `PRIVATE-Libre-Remote-upload-key.zip` em dois locais seguros.
 - [ ] Ativar Play App Signing no primeiro upload.
 
