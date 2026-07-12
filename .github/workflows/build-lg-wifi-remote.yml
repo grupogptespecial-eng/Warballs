@@ -47,6 +47,7 @@ jobs:
         working-directory: lg-wifi-remote-app
         run: |
           sed -i '/automirrored.rounded.ArrowBack/d' app/src/main/java/com/geronimo/controlelgwifi/MainActivity.kt
+          sed -i 's/Icons.AutoMirrored.Rounded.ArrowBack/Icons.Rounded.ArrowBack/g' app/src/main/java/com/geronimo/controlelgwifi/MainActivity.kt
           sed -i 's/@Composable Column\.() -> Unit/@Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit/' app/src/main/java/com/geronimo/controlelgwifi/MainActivity.kt
 
       - name: Build APK
