@@ -1,0 +1,182 @@
+pty { listOf(RemoteModule.DPad) }))
+     }
+ 
+@@ -271,10 +322,7 @@
+         savePreset(preset.copy(name = name.trim().take(32).ifBlank { preset.id.title }))
+     }
+ 
+-    fun resetPreset(id: RemotePresetId = _uiState.value.selectedPresetId) {
+-        val reset = RemotePreset.defaultFor(id)
+-        savePreset(reset)
+-    }
++    fun resetPreset(id: RemotePresetId = _uiState.value.selectedPresetId) = savePreset(RemotePreset.defaultFor(id))
+ 
+     private fun savePreset(preset: RemotePreset) {
+         preferences.savePreset(preset)
+@@ -364,7 +412,7 @@
+ 
+     override fun onCleared() {
+         stopAllRepeating()
+-        client.close()
++        backendRegistry.closeAll()
+         super.onCleared()
+     }
+ 
+@@ -374,7 +422,6 @@
+             .removePrefix("https://")
+             .substringBefore('/')
+             .substringBefore(':')
+-        if (value.equals("lgwebostv", ignoreCase = true)) return value
+         val numbers = value.split('.').mapNotNull { part -> part.toIntOrNull()?.takeIf { it in 0..255 } }
+         if (numbers.size != 4) return null
+         val local = numbers[0] == 10 ||
+diff -ruN '--exclude=.kotlin' '--exclude=build.log' libre_original/source/app/src/main/java/com/geronimo/controlelgwifi/SamsungTizenBackend.kt libre_universal_work/appsrc/app/src/main/java/com/geronimo/controlelgwifi/SamsungTizenBackend.kt
+--- libre_original/source/app/src/main/java/com/geronimo/controlelgwifi/SamsungTizenBackend.kt	1970-01-01 00:00:00.000000000 +0000
++++ libre_universal_work/appsrc/app/src/main/java/com/geronimo/controlelgwifi/SamsungTizenBackend.kt	2026-07-12 22:19:40.606010869 +0000
+@@ -0,0 +1,318 @@
++package com.geronimo.controlelgwifi
++
++import android.content.Context
++import android.util.Base64
++import androidx.security.crypto.EncryptedSharedPreferences
++import androidx.security.crypto.MasterKeys
++import kotlinx.coroutines.CoroutineScope
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.Job
++import kotlinx.coroutines.SupervisorJob
++import kotlinx.coroutines.delay
++import kotlinx.coroutines.launch
++import okhttp3.OkHttpClient
++import okhttp3.Request
++import okhttp3.Response
++import okhttp3.WebSocket
++import okhttp3.WebSocketListener
++import org.json.JSONObject
++import java.security.MessageDigest
++import java.security.SecureRandom
++import java.security.cert.X509Certificate
++import java.util.concurrent.TimeUnit
++import java.util.concurrent.atomic.AtomicBoolean
++import java.util.concurrent.atomic.AtomicInteger
++import javax.net.ssl.SSLContext
++import javax.net.ssl.TrustManager
++import javax.net.ssl.X509TrustManager
++
++/**
++ * Experimental local backend for Samsung Tizen TVs.
++ *
++ * Samsung does not publish this local remote-control WebSocket as a stable public mobile API.
++ * The implementation is intentionally capability-limited and clearly marked Experimental.
++ */
++class SamsungTizenBackend(
++    context: Context,
++    private val listener: TvBackendListener
++) : TvBackend {
++    private val appContext = context.applicationContext
++    private val securePreferences = createSecurePreferences(appContext)
++    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
++
++    private val plainClient = OkHttpClient.Builder()
++        .connectTimeout(1_500, TimeUnit.MILLISECONDS)
++        .readTimeout(0, TimeUnit.MILLISECONDS)
++        .pingInterval(15, TimeUnit.SECONDS)
++        .retryOnConnectionFailure(true)
++        .build()
++
++    private val tlsClient = createLocalTlsClient()
++
++    @Volatile private var device: TvDevice? = null
++    @Volatile private var socket: WebSocket? = null
++    @Volatile private var connected = false
++    @Volatile private var manuallyClosed = true
++    @Volatile private var generation = 0
++    @Volatile private var reconnectAttempt = 0
++    private var reconnectJob: Job? = null
++    private val endpointChosen = AtomicBoolean(false)
++    private val endpointFailures = AtomicInteger(0)
++
++    override val metadata = TvBackendMetadata(
++        platform = TvPlatform.SamsungTizenLocal,
++        supportLevel = TvSupportLevel.Experimental,
++        displayName = "Samsung Tizen local",
++        accountRequired = false,
++        localOnly = true,
++        notes = "Backend local experimental. O pareamento, as teclas e as portas variam entre gerações."
++    )
++
++    override val defaultCapabilities: Set<TvCapability> = TvCapability.samsungTizenDefaults
++
++    override fun connect(device: TvDevice, userInitiated: Boolean) {
++        if (userInitiated) reconnectAttempt = 0
++        manuallyClosed = false
++        reconnectJob?.cancel()
++        closeSocket(notify = false)
++        this.device = device
++        connected = false
++        endpointChosen.set(false)
++        endpointFailures.set(0)
++        val currentGeneration = ++generation
++
++        listener.onConnectionState(
++            if (reconnectAttempt > 0) ConnectionState.Reconnecting else ConnectionState.Connecting,
++            if (reconnectAttempt > 0) "Reconectando à Samsung…" else "Conectando a ${device.displayName}…",
++            reconnectAttempt
++        )
++
++        val encodedName = Base64.encodeToString("Libre Remote".toByteArray(), Base64.NO_WRAP)
++        val token = securePreferences.getString("samsung_token_${device.ip}", null)
++        val secure = buildString {
++            append("wss://${device.ip}:8002/api/v2/channels/samsung.remote.control?name=$encodedName")
++            if (!token.isNullOrBlank()) append("&token=$token")
++        }
++        val plain = "ws://${device.ip}:8001/api/v2/channels/samsung.remote.control?name=$encodedName"
++        val preferredScheme = securePreferences.getString("samsung_endpoint_${device.ip}", null)
++        val endpoints = when (preferredScheme) {
++            "ws" -> listOf(plain, secure)
++            else -> listOf(secure, plain)
++        }
++
++        endpoints.forEachIndexed { index, endpoint ->
++            scope.launch {
++                if (index > 0) delay(index * 130L)
++                if (!endpointChosen.get() && !manuallyClosed && currentGeneration == generation) {
++                    openEndpoint(endpoint, endpoints.size, currentGeneration)
++                }
++            }
++        }
++    }
++
++    private fun openEndpoint(endpoint: String, endpointCount: Int, currentGeneration: Int) {
++        val client = if (endpoint.startsWith("wss://")) tlsClient else plainClient
++        client.newWebSocket(Request.Builder().url(endpoint).build(), object : WebSocketListener() {
++            override fun onOpen(webSocket: WebSocket, response: Response) {
++                if (
++                    manuallyClosed || currentGeneration != generation ||
++                    !endpointChosen.compareAndSet(false, true)
++                ) {
++                    webSocket.close(1000, "Another endpoint won")
++                    return
++                }
++                if (endpoint.startsWith("wss://") && !verifyOrStoreCertificate(response)) {
++                    endpointChosen.set(false)
++                    webSocket.close(1008, "Certificate changed")
++                    listener.onConnectionState(
++                        ConnectionState.Error,
++                        "A identidade segura da Samsung mudou. Esqueça a TV e pareie novamente."
++                    )
++                    return
++                }
++                socket = webSocket
++                device?.let {
++                    securePreferences.edit()
++                        .putString("samsung_endpoint_${it.ip}", if (endpoint.startsWith("wss://")) "wss" else "ws")
++                        .apply()
++                }
++                listener.onConnectionState(ConnectionState.Pairing, "Aceite a solicitação de controle exibida na TV Samsung")
++            }
++
++            override fun onMessage(webSocket: WebSocket, text: String) {
++                if (currentGeneration == generation) handleMessage(text)
++            }
++
++            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
