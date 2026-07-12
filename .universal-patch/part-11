@@ -1,0 +1,158 @@
+ns("android tv") || haystack.contains("google tv") -> TvPlatform.AndroidTvExperimental
++            else -> TvPlatform.Unknown
++        }
++        if (experimentalPlatform == TvPlatform.Unknown && location == null) return null
++        return TvDevice(
++            ip = ip,
++            name = name,
++            model = description?.modelName,
++            manufacturer = description?.manufacturer,
++            platform = experimentalPlatform,
++            supportLevel = if (experimentalPlatform == TvPlatform.Unknown) TvSupportLevel.Unsupported else TvSupportLevel.Experimental,
++            stableId = udn?.let { "${experimentalPlatform.name}:$it" } ?: "${experimentalPlatform.name}:$ip",
++            descriptionUrl = location,
++            backendData = dlnaData,
++            capabilities = emptySet()
++        )
++    }
++
++    private fun buildDlnaData(location: String?, description: DeviceDescription?): Map<String, String> {
++        if (location == null || description == null) return emptyMap()
++        val result = mutableMapOf<String, String>()
++        description.services.forEach { service ->
++            when {
++                service.serviceType.contains("AVTransport", true) -> {
++                    result[DlnaBackend.KEY_AV_TRANSPORT_TYPE] = service.serviceType
++                    result[DlnaBackend.KEY_AV_TRANSPORT_URL] = resolveUrl(location, service.controlUrl) ?: return@forEach
++                }
++                service.serviceType.contains("RenderingControl", true) -> {
++                    result[DlnaBackend.KEY_RENDERING_CONTROL_TYPE] = service.serviceType
++                    result[DlnaBackend.KEY_RENDERING_CONTROL_URL] = resolveUrl(location, service.controlUrl) ?: return@forEach
++                }
++            }
++        }
++        return result
+     }
+ 
++    private fun resolveUrl(base: String, relative: String): String? = runCatching {
++        URL(URL(base), relative).toString().takeIf(::isLocalHttpUrl)
++    }.getOrNull()
++
++    private fun fetchDescription(location: String): DeviceDescription? = runCatching {
++        require(isLocalHttpUrl(location))
++        val connection = URL(location).openConnection() as HttpURLConnection
++        connection.connectTimeout = 700
++        connection.readTimeout = 850
++        connection.instanceFollowRedirects = false
++        val code = connection.responseCode
++        if (code !in 200..299) return@runCatching null
++        val xml = connection.inputStream.bufferedReader().use { it.readText().take(300_000) }
++        val services = Regex("<(?:[A-Za-z0-9_]+:)?service\\b[^>]*>(.*?)</(?:[A-Za-z0-9_]+:)?service>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
++            .findAll(xml)
++            .mapNotNull { match ->
++                val block = match.groupValues[1]
++                val type = extractTag(block, "serviceType") ?: return@mapNotNull null
++                val control = extractTag(block, "controlURL") ?: return@mapNotNull null
++                UpnpService(type.decodeXml(), control.decodeXml())
++            }
++            .toList()
++        DeviceDescription(
++            friendlyName = extractTag(xml, "friendlyName")?.decodeXml(),
++            modelName = extractTag(xml, "modelName")?.decodeXml(),
++            manufacturer = extractTag(xml, "manufacturer")?.decodeXml(),
++            deviceType = extractTag(xml, "deviceType")?.decodeXml(),
++            udn = extractTag(xml, "UDN")?.decodeXml(),
++            services = services
++        )
++    }.getOrNull()
++
++    private fun extractTag(xml: String, tag: String): String? =
++        Regex("<(?:[A-Za-z0-9_]+:)?$tag\\b[^>]*>(.*?)</(?:[A-Za-z0-9_]+:)?$tag>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
++            .find(xml)?.groupValues?.getOrNull(1)?.trim()?.takeIf(String::isNotBlank)
++
+     private fun parseHeaders(response: String): Map<String, String> = response.lineSequence()
+         .mapNotNull { line ->
+             val index = line.indexOf(':')
+@@ -165,22 +441,6 @@
+         }
+         .toMap()
+ 
+-    private fun fetchDescription(location: String): Pair<String, String?>? = runCatching {
+-        val connection = URL(location).openConnection() as HttpURLConnection
+-        connection.connectTimeout = 550
+-        connection.readTimeout = 550
+-        connection.instanceFollowRedirects = false
+-        connection.inputStream.bufferedReader().use { reader ->
+-            val xml = reader.readText().take(160_000)
+-            val friendly = Regex("<friendlyName>(.*?)</friendlyName>", RegexOption.IGNORE_CASE)
+-                .find(xml)?.groupValues?.getOrNull(1)?.decodeXml()?.takeIf(String::isNotBlank)
+-                ?: return@runCatching null
+-            val model = Regex("<modelName>(.*?)</modelName>", RegexOption.IGNORE_CASE)
+-                .find(xml)?.groupValues?.getOrNull(1)?.decodeXml()?.takeIf(String::isNotBlank)
+-            friendly to model
+-        }
+-    }.getOrNull()
+-
+     private fun canConnect(host: String, port: Int, timeoutMs: Int): Boolean = runCatching {
+         Socket().use { socket ->
+             socket.connect(InetSocketAddress(host, port), timeoutMs)
+@@ -188,14 +448,28 @@
+         }
+     }.getOrDefault(false)
+ 
+-    private fun looksLikeLgTv(response: String): Boolean =
+-        response.contains("webos") || response.contains("lge") ||
+-            response.contains("lg smart") || response.contains("lg electronics")
++    private fun canReadLocalUrl(value: String): Boolean = runCatching {
++        if (!isLocalHttpUrl(value)) return@runCatching false
++        val connection = URL(value).openConnection() as HttpURLConnection
++        connection.requestMethod = "GET"
++        connection.connectTimeout = 650
++        connection.readTimeout = 650
++        connection.instanceFollowRedirects = false
++        connection.responseCode in 200..399
++    }.getOrDefault(false)
++
++    private fun isLocalHttpUrl(value: String): Boolean = runCatching {
++        val url = URL(value)
++        if (url.protocol !in setOf("http", "https")) return@runCatching false
++        val address = InetAddress.getByName(url.host)
++        address.isSiteLocalAddress || address.isLinkLocalAddress || address.isLoopbackAddress
++    }.getOrDefault(false)
+ 
+     private fun cleanName(value: String): String = value
+         .replace(Regex("\\s+"), " ")
+         .trim()
+         .take(64)
++        .ifBlank { "Smart TV" }
+ 
+     private fun String.decodeXml(): String = replace("&amp;", "&")
+         .replace("&lt;", "<")
+diff -ruN '--exclude=.kotlin' '--exclude=build.log' libre_original/source/app/src/test/java/com/geronimo/controlelgwifi/RemoteModelsTest.kt libre_universal_work/appsrc/app/src/test/java/com/geronimo/controlelgwifi/RemoteModelsTest.kt
+--- libre_original/source/app/src/test/java/com/geronimo/controlelgwifi/RemoteModelsTest.kt	2026-07-12 19:58:51.000000000 +0000
++++ libre_universal_work/appsrc/app/src/test/java/com/geronimo/controlelgwifi/RemoteModelsTest.kt	2026-07-12 22:20:19.303537986 +0000
+@@ -40,4 +40,24 @@
+         val device = TvDevice(ip = "192.168.1.20", name = "LG OLED", room = "Sala")
+         assertEquals("Sala • LG OLED", device.displayName)
+     }
++    @Test
++    fun platformDefaultsAreCapabilityScoped() {
++        assertTrue(TvCapability.Pointer in TvCapability.defaultsFor(TvPlatform.LgWebOs))
++        assertFalse(TvCapability.Pointer in TvCapability.defaultsFor(TvPlatform.SamsungTizenLocal))
++        assertTrue(TvCapability.Media in TvCapability.defaultsFor(TvPlatform.DlnaMedia))
++        assertFalse(TvCapability.Navigation in TvCapability.defaultsFor(TvPlatform.DlnaMedia))
++    }
++
++    @Test
++    fun blockedPlatformCannotConnect() {
++        val device = TvDevice(
++            ip = "192.168.1.30",
++            platform = TvPlatform.RokuBlockedByPolicy,
++            supportLevel = TvSupportLevel.BlockedByVendorPolicy,
++            capabilities = emptySet()
++        )
++        assertFalse(device.connectable)
++        assertEquals("Roku TV", device.platformLabel)
++    }
++
+ }
