@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- LG webOS generations commonly expose the local SSAP socket over ws://:3000.
+         The application code accepts only private/local addresses and never follows
+         the TV connection to an internet host. WSS :3001 uses certificate pin-on-first-use. -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
