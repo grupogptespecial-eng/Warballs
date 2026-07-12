@@ -37,7 +37,7 @@ jobs:
           set -euo pipefail
           if compgen -G ".universal-patch/part-*" > /dev/null; then
             cat .universal-patch/part-* > universal.patch
-            (cd lg-wifi-remote-app && patch -p3 --forward --batch < ../universal.patch)
+            (cd lg-wifi-remote-app && patch -p2 --forward --batch < ../universal.patch)
             rm -rf .universal-patch .universal-payload universal.patch
             git config user.name "Libre Remote CI"
             git config user.email "actions@users.noreply.github.com"
