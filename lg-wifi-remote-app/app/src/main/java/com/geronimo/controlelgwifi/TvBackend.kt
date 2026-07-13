@@ -653,7 +653,7 @@ class UnsupportedTvBackend(
 
 class TvBackendRegistry(
     context: Context,
-    listener: TvBackendListener
+    private val listener: TvBackendListener
 ) {
     private val lgBackend: TvBackend = LgWebOsBackend(context, listener)
     private val samsungBackend: TvBackend = SamsungTizenBackend(context, listener)
