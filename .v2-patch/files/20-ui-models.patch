@@ -1,0 +1,334 @@
+diff --git a/app/src/main/java/com/geronimo/controlelgwifi/MainActivity.kt b/app/src/main/java/com/geronimo/controlelgwifi/MainActivity.kt
+index 82a8c8f..4bdeeff 100644
+--- a/app/src/main/java/com/geronimo/controlelgwifi/MainActivity.kt
++++ b/app/src/main/java/com/geronimo/controlelgwifi/MainActivity.kt
+@@ -56,6 +56,7 @@ import androidx.compose.material3.Surface
+ import androidx.compose.material3.Text
+ import androidx.compose.material3.TextButton
+ import androidx.compose.runtime.Composable
++import androidx.compose.runtime.LaunchedEffect
+ import androidx.compose.runtime.getValue
+ import androidx.compose.runtime.mutableStateOf
+ import androidx.compose.runtime.remember
+@@ -79,14 +80,26 @@ class MainActivity : ComponentActivity() {
+     override fun onCreate(savedInstanceState: Bundle?) {
+         super.onCreate(savedInstanceState)
+         enableEdgeToEdge()
++        val launchAction = intent?.action
+         setContent {
+             val remoteViewModel: RemoteViewModel = viewModel()
+             val state by remoteViewModel.uiState.collectAsStateWithLifecycle()
+-            LibreRemoteTheme(state.themeMode, state.accentTheme) {
++            LaunchedEffect(launchAction) {
++                when (launchAction) {
++                    ACTION_CONNECT -> remoteViewModel.openConnect()
++                    ACTION_MACROS -> remoteViewModel.openMacros()
++                }
++            }
++            LibreRemoteTheme(state.themeMode, state.accentTheme, state.highContrast) {
+                 LibreRemoteApp(state, remoteViewModel)
+             }
+         }
+     }
++
++    companion object {
++        const val ACTION_CONNECT = "io.github.grupogptespecialeng.libreremote.CONNECT"
++        const val ACTION_MACROS = "io.github.grupogptespecialeng.libreremote.MACROS"
++    }
+ }
+ 
+ @Composable
+@@ -144,6 +157,7 @@ private fun LibreRemoteApp(state: RemoteUiState, viewModel: RemoteViewModel) {
+     if (state.showAppsSheet) AppsSheet(state, viewModel)
+     if (state.showInputsSheet) InputsSheet(state, viewModel)
+     if (state.showMoreSheet) MoreControlsSheet(state, viewModel)
++    if (state.showMacrosSheet) MacrosSheet(state, viewModel)
+     if (state.showSettingsSheet) SettingsSheet(state, viewModel)
+     if (state.showPresetEditor) PresetEditorSheet(state, viewModel)
+ 
+@@ -313,6 +327,32 @@ private fun WelcomeScreen(state: RemoteUiState, onConnect: () -> Unit, onDiagnos
+ @Composable
+ private fun ControllerScreen(state: RemoteUiState, viewModel: RemoteViewModel) {
+     Column(Modifier.fillMaxSize()) {
++        if (state.macroRunState.running) {
++            Surface(
++                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 5.dp),
++                shape = RoundedCornerShape(16.dp),
++                color = MaterialTheme.colorScheme.primaryContainer
++            ) {
++                Row(
++                    Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
++                    verticalAlignment = Alignment.CenterVertically
++                ) {
++                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
++                    Spacer(Modifier.width(10.dp))
++                    Column(Modifier.weight(1f)) {
++                        Text(state.macroRunState.macroName ?: "Macro", fontWeight = FontWeight.SemiBold)
++                        Text(
++                            "${state.macroRunState.stepIndex}/${state.macroRunState.totalSteps} • ${state.macroRunState.message}",
++                            fontSize = 11.sp,
++                            color = MaterialTheme.colorScheme.onSurfaceVariant,
++                            maxLines = 1,
++                            overflow = TextOverflow.Ellipsis
++                        )
++                    }
++                    TextButton(onClick = viewModel::cancelMacro) { Text("Cancelar") }
++                }
++            }
++        }
+         SurfaceSelector(
+             selected = state.controlSurface,
+             pointerAvailable = TvCapability.Pointer in state.capabilities,
+@@ -498,6 +538,20 @@ private fun RemotePresetContent(state: RemoteUiState, viewModel: RemoteViewModel
+                     }
+                 }
+             }
++            if (RemoteModule.Macros in modules) {
++                item {
++                    Surface(
++                        onClick = viewModel::openMacros,
++                        modifier = Modifier.fillMaxWidth().height(52.dp),
++                        shape = RoundedCornerShape(17.dp),
++                        color = MaterialTheme.colorScheme.primaryContainer
++                    ) {
++                        Box(contentAlignment = Alignment.Center) {
++                            Text("Cenas e macros", fontWeight = FontWeight.SemiBold)
++                        }
++                    }
++                }
++            }
+             item { Spacer(Modifier.height(14.dp)) }
+         }
+     }
+diff --git a/app/src/main/java/com/geronimo/controlelgwifi/RemoteControls.kt b/app/src/main/java/com/geronimo/controlelgwifi/RemoteControls.kt
+index a43b338..5be80ec 100644
+--- a/app/src/main/java/com/geronimo/controlelgwifi/RemoteControls.kt
++++ b/app/src/main/java/com/geronimo/controlelgwifi/RemoteControls.kt
+@@ -242,12 +242,11 @@ fun VolumeAndChannelControls(
+     includeChannels: Boolean,
+     compact: Boolean
+ ) {
+-    val buttonSize = if (compact) 52.dp else 60.dp
+-    Row(
+-        modifier = Modifier.fillMaxWidth(),
+-        horizontalArrangement = Arrangement.SpaceEvenly,
+-        verticalAlignment = Alignment.CenterVertically
+-    ) {
++    val baseSize = if (compact) 52.dp else 60.dp
++    val buttonSize = if (state.largeControls) baseSize + 8.dp else baseSize
++
++    @Composable
++    fun VolumeRocker() {
+         VerticalRocker(
+             label = state.volume?.let { "VOL $it" } ?: "VOL",
+             topIcon = Icons.AutoMirrored.Rounded.VolumeUp,
+@@ -260,6 +259,30 @@ fun VolumeAndChannelControls(
+             onBottomPress = { viewModel.startRepeating(RemoteAction.VolumeDown) },
+             onBottomRelease = { viewModel.stopRepeating(RemoteAction.VolumeDown) }
+         )
++    }
++
++    @Composable
++    fun ChannelRocker() {
++        VerticalRocker(
++            label = "CH",
++            topIcon = Icons.Rounded.Add,
++            bottomIcon = Icons.Rounded.Remove,
++            buttonSize = buttonSize,
++            enabled = state.connected,
++            haptics = state.hapticsEnabled,
++            onTopPress = { viewModel.startRepeating(RemoteAction.ChannelUp) },
++            onTopRelease = { viewModel.stopRepeating(RemoteAction.ChannelUp) },
++            onBottomPress = { viewModel.startRepeating(RemoteAction.ChannelDown) },
++            onBottomRelease = { viewModel.stopRepeating(RemoteAction.ChannelDown) }
++        )
++    }
++
++    Row(
++        modifier = Modifier.fillMaxWidth(),
++        horizontalArrangement = Arrangement.SpaceEvenly,
++        verticalAlignment = Alignment.CenterVertically
++    ) {
++        if (state.leftHanded && includeChannels) ChannelRocker() else VolumeRocker()
+         PressControl(
+             icon = if (state.muted) Icons.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
+             text = if (state.muted) "Sem som" else "Mudo",
+@@ -269,19 +292,9 @@ fun VolumeAndChannelControls(
+             showLabel = state.showLabels,
+             onPress = { viewModel.send(RemoteAction.Mute) }
+         )
+-        if (includeChannels) {
+-            VerticalRocker(
+-                label = "CH",
+-                topIcon = Icons.Rounded.Add,
+-                bottomIcon = Icons.Rounded.Remove,
+-                buttonSize = buttonSize,
+-                enabled = state.connected,
+-                haptics = state.hapticsEnabled,
+-                onTopPress = { viewModel.startRepeating(RemoteAction.ChannelUp) },
+-                onTopRelease = { viewModel.stopRepeating(RemoteAction.ChannelUp) },
+-                onBottomPress = { viewModel.startRepeating(RemoteAction.ChannelDown) },
+-                onBottomRelease = { viewModel.stopRepeating(RemoteAction.ChannelDown) }
+-            )
++        when {
++            state.leftHanded && includeChannels -> VolumeRocker()
++            includeChannels -> ChannelRocker()
+         }
+     }
+ }
+diff --git a/app/src/main/java/com/geronimo/controlelgwifi/RemoteModels.kt b/app/src/main/java/com/geronimo/controlelgwifi/RemoteModels.kt
+index a36727b..ca841ef 100644
+--- a/app/src/main/java/com/geronimo/controlelgwifi/RemoteModels.kt
++++ b/app/src/main/java/com/geronimo/controlelgwifi/RemoteModels.kt
+@@ -13,6 +13,9 @@ data class TvDevice(
+     val platform: TvPlatform = TvPlatform.Unknown,
+     val supportLevel: TvSupportLevel = platform.defaultSupportLevel,
+     val stableId: String = "${platform.name}:$ip",
++    val deviceUuid: String? = null,
++    val addresses: List<String> = listOf(ip),
++    val favorite: Boolean = false,
+     val descriptionUrl: String? = null,
+     val avTransportUrl: String? = null,
+     val renderingControlUrl: String? = null,
+@@ -143,7 +146,8 @@ enum class RemoteModule(val title: String, val requiredCapability: TvCapability?
+     Numeric("Teclado numérico", TvCapability.NumericKeys),
+     Colors("Botões coloridos", TvCapability.ColoredKeys),
+     InfoMenu("Info e Menu", TvCapability.Info),
+-    TouchpadShortcut("Atalho do touchpad", TvCapability.Pointer)
++    TouchpadShortcut("Atalho do touchpad", TvCapability.Pointer),
++    Macros("Cenas e macros")
+ }
+ 
+ @Immutable
+@@ -176,7 +180,8 @@ data class RemotePreset(
+                 RemoteModule.Apps,
+                 RemoteModule.Inputs,
+                 RemoteModule.Media,
+-                RemoteModule.Keyboard
++                RemoteModule.Keyboard,
++                RemoteModule.Macros
+             )
+         )
+         val advanced = RemotePreset(
+@@ -193,6 +198,81 @@ data class RemotePreset(
+     }
+ }
+ 
++enum class MacroStepType {
++    Command,
++    Delay,
++    WaitForConnection,
++    LaunchApp,
++    SwitchInput,
++    InsertText
++}
++
++@Immutable
++data class MacroStep(
++    val type: MacroStepType,
++    val action: RemoteAction? = null,
++    val value: String? = null,
++    val delayMs: Long = 0L,
++    val timeoutMs: Long = 5_000L,
++    val continueOnError: Boolean = false
++)
++
++@Immutable
++data class RemoteMacro(
++    val id: String,
++    val name: String,
++    val steps: List<MacroStep>,
++    val builtIn: Boolean = false,
++    val favorite: Boolean = false,
++    val requiresConfirmation: Boolean = false
++) {
++    companion object {
++        fun defaults(): List<RemoteMacro> = listOf(
++            RemoteMacro(
++                id = "movie",
++                name = "Filme",
++                builtIn = true,
++                favorite = true,
++                steps = listOf(
++                    MacroStep(MacroStepType.WaitForConnection, timeoutMs = 6_000),
++                    MacroStep(MacroStepType.Command, RemoteAction.Home),
++                    MacroStep(MacroStepType.Delay, delayMs = 650),
++                    MacroStep(MacroStepType.Command, RemoteAction.PlayPause)
++                )
++            ),
++            RemoteMacro(
++                id = "quiet",
++                name = "Silenciar",
++                builtIn = true,
++                steps = listOf(MacroStep(MacroStepType.Command, RemoteAction.Mute))
++            ),
++            RemoteMacro(
++                id = "good-night",
++                name = "Boa noite",
++                builtIn = true,
++                requiresConfirmation = true,
++                steps = buildList {
++                    add(MacroStep(MacroStepType.Command, RemoteAction.Pause, continueOnError = true))
++                    add(MacroStep(MacroStepType.Delay, delayMs = 400))
++                    repeat(4) { add(MacroStep(MacroStepType.Command, RemoteAction.VolumeDown, continueOnError = true)) }
++                    add(MacroStep(MacroStepType.Delay, delayMs = 500))
++                    add(MacroStep(MacroStepType.Command, RemoteAction.PowerOff))
++                }
++            )
++        )
++    }
++}
++
++@Immutable
++data class MacroRunState(
++    val macroId: String? = null,
++    val macroName: String? = null,
++    val stepIndex: Int = 0,
++    val totalSteps: Int = 0,
++    val running: Boolean = false,
++    val message: String = ""
++)
++
+ @Immutable
+ data class NetworkDiagnostic(
+     val wifiConnected: Boolean = true,
+@@ -201,8 +281,14 @@ data class NetworkDiagnostic(
+     val tvReachable: Boolean? = null,
+     val port3000Reachable: Boolean? = null,
+     val port3001Reachable: Boolean? = null,
++    val port8001Reachable: Boolean? = null,
++    val port8002Reachable: Boolean? = null,
+     val backendSummary: String? = null,
+     val lastCommandDispatchMs: Double? = null,
++    val averageCommandDispatchMs: Double? = null,
++    val p95CommandDispatchMs: Double? = null,
++    val commandSampleCount: Int = 0,
++    val lastConnectionMs: Long? = null,
+     val summary: String = "Pronto para verificar a rede"
+ )
+ 
+@@ -224,17 +310,24 @@ data class RemoteUiState(
+     val showLabels: Boolean = true,
+     val autoConnect: Boolean = true,
+     val experimentalBackendsEnabled: Boolean = true,
++    val leftHanded: Boolean = false,
++    val largeControls: Boolean = false,
++    val highContrast: Boolean = false,
++    val voiceCommandsEnabled: Boolean = true,
+     val themeMode: ThemeMode = ThemeMode.System,
+     val accentTheme: AccentTheme = AccentTheme.Ocean,
+     val controlSurface: ControlSurface = ControlSurface.Remote,
+     val selectedPresetId: RemotePresetId = RemotePresetId.Normal,
+     val presets: Map<RemotePresetId, RemotePreset> = RemotePresetId.entries.associateWith(RemotePreset::defaultFor),
++    val macros: List<RemoteMacro> = RemoteMacro.defaults(),
++    val macroRunState: MacroRunState = MacroRunState(),
+     val showDevicePicker: Boolean = false,
+     val showConnectSheet: Boolean = false,
+     val showSettingsSheet: Boolean = false,
+     val showAppsSheet: Boolean = false,
+     val showInputsSheet: Boolean = false,
+     val showMoreSheet: Boolean = false,
++    val showMacrosSheet: Boolean = false,
+     val showPresetEditor: Boolean = false,
+     val onboardingComplete: Boolean = false,
+     val diagnostic: NetworkDiagnostic = NetworkDiagnostic(),
