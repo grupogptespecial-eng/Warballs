@@ -41,7 +41,7 @@ jobs:
                   prefix[60009] = ord('O')
               report['prefix_sha_after_fix'] = hashlib.sha256(prefix).hexdigest()
 
-              v2_paths = [Path(f'.final-suffix-hex-v2/chunk-{i:02d}') for i in range(5)]
+              v2_paths = [Path(f'.final-suffix-hex-v2/chunk-{i:02d}') for i in range(4)]
               middle_path = Path('.final-suffix-hex/chunk-05')
               tail_paths = [Path(f'.final-suffix-hex/chunk-{i:02d}') for i in range(10, 15)]
               all_hex_paths = v2_paths + [middle_path] + tail_paths
