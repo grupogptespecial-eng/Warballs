@@ -1,0 +1,85 @@
+name: Diagnose Libre Remote final payload
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    paths:
+      - ".final-overlay/**"
+      - ".final-suffix-hex/**"
+      - ".final-suffix-outer-small/**"
+      - ".github/workflows/diagnose-libre-final-payload.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+      - name: Inspect payload
+        shell: bash
+        run: |
+          mkdir -p payload-diagnostics
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, hashlib, json, traceback
+
+          report = {}
+          error = None
+          try:
+              prefix_paths = [Path(f'.final-overlay/part-{i:02d}') for i in range(10)]
+              report['prefix_parts'] = {str(p): len(''.join(p.read_text().split())) if p.exists() else None for p in prefix_paths}
+              prefix = bytearray(''.join(''.join(p.read_text().split()) for p in prefix_paths).encode())
+              report['prefix_length_before_fix'] = len(prefix)
+              report['prefix_byte_60009'] = prefix[60009] if len(prefix) > 60009 else None
+              if len(prefix) > 60009 and prefix[60009] == ord('o'):
+                  prefix[60009] = ord('O')
+              report['prefix_sha_after_fix'] = hashlib.sha256(prefix).hexdigest()
+
+              hex_paths = [Path(f'.final-suffix-hex/chunk-{i:02d}') for i in range(15)]
+              report['hex_parts'] = {str(p): len(''.join(p.read_text().split())) if p.exists() else None for p in hex_paths}
+              first_hex = ''.join(''.join(p.read_text().split()) for p in hex_paths)
+              report['first_hex_length'] = len(first_hex)
+              first_suffix = bytes.fromhex(first_hex)
+              report['first_suffix_length'] = len(first_suffix)
+              report['first_suffix_sha'] = hashlib.sha256(first_suffix).hexdigest()
+
+              outer_paths = sorted(Path('.final-suffix-outer-small').glob('chunk-*'))
+              report['outer_count'] = len(outer_paths)
+              report['outer_parts'] = {str(p): len(''.join(p.read_text().split())) for p in outer_paths}
+              outer = ''.join(''.join(p.read_text().split()) for p in outer_paths).encode()
+              report['outer_length'] = len(outer)
+              report['outer_sha'] = hashlib.sha256(outer).hexdigest()
+              remainder = base64.b64decode(outer, validate=True)
+              report['remainder_length'] = len(remainder)
+              report['remainder_sha'] = hashlib.sha256(remainder).hexdigest()
+
+              payload = bytes(prefix) + first_suffix + remainder
+              report['payload_length'] = len(payload)
+              report['payload_sha'] = hashlib.sha256(payload).hexdigest()
+              archive = base64.b64decode(payload, validate=True)
+              report['archive_length'] = len(archive)
+              report['archive_sha'] = hashlib.sha256(archive).hexdigest()
+              Path('payload-diagnostics/reconstructed.tar.gz').write_bytes(archive)
+          except Exception as exc:
+              error = f'{type(exc).__name__}: {exc}'
+              report['traceback'] = traceback.format_exc()
+          report['error'] = error
+          Path('payload-diagnostics/report.json').write_text(json.dumps(report, indent=2, sort_keys=True))
+          print(json.dumps(report, indent=2, sort_keys=True))
+          if error:
+              raise SystemExit(1)
+          PY
+      - name: Upload diagnostic report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: libre-final-payload-diagnostics
+          path: payload-diagnostics/**
+          if-no-files-found: error
+          retention-days: 7
