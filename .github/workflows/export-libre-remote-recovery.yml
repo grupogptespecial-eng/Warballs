@@ -1,0 +1,45 @@
+name: Export recovered Libre Remote 2
+
+on:
+  push:
+    branches:
+      - recovery/libre-remote-2-export-20260713
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate source tree
+        run: |
+          test -f lg-wifi-remote-app/settings.gradle.kts
+          test -f lg-wifi-remote-app/app/build.gradle.kts
+          test -d lg-wifi-remote-app/app/src/main
+      - name: Create clean source archive
+        run: |
+          rm -rf recovery-dist
+          mkdir -p recovery-dist/Libre-Remote-2
+          rsync -a \
+            --exclude '.git/' \
+            --exclude '.gradle/' \
+            --exclude '**/build/' \
+            --exclude 'local.properties' \
+            --exclude '*.jks' \
+            --exclude '*.keystore' \
+            lg-wifi-remote-app/ recovery-dist/Libre-Remote-2/
+          cd recovery-dist
+          zip -qr Libre-Remote-2-recovered-source.zip Libre-Remote-2
+          sha256sum Libre-Remote-2-recovered-source.zip > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libre-remote-2-recovered-source
+          path: |
+            recovery-dist/Libre-Remote-2-recovered-source.zip
+            recovery-dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
