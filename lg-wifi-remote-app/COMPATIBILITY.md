@@ -1,4 +1,4 @@
-# Matriz de compatibilidade — Libre Remote 1.1 RC1
+# Matriz de compatibilidade — Libre Remote 2.0 RC1
 
 ## Ativo nesta build
 

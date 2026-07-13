@@ -1,0 +1,34 @@
+name: Compatibility report
+description: Confirm what works on a specific TV.
+title: "[Compatibility] "
+body:
+  - type: input
+    id: tv
+    attributes: {label: Manufacturer and exact model}
+    validations: {required: true}
+  - type: input
+    id: firmware
+    attributes: {label: TV system/firmware version}
+  - type: input
+    id: android
+    attributes: {label: Phone and Android version}
+  - type: dropdown
+    id: pairing
+    attributes:
+      label: Pairing
+      options: [Pass, Fail, Not applicable]
+  - type: checkboxes
+    id: features
+    attributes:
+      label: Working features
+      options:
+        - {label: D-pad and OK}
+        - {label: Volume and mute}
+        - {label: Channels}
+        - {label: Apps and inputs}
+        - {label: Touchpad and keyboard}
+        - {label: Power/Wake-on-LAN}
+        - {label: Automatic reconnect}
+  - type: textarea
+    id: notes
+    attributes: {label: Notes and sanitized diagnostic report}
