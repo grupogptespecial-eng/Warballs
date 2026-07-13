@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:gravity="center_vertical"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/widget_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="@string/widget_name"
+        android:textColor="#FFFFFFFF"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/widget_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="@string/widget_not_connected"
+        android:textColor="#FFB8C8E5"
+        android:textSize="12sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/widget_power"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:contentDescription="@string/widget_power"
+            android:text="⏻"
+            android:textSize="18sp" />
+
+        <Button
+            android:id="@+id/widget_volume_down"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:contentDescription="@string/widget_volume_down"
+            android:text="−"
+            android:textSize="18sp" />
+
+        <Button
+            android:id="@+id/widget_mute"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:contentDescription="@string/widget_mute"
+            android:text="M"
+            android:textSize="14sp" />
+
+        <Button
+            android:id="@+id/widget_volume_up"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:contentDescription="@string/widget_volume_up"
+            android:text="+"
+            android:textSize="18sp" />
+
+        <Button
+            android:id="@+id/widget_play_pause"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:contentDescription="@string/widget_play_pause"
+            android:text="▶Ⅱ"
+            android:textSize="12sp" />
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,3 @@
+HSPLcom/geronimo/controlelgwifi/MainActivity;-><init>()V
+HSPLcom/geronimo/controlelgwifi/RemoteViewModel;-><init>(Landroid/app/Application;)V
+HSPLcom/geronimo/controlelgwifi/ProductDatabase;->getInstance(Landroid/content/Context;)Lcom/geronimo/controlelgwifi/ProductDatabase;
