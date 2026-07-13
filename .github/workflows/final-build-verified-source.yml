@@ -58,10 +58,13 @@ jobs:
           PY
           echo "5f537a05fd3f6615edda498563210d51e7549ad81849a7fd48039f63c3facfe4  $archive" | sha256sum -c -
           tar -tzf "$archive" > /tmp/source-files.txt
+          rm -rf lg-wifi-remote-app
+          mkdir -p lg-wifi-remote-app
           tar -xzf "$archive" -C lg-wifi-remote-app
           rm -rf lg-wifi-remote-app/app/schemas
           mkdir -p lg-wifi-remote-app/app/schemas
-          rm -rf .final-b64 .final-materialize .final-overlay* .final-source* .final-suffix*
+          touch lg-wifi-remote-app/app/schemas/.gitkeep
+          rm -rf .final-b64 .final-materialize .final-overlay* .final-source* .final-suffix* .final2-overlay .final2-b32 .final-patch
           rm -f lg-wifi-remote-app/.*trigger* lg-wifi-remote-app/.universal-*
           for file in ProductDatabase.kt CommandScheduler.kt MacroEngine.kt RemoteViewModelPermissions.kt WakeOnLan.kt; do
             test -f "lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/$file"
