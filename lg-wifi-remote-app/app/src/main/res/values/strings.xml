@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Libre Remote</string>
+    <string name="widget_description">Controles rápidos para a TV selecionada no Libre Remote</string>
+    <string name="quick_tile_label">Libre Remote</string>
+    <string name="shortcut_connect_short">Conectar TV</string>
+    <string name="shortcut_connect_long">Procurar e conectar uma TV</string>
+    <string name="shortcut_macros_short">Cenas</string>
+    <string name="shortcut_macros_long">Abrir cenas e macros</string>
+</resources>

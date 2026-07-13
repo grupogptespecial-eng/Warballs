@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="connect_tv"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_connect_short"
+        android:shortcutLongLabel="@string/shortcut_connect_long">
+        <intent
+            android:action="io.github.grupogptespecialeng.libreremote.CONNECT"
+            android:targetPackage="io.github.grupogptespecialeng.libreremote"
+            android:targetClass="com.geronimo.controlelgwifi.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="macros"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_macros_short"
+        android:shortcutLongLabel="@string/shortcut_macros_long">
+        <intent
+            android:action="io.github.grupogptespecialeng.libreremote.MACROS"
+            android:targetPackage="io.github.grupogptespecialeng.libreremote"
+            android:targetClass="com.geronimo.controlelgwifi.MainActivity" />
+    </shortcut>
+</shortcuts>
