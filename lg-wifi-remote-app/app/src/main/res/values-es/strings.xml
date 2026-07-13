@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Libre Remote</string>
+    <string name="permission_network_title">Encuentra televisores en tu red</string>
+    <string name="permission_network_body">Libre Remote necesita acceso a la red local para encontrar y controlar tu televisor. Los comandos permanecen en tu red Wi-Fi.</string>
+    <string name="widget_name">Controles de Libre Remote</string>
+    <string name="widget_not_connected">Abre la aplicación para conectar</string>
+    <string name="widget_power">Encender o apagar</string>
+    <string name="widget_volume_down">Bajar volumen</string>
+    <string name="widget_volume_up">Subir volumen</string>
+    <string name="widget_mute">Silencio</string>
+    <string name="widget_play_pause">Reproducir o pausar</string>
+    <string name="tile_name">Control de TV</string>
+</resources>
