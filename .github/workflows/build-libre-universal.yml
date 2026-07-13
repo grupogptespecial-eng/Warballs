@@ -27,6 +27,18 @@ jobs:
         run: |
           set -euo pipefail
           cat .universal-overlay/part-* > /tmp/universal-overlay.b64
+          python3 - <<'PYFIX'
+          from pathlib import Path
+          path = Path('/tmp/universal-overlay.b64')
+          data = bytearray(path.read_bytes())
+          fixes = {21413: (ord('p'), ord('P')), 24940: (ord('t'), ord('T'))}
+          for offset, (actual, expected) in fixes.items():
+              if data[offset] != actual:
+                  raise SystemExit(f'unexpected overlay byte at {offset}: {data[offset]}')
+              data[offset] = expected
+          path.write_bytes(data)
+          PYFIX
+          echo "5a1136e596f241f253ce47403fb94ecf94b430ecba5d3781ecf2fb4908ab1c19  /tmp/universal-overlay.b64" | sha256sum -c -
           base64 --decode /tmp/universal-overlay.b64 > /tmp/universal-overlay.tar.gz
           echo "b31a421c36ee79cf2301721c1b91d99a83282fdcc4fc1bc84a8827dde2c5038a  /tmp/universal-overlay.tar.gz" | sha256sum -c -
           tar -xzf /tmp/universal-overlay.tar.gz -C "$GITHUB_WORKSPACE"
