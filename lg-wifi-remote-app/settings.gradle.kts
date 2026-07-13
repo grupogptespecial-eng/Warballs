@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ControleLGWiFi"
+rootProject.name = "LibreRemote"
 include(":app")
