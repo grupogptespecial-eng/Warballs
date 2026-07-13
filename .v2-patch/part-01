@@ -1,0 +1,168 @@
+index 074eb6b..0000000
+--- a/.universal-pr-trigger-2
++++ /dev/null
+@@ -1 +0,0 @@
+-Trigger universal RC validation after CI base creation
+diff --git a/.universal-pr-trigger-3 b/.universal-pr-trigger-3
+deleted file mode 100644
+index fe56986..0000000
+--- a/.universal-pr-trigger-3
++++ /dev/null
+@@ -1 +0,0 @@
+-Trigger PR workflow from universal CI base
+diff --git a/ARCHITECTURE.md b/ARCHITECTURE.md
+new file mode 100644
+index 0000000..7f7faf6
+--- /dev/null
++++ b/ARCHITECTURE.md
+@@ -0,0 +1,45 @@
++# Architecture
++
++Libre Remote is a local-first Android application. The user interface never talks directly to a manufacturer protocol. `RemoteViewModel` coordinates discovery, saved devices, layouts, macros and a `TvBackend` selected by `TvBackendRegistry`.
++
++## Runtime layers
++
++1. **UI** — Compose screens and sheets render `RemoteUiState` and emit user intents.
++2. **Application** — `RemoteViewModel`, `RemoteMacroRunner`, voice parsing and performance tracking.
++3. **Domain** — devices, capabilities, commands, presets, macros and diagnostics in `RemoteModels.kt`.
++4. **Protocol adapters** — LG webOS, Samsung Tizen local and DLNA/UPnP implement `TvBackend`.
++5. **Infrastructure** — SSDP discovery, encrypted credentials, Wake-on-LAN, widgets and Quick Settings.
++
++## Backend contract
++
++Every backend must:
++
++- expose only capabilities it really supports;
++- reject non-local endpoints for local-only protocols;
++- avoid network work on the main thread;
++- bound or conflate queues so stale commands are not replayed;
++- clear credentials in `forgetDevice`;
++- normalize connection state through `TvBackendListener`;
++- provide timeouts and close all resources.
++
++A new platform starts as `Experimental`. It becomes stable only after protocol review, automated contract tests and a documented physical-device matrix.
++
++## Device identity
++
++The preferred identity order is device UUID, manufacturer identifier, paired certificate, MAC address, then IP as a last resort. A device may expose several routes, such as webOS and DLNA. Discovery combines duplicates and selects the route with the richest verified capability set.
++
++## Storage
++
++General preferences, devices, presets and macros are local. Pairing secrets are isolated in encrypted preferences backed by Android Keystore where supported. The app disables Android backup. No application server or telemetry pipeline exists.
++
++## Security boundaries
++
++- Cleartext protocols are accepted only for local addresses and only where the television protocol requires them.
++- WSS uses trust-on-first-use per television and rejects certificate changes during the TLS handshake.
++- DLNA control URLs must remain local and cannot contain credentials.
++- Diagnostic exports are sanitized and never include IP, MAC, tokens, certificates or typed text.
++- Roku control is intentionally disabled in public builds while vendor policy restricts third-party mobile clients.
++
++## Source organization
++
++The current release keeps one Android module to minimize release risk, but separates each concern into focused Kotlin files. A future multi-module extraction must preserve API boundaries and migrations, not merely move files.
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 894e43b..a8095ad 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,66 +1,48 @@
+ # Changelog
+ 
+-## 1.1.0-rc1 — 2026-07-12
+-
+-### Added
+-
+-- universal `TvBackend` contract and backend registry;
+-- automatic platform and support-level metadata;
+-- multiprotocol SSDP/UPnP discovery and device-description parsing;
+-- deduplication that prefers a full local backend over DLNA for the same TV;
+-- encrypted Samsung Tizen token storage and persistent local WebSocket control;
+-- experimental Samsung navigation, volume, channels, media, numeric, colored and power keys;
+-- DLNA AVTransport and RenderingControl backend for media, volume and mute;
+-- migration of saved LG devices to stable platform-aware identifiers;
+-- capability-driven UI that hides unsupported controls;
+-- experimental-backend toggle and platform/support labels in the device picker;
+-- local command-dispatch latency measurement in network diagnostics.
++## 2.0.0-rc1 — 2026-07-13
+ 
+-### Performance
++### Product
+ 
+-- Samsung endpoint racing and persistent sockets;
+-- bounded Samsung command queue;
+-- 250 ms initial reconnect backoff;
+-- faster held-button repetition;
+-- pooled HTTP connection for DLNA commands;
+-- previous LG persistent socket and conflated pointer optimizations retained.
++- scenes/macros with cancellation, delays and connection waits;
++- local deterministic voice commands;
++- home-screen widget, Quick Settings tile and launcher shortcuts;
++- left-handed, large-control and high-contrast modes;
++- custom-layout import/export;
++- sanitized diagnostic sharing;
++- local average and p95 command-dispatch metrics;
++- stable device identities with address history.
+ 
+-### Honest limitations
++### Security
+ 
+-- LG is the only full backend considered stable in this release candidate;
+-- Samsung Tizen local is experimental and requires physical testing by generation;
+-- DLNA controls only the current media session and exposed volume service;
+-- SmartThings, Google Cast and Fire TV are represented in the architecture but not activated;
+-- Roku control remains disabled because of vendor-policy concerns;
+-- no claim of compatibility with every television is made.
++- local-address validation for LG, Samsung and DLNA control routes;
++- certificate changes rejected during LG/Samsung TLS handshakes;
++- historical third-party signed LG test manifest removed;
++- minimal unsigned LG permissions aligned with the Apache-2.0 Connect SDK registration pattern;
++- no backup, telemetry or secret-bearing diagnostic output.
+ 
+-All notable changes to Libre Remote will be documented here.
++### Open source and release engineering
+ 
+-## 0.2.0-beta — 2026-07-12
++- architecture, governance, testing, release and maintainer documentation;
++- complete GPL license text and third-party notices;
++- bug/compatibility templates, pull-request template, Dependabot and CodeQL;
++- standalone CI and signed-release workflows;
++- Play listing, Data Safety notes and HTTPS-ready privacy policy.
+ 
+-### Added
++### Compatibility
+ 
+-- complete Jetpack Compose and Material 3 interface;
+-- rounded controls, circular directional pad and bottom navigation;
+-- dedicated Control, Touchpad, Apps and Settings areas;
+-- persistent LG webOS WebSocket connection;
+-- fast connection selection between local ports 3000 and 3001;
+-- immediate command dispatch on press and repeat while holding volume or channel controls;
+-- conflated touchpad motion queue and adjustable sensitivity;
+-- SSDP discovery and manual IP connection;
+-- dynamic application and input loading;
+-- media, numeric keypad, colored keys, text input and Wake-on-LAN controls;
+-- dark and light themes and optional haptic feedback;
+-- encrypted pairing preferences and local TLS certificate trust-on-first-use checks;
+-- open-source project documentation.
++- LG webOS remains the full release-candidate backend;
++- Samsung Tizen remains experimental pending model-year testing;
++- DLNA remains media-only;
++- proprietary or policy-blocked platforms are not falsely marked complete.
+ 
+-### Known limitations
++## 1.1.0-rc1 — 2026-07-12
+ 
+-- compatibility is currently focused on LG webOS televisions;
+-- behavior varies across firmware generations and routers;
+-- the downloadable beta APK is debug-signed and is not the future Google Play release build;
+-- runtime testing is still required on a wider device matrix.
++- universal backend contract;
++- multiprotocol SSDP/UPnP discovery and deduplication;
++- LG webOS, experimental Samsung Tizen local and DLNA media backends;
++- capability-driven interface, persistent sockets, reconnect backoff and bounded queues.
+ 
+-## 0.1.0 — 2026-07-12
++## 0.2.0-beta — 2026-07-12
+ 
+-- initial functional LG webOS Wi-Fi remote prototype.
++- initial Compose interface, LG webOS pairi
