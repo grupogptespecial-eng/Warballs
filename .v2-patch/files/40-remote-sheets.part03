@@ -1,0 +1,77 @@
+             item { SettingsToggle(Icons.Rounded.Wifi, "Reconectar automaticamente", "Tenta restaurar a conexão sem interromper você", state.autoConnect, viewModel::setAutoConnect) }
+             item { SettingsToggle(Icons.Rounded.Devices, "Sistemas experimentais", "Permite testar Samsung Tizen e plataformas ainda em validação", state.experimentalBackendsEnabled, viewModel::setExperimentalBackendsEnabled) }
+ 
+@@ -555,10 +854,19 @@ fun SettingsSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+             item {
+                 SettingsAction(Icons.Rounded.SettingsRemote, "Layout", state.selectedPreset.name) { viewModel.openPresetEditor() }
+             }
++            item {
++                SettingsAction(Icons.Rounded.AutoAwesome, "Cenas e macros", "${state.macros.size} macros salvas") { viewModel.openMacros() }
++            }
+             item { SettingsToggle(Icons.Rounded.Visibility, "Mostrar nomes dos botões", "Útil para aprender os ícones", state.showLabels, viewModel::setShowLabels) }
+             item { SettingsToggle(Icons.Rounded.Smartphone, "Modo compacto", "Exibe mais funções em telas pequenas", state.compactMode, viewModel::setCompactMode) }
+             item { SettingsToggle(Icons.Rounded.Vibration, "Vibração", "Resposta tátil ao tocar", state.hapticsEnabled, viewModel::setHaptics) }
+ 
++            item { SettingsSectionLabel("ACESSIBILIDADE") }
++            item { SettingsToggle(Icons.Rounded.AccessibilityNew, "Modo para canhotos", "Inverte volume e canais", state.leftHanded, viewModel::setLeftHanded) }
++            item { SettingsToggle(Icons.Rounded.TextFields, "Controles ampliados", "Aumenta os alvos de toque", state.largeControls, viewModel::setLargeControls) }
++            item { SettingsToggle(Icons.Rounded.Visibility, "Alto contraste", "Reforça textos, contornos e superfícies", state.highContrast, viewModel::setHighContrast) }
++            item { SettingsToggle(Icons.Rounded.Mic, "Comandos de voz", "Reconhecimento iniciado somente quando você toca no microfone", state.voiceCommandsEnabled, viewModel::setVoiceCommandsEnabled) }
++
+             item { SettingsSectionLabel("APARÊNCIA") }
+             item {
+                 Column(Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
+@@ -595,7 +903,7 @@ fun SettingsSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+             item { SettingsSectionLabel("PRIVACIDADE E SOBRE") }
+             item { SettingsInfo(Icons.Rounded.Security, "Privacidade", "Sem conta, anúncios, telemetria ou servidor externo") }
+             item { SettingsInfo(Icons.Rounded.Language, "Idioma", "Português; estrutura preparada para traduções") }
+-            item { SettingsInfo(Icons.Rounded.Info, "Libre Remote Universal 1.1 RC1", "LG completo; Samsung e outros sistemas claramente identificados por nível de suporte") }
++            item { SettingsInfo(Icons.Rounded.Info, "Libre Remote Universal 2.0 RC1", "LG completo; Samsung e outros sistemas claramente identificados por nível de suporte") }
+         }
+     }
+ 
+@@ -722,6 +1030,44 @@ private fun EmptySheetMessage(title: String, body: String) {
+     }
+ }
+ 
++private fun MacroStep.shortLabel(): String = when (type) {
++    MacroStepType.Command -> action?.displayLabel() ?: "Comando"
++    MacroStepType.Delay -> "${delayMs} ms"
++    MacroStepType.WaitForConnection -> "Conectar"
++    MacroStepType.LaunchApp -> "App"
++    MacroStepType.SwitchInput -> "Entrada"
++    MacroStepType.InsertText -> "Texto"
++}
++
++private fun RemoteAction.displayLabel(): String = when (this) {
++    RemoteAction.Up -> "Cima"
++    RemoteAction.Down -> "Baixo"
++    RemoteAction.Left -> "Esquerda"
++    RemoteAction.Right -> "Direita"
++    RemoteAction.Enter -> "OK"
++    RemoteAction.Back -> "Voltar"
++    RemoteAction.Home -> "Home"
++    RemoteAction.Menu -> "Menu"
++    RemoteAction.Settings -> "Ajustes"
++    RemoteAction.Info -> "Info"
++    RemoteAction.Guide -> "Guia"
++    RemoteAction.Exit -> "Sair"
++    RemoteAction.VolumeUp -> "Volume +"
++    RemoteAction.VolumeDown -> "Volume −"
++    RemoteAction.Mute -> "Mudo"
++    RemoteAction.ChannelUp -> "Canal +"
++    RemoteAction.ChannelDown -> "Canal −"
++    RemoteAction.Play -> "Play"
++    RemoteAction.Pause -> "Pausa"
++    RemoteAction.PlayPause -> "Play/Pausa"
++    RemoteAction.Rewind -> "Voltar mídia"
++    RemoteAction.FastForward -> "Avançar mídia"
++    RemoteAction.Stop -> "Parar"
++    RemoteAction.Previous -> "Anterior"
++    RemoteAction.Next -> "Próximo"
++    RemoteAction.PowerOff -> "Desligar"
++}
++
+ private fun ThemeMode.themeLabel(): String = when (this) {
+     ThemeMode.System -> "Sistema"
+     ThemeMode.Light -> "Claro"
