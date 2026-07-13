@@ -40,8 +40,9 @@ jobs:
             tr -d '\r\n\t ' < .final-b64/part-00 > /tmp/libre-remote-final.b64
             base64 --decode /tmp/libre-remote-final.b64 > /tmp/libre-remote-final.tar.gz
             echo "6aee8919e7be880689d92d84cb0b3ad3bd9da5eebbd91dd06ca761cbfdf3a963  /tmp/libre-remote-final.tar.gz" | sha256sum -c -
+            mkdir -p lg-wifi-remote-app
             tar -tzf /tmp/libre-remote-final.tar.gz > /tmp/libre-remote-final-files.txt
-            tar -xzf /tmp/libre-remote-final.tar.gz -C "$GITHUB_WORKSPACE"
+            tar -xzf /tmp/libre-remote-final.tar.gz -C lg-wifi-remote-app
             bash /tmp/finalize-libre-remote.sh "$GITHUB_WORKSPACE"
             rm -rf .final-b64 .final-overlay-exact .final-overlay-v2 .final-overlay-v3 \
               .final-overlay-v4 .final-overlay-v5 .final-suffix-hex .final-suffix-hex-v2 \
@@ -80,6 +81,7 @@ jobs:
           set -euo pipefail
           git config user.name "Libre Remote CI"
           git config user.email "actions@users.noreply.github.com"
+          rm -rf .final-materialize
           git add -A
           if ! git diff --cached --quiet; then
             git commit -m "Materialize Libre Remote 2 final product [skip ci]"
@@ -152,9 +154,7 @@ jobs:
           if [ -d lg-wifi-remote-app/store-listing ]; then
             cp -r lg-wifi-remote-app/store-listing/. final-output/store-listing/
           fi
-          cat > final-output/store-listing/GRAPHICS-NOTE.txt <<'EOF'
-          Store text and policy files are included here. Final listing graphics are maintained as a separate reviewed delivery asset so binary images never pass through the source-materialization transport.
-          EOF
+          printf 'Store text and policy files are included. Final reviewed graphics are distributed as a separate delivery asset.\n' > final-output/store-listing/GRAPHICS-NOTE.txt
           (cd final-output && zip -qr Libre-Remote-2.0.0-play-store-materials.zip store-listing && rm -rf store-listing)
 
           cp lg-wifi-remote-app/build-final.log final-output/BUILD-LOG.txt
