@@ -212,6 +212,5 @@ jobs:
           retention-days: 14
 
       - name: Preserve failing status
-        if: always() && !contains(steps.*.outcome, 'failure') == false
-        run: |
-          if [ ! -f lg-wifi-remote-app/CI_SUCCESS.md ]; then exit 1; fi
+        if: always() && steps.package.outcome != 'success'
+        run: exit 1
