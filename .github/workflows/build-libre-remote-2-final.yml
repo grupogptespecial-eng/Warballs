@@ -35,6 +35,8 @@ jobs:
           set -euo pipefail
           if [ -f lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/ProductDatabase.kt ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
+            rm -rf lg-wifi-remote-app/app/schemas
+            mkdir -p lg-wifi-remote-app/app/schemas
             exit 0
           fi
           artifact_id=""
@@ -73,11 +75,11 @@ jobs:
           echo "5f537a05fd3f6615edda498563210d51e7549ad81849a7fd48039f63c3facfe4  $archive" | sha256sum -c -
           tar -tzf "$archive" > /tmp/source-files.txt
           tar -xzf "$archive" -C lg-wifi-remote-app
-          rm -f lg-wifi-remote-app/app/schemas/.gitkeep
+          rm -rf lg-wifi-remote-app/app/schemas
+          mkdir -p lg-wifi-remote-app/app/schemas
           rm -rf .final-b64 .final-materialize .final-overlay* .final-source* .final-suffix*
           rm -f lg-wifi-remote-app/.*trigger* lg-wifi-remote-app/.universal-*
-          for file in \
-            ProductDatabase.kt CommandScheduler.kt MacroEngine.kt RemoteViewModelPermissions.kt WakeOnLan.kt; do
+          for file in ProductDatabase.kt CommandScheduler.kt MacroEngine.kt RemoteViewModelPermissions.kt WakeOnLan.kt; do
             test -f "lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/$file"
           done
           test -f lg-wifi-remote-app/app/proguard-rules.pro
