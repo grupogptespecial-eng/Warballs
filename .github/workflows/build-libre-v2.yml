@@ -1,0 +1,167 @@
+name: Build Libre Remote 2.0 RC
+
+on:
+  push:
+    branches:
+      - release/libre-remote-v2-playstore
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize-test-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Materialize v2 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .v2-patch/files/* > /tmp/libre-v2.patch
+          echo "2baff6d15effca7b70e09d78d7ea8ebb221e5ec6c8f138fe32c2a724b10daea4  /tmp/libre-v2.patch" | sha256sum -c -
+          cd lg-wifi-remote-app
+          git apply --check /tmp/libre-v2.patch
+          git apply /tmp/libre-v2.patch
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Configure release signing
+        shell: bash
+        env:
+          KEYSTORE_B64: ${{ secrets.LIBRE_UPLOAD_KEYSTORE_B64 }}
+          STORE_PASSWORD: ${{ secrets.LIBRE_UPLOAD_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.LIBRE_UPLOAD_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.LIBRE_UPLOAD_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -n "${KEYSTORE_B64:-}" ] && [ -n "${STORE_PASSWORD:-}" ] && [ -n "${KEY_ALIAS:-}" ] && [ -n "${KEY_PASSWORD:-}" ]; then
+            echo "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/libre-upload.jks"
+            SIGNING_STATUS="permanent upload key from GitHub Actions secrets"
+          else
+            STORE_PASSWORD="$(openssl rand -hex 18)"
+            KEY_PASSWORD="$STORE_PASSWORD"
+            KEY_ALIAS="libre-remote-v2-test"
+            echo "::add-mask::$STORE_PASSWORD"
+            keytool -genkeypair -v \
+              -keystore "$RUNNER_TEMP/libre-upload.jks" \
+              -storepass "$STORE_PASSWORD" \
+              -keypass "$KEY_PASSWORD" \
+              -alias "$KEY_ALIAS" \
+              -keyalg RSA \
+              -keysize 4096 \
+              -validity 10000 \
+              -dname "CN=Libre Remote 2.0 Test Build, OU=Open Source, O=Libre Remote Community, L=Rio de Janeiro, ST=RJ, C=BR"
+            SIGNING_STATUS="temporary CI key — replace before the first Play Console upload"
+          fi
+          echo "LIBRE_KEYSTORE_PATH=$RUNNER_TEMP/libre-upload.jks" >> "$GITHUB_ENV"
+          echo "LIBRE_KEYSTORE_PASSWORD=$STORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "LIBRE_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "LIBRE_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
+          echo "SIGNING_STATUS=$SIGNING_STATUS" >> "$GITHUB_ENV"
+
+      - name: Unit tests, lint and release build
+        working-directory: lg-wifi-remote-app
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle --no-daemon --stacktrace \
+            :app:testDebugUnitTest \
+            :app:lintRelease \
+            :app:assembleRelease \
+            :app:bundleRelease 2>&1 | tee build.log
+
+      - name: Package public release candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output/source output/store
+          APK="lg-wifi-remote-app/app/build/outputs/apk/release/app-release.apk"
+          AAB="lg-wifi-remote-app/app/build/outputs/bundle/release/app-release.aab"
+          test -s "$APK"
+          test -s "$AAB"
+          cp "$APK" output/Libre-Remote-2.0.0-rc1.apk
+          cp "$AAB" output/Libre-Remote-2.0.0-rc1.aab
+          APKSIGNER="$(find "${ANDROID_SDK_ROOT:-$ANDROID_HOME}/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -x "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs output/Libre-Remote-2.0.0-rc1.apk > output/APK-SIGNATURE.txt
+          sha256sum output/Libre-Remote-2.0.0-rc1.apk output/Libre-Remote-2.0.0-rc1.aab > output/SHA256SUMS.txt
+          printf 'Signing: %s\n\nOwner actions still required before production:\n- configure the permanent upload key and Play App Signing\n- publish the privacy policy on an HTTPS URL\n- add the public support email and developer identity\n- complete the required Play testing track for the account type\n- replace conceptual screenshots with real device screenshots\n- validate LG/Samsung/DLNA on the published compatibility matrix\n' "$SIGNING_STATUS" > output/PLAYSTORE-OWNER-ACTIONS.txt
+          rsync -a \
+            --exclude build \
+            --exclude .gradle \
+            --exclude .kotlin \
+            --exclude local.properties \
+            --exclude '*.jks' \
+            --exclude '*.keystore' \
+            lg-wifi-remote-app/ output/source/
+          (cd output && zip -qr Libre-Remote-2.0.0-rc1-source.zip source && rm -rf source)
+          if [ -d lg-wifi-remote-app/store-listing ]; then
+            cp -r lg-wifi-remote-app/store-listing/* output/store/
+            cp lg-wifi-remote-app/docs/privacy-policy.html output/store/
+            (cd output && zip -qr Libre-Remote-2.0.0-store-listing.zip store && rm -rf store)
+          fi
+          cp lg-wifi-remote-app/build.log output/BUILD-LOG.txt
+          (cd output && zip -qr Libre-Remote-2.0.0-RC1-public.zip \
+            Libre-Remote-2.0.0-rc1.apk \
+            Libre-Remote-2.0.0-rc1.aab \
+            Libre-Remote-2.0.0-rc1-source.zip \
+            Libre-Remote-2.0.0-store-listing.zip \
+            APK-SIGNATURE.txt SHA256SUMS.txt PLAYSTORE-OWNER-ACTIONS.txt BUILD-LOG.txt)
+          ls -lh output
+
+      - name: Materialize clean source branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Libre Remote CI"
+          git config user.email "actions@users.noreply.github.com"
+          rm -rf .v2-patch
+          rm -f lg-wifi-remote-app/.v2-tree-anchor
+          git add -A lg-wifi-remote-app .v2-patch
+          if ! git diff --cached --quiet; then
+            git commit -m "Materialize Libre Remote 2.0 release candidate [skip ci]"
+            git push origin HEAD:release/libre-remote-v2-playstore
+          fi
+
+      - name: Upload release candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: Libre-Remote-2.0.0-RC1
+          path: output/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Libre-Remote-2.0.0-build-diagnostics
+          path: |
+            lg-wifi-remote-app/build.log
+            lg-wifi-remote-app/app/build/reports/lint-results-release.html
+            lg-wifi-remote-app/app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 14
