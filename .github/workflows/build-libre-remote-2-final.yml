@@ -42,7 +42,6 @@ jobs:
             exit 0
           fi
 
-          cp .final-materialize/finalize-v2.sh /tmp/finalize-libre-remote.sh
           artifact_id=""
           for attempt in $(seq 1 30); do
             response=$(curl --fail-with-body -sS \
@@ -54,7 +53,7 @@ jobs:
               '[.artifacts[] | select(.expired == false and .workflow_run.head_sha == $sha)] | sort_by(.created_at) | last | .id // empty' \
               <<<"$response")
             if [ -n "$artifact_id" ]; then break; fi
-            echo "Waiting for source diagnostic artifact ($attempt/30)..."
+            echo "Waiting for reviewed source artifact ($attempt/30)..."
             sleep 4
           done
           test -n "$artifact_id"
@@ -78,18 +77,30 @@ jobs:
           data = bytearray(path.read_bytes())
           expected = {63805: 0o367, 63806: 0o66}
           replacement = {63805: 0o365, 63806: 0o166}
-          for offset, value in expected.items():
-              if data[offset] != value:
-                  raise SystemExit(f"Unexpected byte at {offset}: {data[offset]:#o}")
+          for offset, expected_value in expected.items():
+              actual = data[offset]
+              if actual != expected_value:
+                  raise SystemExit(f"Unexpected byte at {offset}: {actual:#o}")
               data[offset] = replacement[offset]
           path.write_bytes(data)
           PY
           echo "5f537a05fd3f6615edda498563210d51e7549ad81849a7fd48039f63c3facfe4  $archive" | sha256sum -c -
           tar -tzf "$archive" > /tmp/libre-remote-final-files.txt
-          mkdir -p lg-wifi-remote-app
           tar -xzf "$archive" -C lg-wifi-remote-app
-          bash /tmp/finalize-libre-remote.sh "$GITHUB_WORKSPACE"
+
+          test -f lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/ProductDatabase.kt
+          test -f lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/CommandScheduler.kt
+          test -f lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/MacroEngine.kt
+          test -f lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/RemoteViewModelPermissions.kt
+          test -f lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/WakeOnLan.kt
+          test -f lg-wifi-remote-app/app/proguard-rules.pro
+          test -f lg-wifi-remote-app/app/src/main/res/xml/network_security_config.xml
+          test -f lg-wifi-remote-app/README.md
+          test -f lg-wifi-remote-app/ARCHITECTURE.md
+          test -f lg-wifi-remote-app/PRIVACY.md
+
           rm -rf .final-b64 .final-materialize .final-overlay* .final-source* .final-suffix*
+          rm -f lg-wifi-remote-app/.*trigger* lg-wifi-remote-app/.universal-*
           echo "materialized=true" >> "$GITHUB_OUTPUT"
 
       - name: Set up Java 17
@@ -164,7 +175,7 @@ jobs:
           (cd final-output && zip -qr Libre-Remote-2.0.0-rc1-source.zip source && rm -rf source)
           if [ -d lg-wifi-remote-app/store-listing ]; then
             cp -r lg-wifi-remote-app/store-listing/. final-output/store/
-            printf 'Final reviewed graphics are delivered separately from the source transport.\n' > final-output/store/GRAPHICS-NOTE.txt
+            printf 'Final reviewed graphics are delivered separately from this source transport.\n' > final-output/store/GRAPHICS-NOTE.txt
             (cd final-output && zip -qr Libre-Remote-2.0.0-play-store-materials.zip store && rm -rf store)
           fi
           cp lg-wifi-remote-app/build-final.log final-output/BUILD-LOG.txt
@@ -178,7 +189,6 @@ jobs:
           set -euo pipefail
           git config user.name "Libre Remote CI"
           git config user.email "actions@users.noreply.github.com"
-          rm -f lg-wifi-remote-app/.*trigger* lg-wifi-remote-app/.universal-*
           git add -A
           if ! git diff --cached --quiet; then
             git commit -m "Materialize validated Libre Remote 2.0 RC1 source [skip ci]"
