@@ -1,0 +1,109 @@
+name: Export Libre Remote Handoff
+
+on:
+  push:
+    branches:
+      - feature/libre-remote-2-product-foundation
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout complete history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare clean handoff package
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="$GITHUB_WORKSPACE"
+          OUT="$ROOT/export/Libre-Remote-Handoff"
+          SRC="$OUT/source"
+          rm -rf "$ROOT/export"
+          mkdir -p "$SRC" "$OUT/project-notes"
+
+          rsync -a \
+            --exclude='.git/' \
+            --exclude='.gradle/' \
+            --exclude='**/build/' \
+            --exclude='local.properties' \
+            --exclude='*.jks' \
+            --exclude='*.keystore' \
+            --exclude='*.apk' \
+            --exclude='*.aab' \
+            --exclude='*.log' \
+            --exclude='.*trigger*' \
+            --exclude='.probe-*' \
+            --exclude='.final-*' \
+            --exclude='.universal-*' \
+            lg-wifi-remote-app/ "$SRC/"
+
+          if [ -f .github/RELEASE_TRANSFER.md ]; then
+            cp .github/RELEASE_TRANSFER.md "$OUT/project-notes/RELEASE_TRANSFER.md"
+          fi
+
+          cat > "$OUT/README-FIRST.md" <<'EOF'
+          # Libre Remote — pacote de handoff
+
+          Comece por:
+
+          1. `source/HANDOFF.md` — estado do projeto e sequência recomendada;
+          2. `source/docs/MASTER_PLAN.md` — plano mestre completo;
+          3. `source/README.md` — visão geral do produto;
+          4. `source/ARCHITECTURE.md` — arquitetura;
+          5. `source/BUILDING.md` — como compilar;
+          6. `source/TESTING.md` — testes;
+          7. `source/COMPATIBILITY.md` — compatibilidade;
+          8. `source/SECURITY.md` e `source/PRIVACY.md` — segurança e privacidade.
+
+          Este pacote contém o código cumulativo mais recente. Chaves privadas, tokens,
+          builds, APKs, AABs, logs e diretórios temporários foram excluídos.
+          EOF
+
+          {
+            echo "# Snapshot"
+            echo
+            echo "Repository: $GITHUB_REPOSITORY"
+            echo "Branch: ${GITHUB_REF_NAME}"
+            echo "Commit: ${GITHUB_SHA}"
+            echo "Generated UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo
+            echo "## Latest commit"
+            git show -s --format='- %H%n- %ad%n- %an%n- %s' --date=iso-strict HEAD
+          } > "$OUT/SNAPSHOT.md"
+
+          {
+            echo "# Histórico de desenvolvimento da pasta Libre Remote"
+            echo
+            git log --date=iso-strict --pretty=format:'- `%h` %ad — %s' -- lg-wifi-remote-app || true
+          } > "$OUT/DEVELOPMENT_HISTORY.md"
+
+          (
+            cd "$OUT"
+            find . -type f ! -name 'SHA256SUMS.txt' -print0 \
+              | sort -z \
+              | xargs -0 sha256sum > SHA256SUMS.txt
+            find . -type f -printf '%P\n' | sort > FILE_MANIFEST.txt
+          )
+
+          cp -a "$OUT" "$ROOT/export/Libre-Remote-Handoff-copy"
+          mv "$ROOT/export/Libre-Remote-Handoff-copy" "$ROOT/export/Libre-Remote-Handoff-content"
+          cd "$ROOT/export"
+          zip -qr Libre-Remote-Handoff-2026-07-13.zip Libre-Remote-Handoff
+          sha256sum Libre-Remote-Handoff-2026-07-13.zip > Libre-Remote-Handoff-2026-07-13.zip.sha256
+
+      - name: Upload handoff package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Libre-Remote-Handoff-2026-07-13
+          path: |
+            export/Libre-Remote-Handoff-2026-07-13.zip
+            export/Libre-Remote-Handoff-2026-07-13.zip.sha256
+          if-no-files-found: error
+          retention-days: 90
