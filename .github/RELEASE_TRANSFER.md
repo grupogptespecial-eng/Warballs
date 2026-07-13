@@ -1,0 +1,1 @@
+The final release workflow keeps public source artifacts separate from the private Play upload key. Generated release archives are never committed to the repository.
