@@ -1,0 +1,30 @@
+name: Bug report
+description: Report a reproducible problem without exposing credentials.
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: "Never paste pairing tokens, passwords, full certificates or typed TV content."
+  - type: input
+    id: version
+    attributes: {label: Libre Remote version}
+    validations: {required: true}
+  - type: input
+    id: device
+    attributes: {label: Phone and Android version}
+    validations: {required: true}
+  - type: input
+    id: tv
+    attributes: {label: TV model and firmware}
+    validations: {required: true}
+  - type: textarea
+    id: steps
+    attributes: {label: Steps to reproduce}
+    validations: {required: true}
+  - type: textarea
+    id: expected
+    attributes: {label: Expected and actual behavior}
+    validations: {required: true}
+  - type: textarea
+    id: diagnostics
+    attributes: {label: Sanitized diagnostic report}
