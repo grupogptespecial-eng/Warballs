@@ -42,6 +42,17 @@ jobs:
           base64 --decode /tmp/universal-overlay.b64 > /tmp/universal-overlay.tar.gz
           echo "b31a421c36ee79cf2301721c1b91d99a83282fdcc4fc1bc84a8827dde2c5038a  /tmp/universal-overlay.tar.gz" | sha256sum -c -
           tar -xzf /tmp/universal-overlay.tar.gz -C "$GITHUB_WORKSPACE"
+          python3 - <<'PYSOURCE'
+          from pathlib import Path
+          path = Path('lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/TvBackend.kt')
+          text = path.read_text()
+          old = "class TvBackendRegistry(\n    context: Context,\n    listener: TvBackendListener\n)"
+          new = "class TvBackendRegistry(\n    context: Context,\n    private val listener: TvBackendListener\n)"
+          if old in text:
+              path.write_text(text.replace(old, new, 1))
+          elif new not in text:
+              raise SystemExit('TvBackendRegistry listener signature was not recognized')
+          PYSOURCE
           git config user.name "Libre Remote CI"
           git config user.email "actions@users.noreply.github.com"
           git add lg-wifi-remote-app
