@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Libre Remote</string>
+    <string name="permission_network_title">Find TVs on your network</string>
+    <string name="permission_network_body">Libre Remote needs local network access to discover and control your TV. Commands stay on your Wi‑Fi network.</string>
+    <string name="widget_name">Libre Remote controls</string>
+    <string name="widget_not_connected">Open the app to connect</string>
+    <string name="widget_power">Power</string>
+    <string name="widget_volume_down">Volume down</string>
+    <string name="widget_volume_up">Volume up</string>
+    <string name="widget_mute">Mute</string>
+    <string name="widget_play_pause">Play or pause</string>
+    <string name="tile_name">TV control</string>
+</resources>
