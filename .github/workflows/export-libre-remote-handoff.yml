@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - feature/libre-remote-2-product-foundation
+  pull_request:
+    branches:
+      - build/libre-handoff-export-base
   workflow_dispatch:
 
 permissions:
@@ -70,7 +73,7 @@ jobs:
             echo "# Snapshot"
             echo
             echo "Repository: $GITHUB_REPOSITORY"
-            echo "Branch: ${GITHUB_REF_NAME}"
+            echo "Branch/ref: ${GITHUB_REF_NAME}"
             echo "Commit: ${GITHUB_SHA}"
             echo "Generated UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
             echo
@@ -92,8 +95,6 @@ jobs:
             find . -type f -printf '%P\n' | sort > FILE_MANIFEST.txt
           )
 
-          cp -a "$OUT" "$ROOT/export/Libre-Remote-Handoff-copy"
-          mv "$ROOT/export/Libre-Remote-Handoff-copy" "$ROOT/export/Libre-Remote-Handoff-content"
           cd "$ROOT/export"
           zip -qr Libre-Remote-Handoff-2026-07-13.zip Libre-Remote-Handoff
           sha256sum Libre-Remote-Handoff-2026-07-13.zip > Libre-Remote-Handoff-2026-07-13.zip.sha256
