@@ -1,1 +1,1 @@
-Trigger validation using the latest verified source artifact.
+Run the stable final validation after all CI base changes settled.
