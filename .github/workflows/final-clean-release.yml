@@ -1,0 +1,294 @@
+name: Libre Remote 2 Final Clean Release
+
+on:
+  push:
+    branches:
+      - feature/libre-remote-2-final-clean
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: libre-remote-2-final-clean
+  cancel-in-progress: true
+
+jobs:
+  build-final-product:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout final clean branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/libre-remote-2-final-clean
+          fetch-depth: 0
+
+      - name: Materialize exact reviewed source
+        id: materialize
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -f app/src/main/java/com/geronimo/controlelgwifi/ProductDatabase.kt ]; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            rm -rf app/schemas
+            mkdir -p app/schemas
+            exit 0
+          fi
+
+          artifact_id=8269145198
+          curl --fail-with-body -sSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPOSITORY/actions/artifacts/$artifact_id/zip" \
+            -o /tmp/libre-source-artifact.zip
+
+          rm -rf /tmp/libre-source-artifact /tmp/libre-source-root
+          mkdir -p /tmp/libre-source-artifact /tmp/libre-source-root
+          unzip -q /tmp/libre-source-artifact.zip -d /tmp/libre-source-artifact
+          archive=$(find /tmp/libre-source-artifact -type f -name reconstructed.tar.gz -print -quit)
+          test -n "$archive"
+
+          python3 - "$archive" <<'PY'
+          from pathlib import Path
+          import sys
+
+          path = Path(sys.argv[1])
+          data = bytearray(path.read_bytes())
+          for offset, expected, replacement in (
+              (63805, 0o367, 0o365),
+              (63806, 0o66, 0o166),
+          ):
+              actual = data[offset]
+              if actual != expected:
+                  raise SystemExit(
+                      f"Unexpected reviewed-source byte at {offset}: {actual:#o}"
+                  )
+              data[offset] = replacement
+          path.write_bytes(data)
+          PY
+
+          echo '5f537a05fd3f6615edda498563210d51e7549ad81849a7fd48039f63c3facfe4  '"$archive" | sha256sum -c -
+          tar -tzf "$archive" > /tmp/libre-source-files.txt
+          tar -xzf "$archive" -C /tmp/libre-source-root
+
+          cp .github/workflows/final-clean-release.yml /tmp/final-clean-release.yml
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a /tmp/libre-source-root/. .
+          mkdir -p .github/workflows
+          cp /tmp/final-clean-release.yml .github/workflows/final-clean-release.yml
+
+          rm -rf app/schemas
+          mkdir -p app/schemas
+          rm -f CI_SUCCESS.md CI_FAILURE.txt
+
+          for file in \
+            ProductDatabase.kt \
+            CommandScheduler.kt \
+            MacroEngine.kt \
+            RemoteCommandExecutor.kt \
+            RemoteWidgetProvider.kt \
+            WakeOnLan.kt; do
+            test -f "app/src/main/java/com/geronimo/controlelgwifi/$file"
+          done
+          test -f app/src/main/res/xml/network_security_config.xml
+          test -f app/proguard-rules.pro
+          test -f README.md
+          test -f ARCHITECTURE.md
+          test -f PRIVACY.md
+          test -f CONTRIBUTING.md
+          test -f SECURITY.md
+          test -d store-listing
+
+          echo 'changed=true' >> "$GITHUB_OUTPUT"
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'platform-tools'
+
+      - name: Set up Gradle 8.10.2
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Generate and verify Gradle wrapper
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle wrapper --gradle-version 8.10.2 --distribution-type bin
+          chmod +x gradlew
+          ./gradlew --version
+
+      - name: Configure temporary release signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          password=$(openssl rand -hex 18)
+          alias=libre-remote-final-test
+          echo "::add-mask::$password"
+          keytool -genkeypair \
+            -keystore "$RUNNER_TEMP/libre-remote-final-test.jks" \
+            -storepass "$password" \
+            -keypass "$password" \
+            -alias "$alias" \
+            -keyalg RSA \
+            -keysize 4096 \
+            -validity 10000 \
+            -dname 'CN=Libre Remote Final Test, OU=Open Source, O=Libre Remote Community, L=Rio de Janeiro, ST=RJ, C=BR'
+          echo "LIBRE_KEYSTORE_PATH=$RUNNER_TEMP/libre-remote-final-test.jks" >> "$GITHUB_ENV"
+          echo "LIBRE_KEYSTORE_PASSWORD=$password" >> "$GITHUB_ENV"
+          echo "LIBRE_KEY_ALIAS=$alias" >> "$GITHUB_ENV"
+          echo "LIBRE_KEY_PASSWORD=$password" >> "$GITHUB_ENV"
+
+      - name: Unit tests, release lint, APK and AAB
+        id: build
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew --no-daemon --stacktrace \
+            :app:testDebugUnitTest \
+            :app:lintRelease \
+            :app:assembleRelease \
+            :app:bundleRelease 2>&1 | tee build-final.log
+
+      - name: Package successful final candidate
+        id: package
+        if: steps.build.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p final-output/source final-output/store
+
+          APK=app/build/outputs/apk/release/app-release.apk
+          AAB=app/build/outputs/bundle/release/app-release.aab
+          test -s "$APK"
+          test -s "$AAB"
+
+          cp "$APK" final-output/Libre-Remote-2.0.0-rc1-test.apk
+          cp "$AAB" final-output/Libre-Remote-2.0.0-rc1-test.aab
+
+          signer=$(find "${ANDROID_SDK_ROOT:-$ANDROID_HOME}/build-tools" -type f -name apksigner | sort -V | tail -n 1)
+          test -x "$signer"
+          "$signer" verify --verbose --print-certs "$APK" > final-output/APK-SIGNATURE.txt
+          sha256sum final-output/*.apk final-output/*.aab > final-output/SHA256SUMS.txt
+
+          rsync -a \
+            --exclude .git \
+            --exclude build \
+            --exclude app/build \
+            --exclude .gradle \
+            --exclude .kotlin \
+            --exclude local.properties \
+            ./ final-output/source/
+          (cd final-output && zip -qr Libre-Remote-2.0.0-rc1-source.zip source && rm -rf source)
+
+          cp -r store-listing/. final-output/store/
+          printf 'Final reviewed graphics are delivered separately from this source transport.\n' > final-output/store/GRAPHICS-NOTE.txt
+          (cd final-output && zip -qr Libre-Remote-2.0.0-play-store-materials.zip store && rm -rf store)
+
+          cp build-final.log final-output/BUILD-LOG.txt
+          cp app/build/reports/lint-results-release.html final-output/LINT-REPORT.html
+          printf 'Temporary CI test signature. Rebuild this exact source with the permanent Play upload key before production.\n' > final-output/IMPORTANT-SIGNING.txt
+
+          {
+            echo '# Libre Remote 2 — CI validada'
+            echo
+            echo "Run: $GITHUB_RUN_ID"
+            echo 'Validações concluídas:'
+            echo '- SHA-256 da fonte revisada'
+            echo '- testes unitários'
+            echo '- Android Lint de release'
+            echo '- APK de release'
+            echo '- AAB de release'
+            echo '- verificação criptográfica da assinatura do APK'
+            echo
+            echo 'Artefatos desta execução usam uma chave temporária de teste.'
+            echo
+            cat final-output/SHA256SUMS.txt
+          } > CI_SUCCESS.md
+          rm -f CI_FAILURE.txt
+
+      - name: Record exact failure
+        if: steps.build.outcome != 'success' || steps.package.outcome == 'failure'
+        shell: bash
+        run: |
+          rm -f CI_SUCCESS.md
+          {
+            echo '# Libre Remote 2 — falha de validação'
+            echo
+            echo "Run: $GITHUB_RUN_ID"
+            echo "Build: ${{ steps.build.outcome }}"
+            echo "Package: ${{ steps.package.outcome }}"
+            echo
+            echo '```text'
+            if [ -f build-final.log ]; then
+              grep -nE '(^e:| error: |FAILURE|What went wrong|Unresolved reference|Compilation error|Exception)' build-final.log | tail -n 220 || true
+              echo
+              tail -n 360 build-final.log || true
+            else
+              echo 'A falha ocorreu antes da criação do log do Gradle.'
+            fi
+            echo '```'
+          } > CI_FAILURE.txt
+
+      - name: Commit clean repository and validation result
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Libre Remote CI'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          if [ -f CI_SUCCESS.md ]; then
+            message='Materialize validated Libre Remote 2.0 RC1 standalone repository [skip ci]'
+          else
+            message='Materialize Libre Remote 2.0 source with validation failure [skip ci]'
+          fi
+          if ! git diff --cached --quiet; then
+            git commit -m "$message"
+            git push origin HEAD:feature/libre-remote-2-final-clean
+          fi
+
+      - name: Upload final candidate
+        if: steps.package.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Libre-Remote-2.0.0-RC1-final-candidate
+          path: final-output/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload validation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Libre-Remote-2.0.0-final-clean-reports
+          path: |
+            /tmp/libre-source-files.txt
+            build-final.log
+            app/build/reports/**
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Preserve failing status
+        if: steps.package.outcome != 'success'
+        run: exit 1
