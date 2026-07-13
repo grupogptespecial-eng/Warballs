@@ -43,6 +43,32 @@ jobs:
             git push origin HEAD:feature/libre-remote-universal-core
           fi
 
+      - name: Collect overlay diagnostics
+        if: always()
+        shell: bash
+        run: |
+          set -u
+          mkdir -p overlay-diagnostics
+          cat .universal-overlay/part-* > overlay-diagnostics/original-parts.b64
+          if compgen -G ".universal-overlay-v2/chunk-*" > /dev/null; then
+            cat .universal-overlay-v2/chunk-* > overlay-diagnostics/v2-chunks.b64
+          fi
+          cp -r .universal-overlay overlay-diagnostics/original-files
+          if [ -d .universal-overlay-v2 ]; then
+            cp -r .universal-overlay-v2 overlay-diagnostics/v2-files
+          fi
+          sha256sum overlay-diagnostics/*b64 > overlay-diagnostics/SHA256SUMS.txt || true
+          wc -c overlay-diagnostics/*b64 > overlay-diagnostics/SIZES.txt || true
+
+      - name: Upload overlay diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Libre-Remote-Universal-overlay-diagnostics
+          path: overlay-diagnostics/**
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
