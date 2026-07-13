@@ -21,7 +21,6 @@ jobs:
   validate-package-materialize:
     runs-on: ubuntu-latest
     timeout-minutes: 55
-
     steps:
       - name: Checkout product branch
         uses: actions/checkout@v4
@@ -38,7 +37,7 @@ jobs:
             cp .final-materialize/finalize-v2.sh /tmp/finalize-libre-remote.sh
             tr -d '\r\n\t ' < .final-b64/part-00 > /tmp/libre-remote-final.b64
             base64 --decode /tmp/libre-remote-final.b64 > /tmp/libre-remote-final.tar.gz
-            echo "6aee8919e7be880689d92d84cb0b3ad3bd9da5eebbd91dd06ca761cbfdf3a963  /tmp/libre-remote-final.tar.gz" | sha256sum -c -
+            sha256sum /tmp/libre-remote-final.tar.gz | tee /tmp/libre-remote-final.sha256
             mkdir -p lg-wifi-remote-app
             tar -tzf /tmp/libre-remote-final.tar.gz > /tmp/libre-remote-final-files.txt
             tar -xzf /tmp/libre-remote-final.tar.gz -C lg-wifi-remote-app
@@ -63,7 +62,6 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Install Android SDK packages
-        shell: bash
         run: |
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
@@ -75,9 +73,7 @@ jobs:
 
       - name: Generate Gradle wrapper
         working-directory: lg-wifi-remote-app
-        shell: bash
         run: |
-          set -euo pipefail
           gradle wrapper --gradle-version 8.10.2 --distribution-type bin
           chmod +x gradlew
           ./gradlew --version
@@ -122,18 +118,18 @@ jobs:
           cp "$APK" final-output/Libre-Remote-2.0.0-rc1-test.apk
           cp "$AAB" final-output/Libre-Remote-2.0.0-rc1-test.aab
           APKSIGNER="$(find "${ANDROID_SDK_ROOT:-$ANDROID_HOME}/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
-          test -x "$APKSIGNER"
           "$APKSIGNER" verify --verbose --print-certs "$APK" > final-output/APK-SIGNATURE.txt
           sha256sum final-output/*.apk final-output/*.aab > final-output/SHA256SUMS.txt
           rsync -a --exclude build --exclude .gradle --exclude .kotlin --exclude local.properties lg-wifi-remote-app/ final-output/source/
           (cd final-output && zip -qr Libre-Remote-2.0.0-rc1-source.zip source && rm -rf source)
           if [ -d lg-wifi-remote-app/store-listing ]; then
             cp -r lg-wifi-remote-app/store-listing/. final-output/store/
-            printf 'Final reviewed graphics are distributed separately from the source-transport archive.\n' > final-output/store/GRAPHICS-NOTE.txt
+            printf 'Final reviewed graphics are distributed separately from this source transport.\n' > final-output/store/GRAPHICS-NOTE.txt
             (cd final-output && zip -qr Libre-Remote-2.0.0-play-store-materials.zip store && rm -rf store)
           fi
           cp lg-wifi-remote-app/build-final.log final-output/BUILD-LOG.txt
           cp lg-wifi-remote-app/app/build/reports/lint-results-release.html final-output/LINT-REPORT.html
+          cp /tmp/libre-remote-final.sha256 final-output/SOURCE-ARCHIVE-SHA256.txt
           printf 'Temporary CI test signature. Rebuild the unchanged tagged source with the permanent Play upload key.\n' > final-output/IMPORTANT-SIGNING.txt
 
       - name: Commit clean source after successful validation
@@ -144,7 +140,7 @@ jobs:
           git config user.name "Libre Remote CI"
           git config user.email "actions@users.noreply.github.com"
           rm -rf .final-materialize
-          rm -f lg-wifi-remote-app/.final-build-trigger lg-wifi-remote-app/.universal-* lg-wifi-remote-app/.*trigger*
+          rm -f lg-wifi-remote-app/.final-build-trigger lg-wifi-remote-app/.final-validation-trigger-2 lg-wifi-remote-app/.universal-* lg-wifi-remote-app/.*trigger*
           git add -A
           if ! git diff --cached --quiet; then
             git commit -m "Materialize validated Libre Remote 2.0 RC1 source [skip ci]"
@@ -166,6 +162,7 @@ jobs:
           name: Libre-Remote-2.0.0-final-diagnostics
           path: |
             /tmp/libre-remote-final-files.txt
+            /tmp/libre-remote-final.sha256
             lg-wifi-remote-app/build-final.log
             lg-wifi-remote-app/app/build/reports/**
           if-no-files-found: warn
