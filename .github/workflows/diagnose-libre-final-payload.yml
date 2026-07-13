@@ -6,6 +6,7 @@ on:
     paths:
       - ".final-overlay/**"
       - ".final-suffix-hex/**"
+      - ".final-suffix-hex-v2/**"
       - ".final-suffix-outer-small/**"
       - ".github/workflows/diagnose-libre-final-payload.yml"
   workflow_dispatch:
@@ -28,7 +29,6 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import base64, hashlib, json, traceback
-
           report = {}
           error = None
           try:
@@ -41,9 +41,12 @@ jobs:
                   prefix[60009] = ord('O')
               report['prefix_sha_after_fix'] = hashlib.sha256(prefix).hexdigest()
 
-              hex_paths = [Path(f'.final-suffix-hex/chunk-{i:02d}') for i in range(15)]
-              report['hex_parts'] = {str(p): len(''.join(p.read_text().split())) if p.exists() else None for p in hex_paths}
-              first_hex = ''.join(''.join(p.read_text().split()) for p in hex_paths)
+              v2_paths = [Path(f'.final-suffix-hex-v2/chunk-{i:02d}') for i in range(5)]
+              middle_path = Path('.final-suffix-hex/chunk-05')
+              tail_paths = [Path(f'.final-suffix-hex/chunk-{i:02d}') for i in range(10, 15)]
+              all_hex_paths = v2_paths + [middle_path] + tail_paths
+              report['hex_parts'] = {str(p): len(''.join(p.read_text().split())) if p.exists() else None for p in all_hex_paths}
+              first_hex = ''.join(''.join(p.read_text().split()) for p in all_hex_paths)
               report['first_hex_length'] = len(first_hex)
               first_suffix = bytes.fromhex(first_hex)
               report['first_suffix_length'] = len(first_suffix)
