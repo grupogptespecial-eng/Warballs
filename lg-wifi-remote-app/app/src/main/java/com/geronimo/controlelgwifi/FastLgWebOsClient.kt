@@ -54,7 +54,7 @@ class FastLgWebOsClient(
     private val pointerLock = Any()
 
     private val plainClient = OkHttpClient.Builder()
-        .connectTimeout(1_250, TimeUnit.MILLISECONDS)
+        .connectTimeout(1_100, TimeUnit.MILLISECONDS)
         .readTimeout(0, TimeUnit.MILLISECONDS)
         .pingInterval(12, TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
@@ -80,7 +80,7 @@ class FastLgWebOsClient(
         scope.launch {
             for (motion in motionChannel) {
                 sendPointerNow("type:move\ndx:${motion.dx}\ndy:${motion.dy}\ndown:0\n\n")
-                delay(14)
+                delay(12)
             }
         }
     }
@@ -112,7 +112,7 @@ class FastLgWebOsClient(
 
         endpoints.forEachIndexed { index, endpoint ->
             scope.launch {
-                if (index > 0) delay(if (preferred == null) index * 90L else index * 160L)
+                if (index > 0) delay(if (preferred == null) index * 70L else index * 125L)
                 if (!endpointChosen.get() && !manuallyClosed && generation == connectionGeneration) {
                     openEndpoint(endpoint, endpoints.size, generation)
                 }
@@ -233,9 +233,9 @@ class FastLgWebOsClient(
             ensurePointerSocket()
             scope.launch {
                 loadVolume()
-                delay(90)
+                delay(60)
                 loadInputs()
-                delay(140)
+                delay(100)
                 loadApps()
             }
         }
@@ -517,7 +517,7 @@ class FastLgWebOsClient(
         return OkHttpClient.Builder()
             .sslSocketFactory(sslContext.socketFactory, trustManager)
             .hostnameVerifier { hostname, _ -> hostname == device?.ip || hostname.equals("lgwebostv", true) }
-            .connectTimeout(1_250, TimeUnit.MILLISECONDS)
+            .connectTimeout(1_100, TimeUnit.MILLISECONDS)
             .readTimeout(0, TimeUnit.MILLISECONDS)
             .pingInterval(12, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)

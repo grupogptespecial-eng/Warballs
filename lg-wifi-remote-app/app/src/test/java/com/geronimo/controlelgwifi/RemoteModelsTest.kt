@@ -37,7 +37,39 @@ class RemoteModelsTest {
 
     @Test
     fun roomIsIncludedInDisplayName() {
-        val device = TvDevice(ip = "192.168.1.20", name = "LG OLED", room = "Sala")
+        val device = TvDevice(
+            ip = "192.168.1.20",
+            name = "LG OLED",
+            room = "Sala",
+            platform = TvPlatform.LgWebOs
+        )
         assertEquals("Sala • LG OLED", device.displayName)
+    }
+
+    @Test
+    fun platformDefaultsHideUnsupportedControls() {
+        val dlna = TvPlatform.DlnaMedia.defaultCapabilities(
+            hasAvTransport = true,
+            hasRenderingControl = false
+        )
+        assertTrue(TvCapability.Media in dlna)
+        assertFalse(TvCapability.Navigation in dlna)
+        assertFalse(TvCapability.Volume in dlna)
+    }
+
+    @Test
+    fun samsungExposesRemoteKeysButNotPointer() {
+        val capabilities = TvPlatform.SamsungTizenLocal.defaultCapabilities()
+        assertTrue(TvCapability.Navigation in capabilities)
+        assertTrue(TvCapability.Channels in capabilities)
+        assertFalse(TvCapability.Pointer in capabilities)
+        assertFalse(TvCapability.Apps in capabilities)
+    }
+
+    @Test
+    fun localNetworkValidationRejectsPublicAddresses() {
+        assertTrue(NetworkAddressValidator.isLocalHost("192.168.1.10"))
+        assertTrue(NetworkAddressValidator.isLocalHost("10.0.0.8"))
+        assertFalse(NetworkAddressValidator.isLocalHost("8.8.8.8"))
     }
 }

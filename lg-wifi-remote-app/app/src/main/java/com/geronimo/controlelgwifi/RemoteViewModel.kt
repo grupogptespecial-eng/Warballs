@@ -12,10 +12,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class RemoteViewModel(application: Application) : AndroidViewModel(application), FastLgWebOsClient.Listener {
+class RemoteViewModel(application: Application) : AndroidViewModel(application), TvBackendListener {
     private val preferences = RemotePreferences(application)
-    private val client = FastLgWebOsClient(application, this)
+    private val registry = TvBackendRegistry(application, this)
     private val repeatJobs = mutableMapOf<RemoteAction, Job>()
+
+    @Volatile private var activeBackend: TvBackend? = null
+    @Volatile private var activePlatform: TvPlatform? = null
 
     private val _uiState = MutableStateFlow(
         preferences.loadState().let { loaded ->
@@ -33,7 +36,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
         val state = _uiState.value
         if (state.autoConnect && state.currentDevice != null) {
             viewModelScope.launch {
-                delay(100)
+                delay(80)
                 connect(state.currentDevice, userInitiated = false)
             }
         }
@@ -52,7 +55,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
         _uiState.update {
             it.copy(
                 connectionState = ConnectionState.Discovering,
-                statusText = "Procurando TVs na sua rede…",
+                statusText = "Procurando TVs e receptores na sua rede…",
                 discoveredDevices = emptyList(),
                 lastError = null
             )
@@ -60,61 +63,95 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
         viewModelScope.launch(Dispatchers.IO) {
             val known = _uiState.value.savedDevices
             val devices = TvDiscovery.discover(getApplication(), known)
+                .filter { device ->
+                    _uiState.value.experimentalBackendsEnabled || device.supportLevel != TvSupportLevel.Experimental
+                }
             _uiState.update { state ->
                 when {
                     devices.isEmpty() -> state.copy(
                         connectionState = if (state.currentDevice == null) ConnectionState.Idle else state.connectionState,
-                        statusText = "Nenhuma TV apareceu. Confira a rede ou use o IP manual.",
+                        statusText = "Nenhuma TV compatível apareceu. Confira a rede ou use o IP manual.",
                         discoveredDevices = emptyList(),
                         showDevicePicker = false
                     )
                     devices.size == 1 -> state.copy(
                         discoveredDevices = devices,
                         showDevicePicker = false,
-                        statusText = "TV encontrada: ${devices.first().displayName}"
+                        statusText = "Encontrada: ${devices.first().displayName} • ${devices.first().platformLabel}"
                     )
                     else -> state.copy(
                         connectionState = ConnectionState.Idle,
                         discoveredDevices = devices,
                         showDevicePicker = true,
-                        statusText = "${devices.size} TVs encontradas"
+                        statusText = "${devices.size} dispositivos encontrados"
                     )
                 }
             }
-            if (devices.size == 1) connect(devices.first(), userInitiated = true)
+            if (devices.size == 1 && devices.first().supportLevel !in setOf(
+                    TvSupportLevel.BlockedByVendorPolicy,
+                    TvSupportLevel.Unsupported
+                )
+            ) {
+                connect(devices.first(), userInitiated = true)
+            }
         }
     }
 
     fun connectManual(raw: String) {
-        val ip = normalizeLocalAddress(raw)
-        if (ip == null) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val device = TvDiscovery.identifyManual(raw)
+            if (device == null) {
+                _uiState.update {
+                    it.copy(
+                        connectionState = ConnectionState.Error,
+                        statusText = "Informe um IP local, como 192.168.1.20",
+                        lastError = "Endereço inválido"
+                    )
+                }
+                return@launch
+            }
+            connect(device, userInitiated = true)
+        }
+    }
+
+    fun connect(device: TvDevice, userInitiated: Boolean = true) {
+        if (device.supportLevel == TvSupportLevel.Experimental && !_uiState.value.experimentalBackendsEnabled) {
             _uiState.update {
                 it.copy(
                     connectionState = ConnectionState.Error,
-                    statusText = "Informe um IP local, como 192.168.1.20",
-                    lastError = "Endereço inválido"
+                    statusText = "Ative sistemas experimentais nas configurações para usar ${device.platformLabel}.",
+                    lastError = "Backend experimental desativado"
                 )
             }
             return
         }
-        connect(TvDevice(ip = ip), userInitiated = true)
-    }
 
-    fun connect(device: TvDevice, userInitiated: Boolean = true) {
-        preferences.selectDevice(device.ip)
+        val backend = registry.backendFor(device.platform)
+        if (activePlatform != device.platform) {
+            activeBackend?.close()
+            activeBackend = backend
+            activePlatform = device.platform
+        } else if (activeBackend == null) {
+            activeBackend = backend
+        }
+
+        preferences.selectDevice(device.stableId)
         val saved = preferences.saveDevice(device)
         _uiState.update {
             it.copy(
                 currentDevice = device,
                 savedDevices = saved,
+                capabilities = device.capabilities,
+                apps = emptyList(),
+                inputs = emptyList(),
                 showDevicePicker = false,
                 showConnectSheet = false,
                 connectionState = if (userInitiated) ConnectionState.Connecting else ConnectionState.Reconnecting,
-                statusText = "Conectando a ${device.displayName}…",
+                statusText = "Conectando a ${device.displayName} por ${device.platformLabel}…",
                 lastError = null
             )
         }
-        client.connect(device, userInitiated)
+        backend.connect(device, userInitiated)
     }
 
     fun reconnect() {
@@ -124,7 +161,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
 
     fun disconnect() {
         stopAllRepeating()
-        client.close()
+        activeBackend?.close()
         _uiState.update {
             it.copy(
                 connectionState = ConnectionState.Idle,
@@ -135,14 +172,19 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
     }
 
     fun forgetDevice(device: TvDevice) {
-        client.forgetDevice(device.ip)
-        val saved = preferences.removeDevice(device.ip)
-        val wasCurrent = _uiState.value.currentDevice?.ip == device.ip
-        if (wasCurrent) client.close()
+        registry.backendFor(device.platform).forgetDevice(device)
+        val saved = preferences.removeDevice(device.stableId)
+        val wasCurrent = _uiState.value.currentDevice?.stableId == device.stableId
+        if (wasCurrent) {
+            activeBackend?.close()
+            activeBackend = null
+            activePlatform = null
+        }
         _uiState.update {
             it.copy(
                 savedDevices = saved,
                 currentDevice = if (wasCurrent) null else it.currentDevice,
+                capabilities = if (wasCurrent) emptySet() else it.capabilities,
                 connectionState = if (wasCurrent) ConnectionState.Idle else it.connectionState,
                 statusText = if (wasCurrent) "TV removida" else it.statusText
             )
@@ -162,12 +204,13 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
 
     fun send(action: RemoteAction) {
         if (!_uiState.value.connected) return
+        val backend = activeBackend ?: return
         if (action == RemoteAction.Mute) {
             val muted = !_uiState.value.muted
             _uiState.update { it.copy(muted = muted) }
-            client.setMute(muted)
+            backend.setMute(muted)
         } else {
-            client.send(action)
+            backend.send(action)
         }
     }
 
@@ -175,10 +218,10 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
         if (!_uiState.value.connected || repeatJobs[action]?.isActive == true) return
         repeatJobs[action] = viewModelScope.launch(Dispatchers.IO) {
             send(action)
-            delay(275)
+            delay(260)
             while (true) {
                 send(action)
-                delay(90)
+                delay(86)
             }
         }
     }
@@ -193,22 +236,32 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
     }
 
     fun setControlSurface(surface: ControlSurface) {
+        if (surface == ControlSurface.Touchpad && TvCapability.Pointer !in _uiState.value.capabilities) return
         _uiState.update { it.copy(controlSurface = surface) }
     }
 
-    fun movePointer(dx: Int, dy: Int) = client.move(dx, dy)
-    fun clickPointer() = client.click()
-    fun scrollPointer(delta: Int) = client.scroll(delta)
-    fun launchApp(app: TvApp) = client.launchApp(app.id)
-    fun switchInput(input: TvInput) = client.switchInput(input.id)
-    fun sendText(text: String) = client.insertText(text)
-    fun deleteText() = client.deleteText()
-    fun sendNumber(number: Int) = client.sendNumber(number)
-    fun sendColor(color: String) = client.sendColor(color)
-    fun refresh() = client.refreshDeviceData()
+    fun movePointer(dx: Int, dy: Int) = activeBackend?.movePointer(dx, dy) ?: Unit
+    fun clickPointer() = activeBackend?.clickPointer() ?: Unit
+    fun scrollPointer(delta: Int) = activeBackend?.scrollPointer(delta) ?: Unit
+    fun launchApp(app: TvApp) = activeBackend?.launchApp(app) ?: Unit
+    fun switchInput(input: TvInput) = activeBackend?.switchInput(input) ?: Unit
+    fun sendText(text: String) = activeBackend?.insertText(text) ?: Unit
+    fun deleteText() = activeBackend?.deleteText() ?: Unit
+    fun sendNumber(number: Int) = activeBackend?.sendNumber(number) ?: Unit
+    fun sendColor(color: String) = activeBackend?.sendColor(color) ?: Unit
+    fun refresh() = activeBackend?.refreshDeviceData() ?: Unit
 
     fun wake(device: TvDevice? = _uiState.value.currentDevice, macOverride: String? = null) {
-        val mac = macOverride?.trim()?.takeIf(String::isNotBlank) ?: device?.mac
+        val current = device ?: return
+        if (TvCapability.WakeOnLan !in current.capabilities && current.platform !in setOf(
+                TvPlatform.LgWebOs,
+                TvPlatform.SamsungTizenLocal
+            )
+        ) {
+            _uiState.update { it.copy(statusText = "Este sistema não oferece Wake-on-LAN pelo Libre Remote.") }
+            return
+        }
+        val mac = macOverride?.trim()?.takeIf(String::isNotBlank) ?: current.mac
         if (mac == null) {
             _uiState.update { it.copy(statusText = "Adicione o endereço MAC da TV nas configurações para ligá-la.") }
             return
@@ -222,8 +275,8 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
                 )
             }
             if (sent) {
-                delay(1_400)
-                device?.let { connect(it, userInitiated = false) }
+                delay(1_250)
+                connect(current, userInitiated = false)
             }
         }
     }
@@ -243,11 +296,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
         val state = _uiState.value
         val preset = state.selectedPreset
         if (!preset.id.isCustom) return
-        val modules = if (module in preset.modules) {
-            preset.modules - module
-        } else {
-            preset.modules + module
-        }
+        val modules = if (module in preset.modules) preset.modules - module else preset.modules + module
         savePreset(preset.copy(modules = modules.ifEmpty { listOf(RemoteModule.DPad) }))
     }
 
@@ -271,10 +320,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
         savePreset(preset.copy(name = name.trim().take(32).ifBlank { preset.id.title }))
     }
 
-    fun resetPreset(id: RemotePresetId = _uiState.value.selectedPresetId) {
-        val reset = RemotePreset.defaultFor(id)
-        savePreset(reset)
-    }
+    fun resetPreset(id: RemotePresetId = _uiState.value.selectedPresetId) = savePreset(RemotePreset.defaultFor(id))
 
     private fun savePreset(preset: RemotePreset) {
         preferences.savePreset(preset)
@@ -288,6 +334,9 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
     fun setCompactMode(enabled: Boolean) = updateSettings { it.copy(compactMode = enabled) }
     fun setShowLabels(enabled: Boolean) = updateSettings { it.copy(showLabels = enabled) }
     fun setAutoConnect(enabled: Boolean) = updateSettings { it.copy(autoConnect = enabled) }
+    fun setExperimentalBackendsEnabled(enabled: Boolean) = updateSettings {
+        it.copy(experimentalBackendsEnabled = enabled)
+    }
 
     private fun updateSettings(transform: (RemoteUiState) -> RemoteUiState) {
         _uiState.update(transform)
@@ -311,7 +360,9 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
         _uiState.update { it.copy(diagnostic = it.diagnostic.copy(summary = "Verificando a rede…")) }
         viewModelScope.launch(Dispatchers.IO) {
             val result = TvDiscovery.diagnose(getApplication(), _uiState.value.currentDevice)
-            _uiState.update { it.copy(diagnostic = result) }
+            _uiState.update { state ->
+                state.copy(diagnostic = result.copy(lastCommandDispatchMs = state.diagnostic.lastCommandDispatchMs))
+            }
         }
     }
 
@@ -358,29 +409,26 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
     override fun onCapabilities(capabilities: Set<TvCapability>) {
         _uiState.update { state ->
             val updatedDevice = state.currentDevice?.copy(capabilities = capabilities)
-            state.copy(capabilities = capabilities, currentDevice = updatedDevice)
+            val correctedSurface = if (TvCapability.Pointer !in capabilities) ControlSurface.Remote else state.controlSurface
+            state.copy(
+                capabilities = capabilities,
+                currentDevice = updatedDevice,
+                controlSurface = correctedSurface
+            )
+        }
+    }
+
+    override fun onCommandLatency(milliseconds: Double) {
+        _uiState.update { state ->
+            state.copy(
+                diagnostic = state.diagnostic.copy(lastCommandDispatchMs = milliseconds)
+            )
         }
     }
 
     override fun onCleared() {
         stopAllRepeating()
-        client.close()
+        registry.closeAll()
         super.onCleared()
-    }
-
-    private fun normalizeLocalAddress(raw: String): String? {
-        val value = raw.trim()
-            .removePrefix("http://")
-            .removePrefix("https://")
-            .substringBefore('/')
-            .substringBefore(':')
-        if (value.equals("lgwebostv", ignoreCase = true)) return value
-        val numbers = value.split('.').mapNotNull { part -> part.toIntOrNull()?.takeIf { it in 0..255 } }
-        if (numbers.size != 4) return null
-        val local = numbers[0] == 10 ||
-            (numbers[0] == 192 && numbers[1] == 168) ||
-            (numbers[0] == 172 && numbers[1] in 16..31) ||
-            (numbers[0] == 169 && numbers[1] == 254)
-        return value.takeIf { local }
     }
 }

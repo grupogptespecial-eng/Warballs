@@ -1,8 +1,1 @@
-Primeira versão pública candidata do Libre Remote.
-
-• Conexão automática com TVs LG webOS
-• Controle, touchpad, apps, entradas e teclado
-• Presets Simples, Normal, Avançado e personalizados
-• Reconexão silenciosa e baixa latência
-• Temas claro, escuro e AMOLED
-• Sem anúncios, conta ou rastreamento
+Nova RC universal: mantém o controle completo para LG webOS, adiciona Samsung Tizen local experimental e controle de mídia DLNA/UPnP. A busca agora identifica o sistema da TV, combina resultados duplicados e mostra somente os botões compatíveis. Inclui reconexão rápida, fila limitada e medição local de latência, sem telemetria.

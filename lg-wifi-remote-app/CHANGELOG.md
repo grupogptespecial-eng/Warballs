@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.1.0-rc1 — 2026-07-12
+
+### Added
+
+- universal `TvBackend` contract and backend registry;
+- automatic platform and support-level metadata;
+- multiprotocol SSDP/UPnP discovery and device-description parsing;
+- deduplication that prefers a full local backend over DLNA for the same TV;
+- encrypted Samsung Tizen token storage and persistent local WebSocket control;
+- experimental Samsung navigation, volume, channels, media, numeric, colored and power keys;
+- DLNA AVTransport and RenderingControl backend for media, volume and mute;
+- migration of saved LG devices to stable platform-aware identifiers;
+- capability-driven UI that hides unsupported controls;
+- experimental-backend toggle and platform/support labels in the device picker;
+- local command-dispatch latency measurement in network diagnostics.
+
+### Performance
+
+- Samsung endpoint racing and persistent sockets;
+- bounded Samsung command queue;
+- 250 ms initial reconnect backoff;
+- faster held-button repetition;
+- pooled HTTP connection for DLNA commands;
+- previous LG persistent socket and conflated pointer optimizations retained.
+
+### Honest limitations
+
+- LG is the only full backend considered stable in this release candidate;
+- Samsung Tizen local is experimental and requires physical testing by generation;
+- DLNA controls only the current media session and exposed volume service;
+- SmartThings, Google Cast and Fire TV are represented in the architecture but not activated;
+- Roku control remains disabled because of vendor-policy concerns;
+- no claim of compatibility with every television is made.
+
 All notable changes to Libre Remote will be documented here.
 
 ## 0.2.0-beta — 2026-07-12

@@ -143,18 +143,18 @@ fun ConnectTvSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
 
             if (state.discoveredDevices.isNotEmpty()) {
                 item { SectionTitle("Encontradas agora") }
-                items(state.discoveredDevices, key = { "found-${it.ip}" }) { device ->
-                    DeviceRow(device, connected = state.currentDevice?.ip == device.ip && state.connected) {
+                items(state.discoveredDevices, key = { "found-${it.stableId}" }) { device ->
+                    DeviceRow(device, connected = state.currentDevice?.stableId == device.stableId && state.connected) {
                         viewModel.connect(device)
                     }
                 }
             }
 
-            val offlineSaved = state.savedDevices.filter { saved -> state.discoveredDevices.none { it.ip == saved.ip } }
+            val offlineSaved = state.savedDevices.filter { saved -> state.discoveredDevices.none { it.stableId == saved.stableId } }
             if (offlineSaved.isNotEmpty()) {
                 item { SectionTitle("Salvas") }
-                items(offlineSaved, key = { "saved-${it.ip}" }) { device ->
-                    DeviceRow(device, connected = state.currentDevice?.ip == device.ip && state.connected) {
+                items(offlineSaved, key = { "saved-${it.stableId}" }) { device ->
+                    DeviceRow(device, connected = state.currentDevice?.stableId == device.stableId && state.connected) {
                         viewModel.connect(device)
                     }
                 }
@@ -210,7 +210,7 @@ private fun DeviceRow(device: TvDevice, connected: Boolean, onClick: () -> Unit)
             Column(Modifier.weight(1f)) {
                 Text(device.displayName, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
-                    listOfNotNull(device.model, device.ip).joinToString(" • "),
+                    listOfNotNull(device.platformLabel, device.supportLabel, device.model, device.ip).joinToString(" • "),
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -537,9 +537,19 @@ fun SettingsSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
                 }
             }
             item {
-                SettingsAction(Icons.Rounded.NetworkCheck, "Diagnóstico de rede", state.diagnostic.summary) { viewModel.runDiagnostics() }
+                SettingsAction(
+                    Icons.Rounded.NetworkCheck,
+                    "Diagnóstico de rede",
+                    listOfNotNull(
+                        state.diagnostic.summary,
+                        state.diagnostic.backendSummary,
+                        state.diagnostic.lastCommandDispatchMs?.let { "Envio local: %.2f ms".format(it) }
+                    ).joinToString(" • "),
+                    onClick = viewModel::runDiagnostics
+                )
             }
             item { SettingsToggle(Icons.Rounded.Wifi, "Reconectar automaticamente", "Tenta restaurar a conexão sem interromper você", state.autoConnect, viewModel::setAutoConnect) }
+            item { SettingsToggle(Icons.Rounded.Devices, "Sistemas experimentais", "Permite testar Samsung Tizen e plataformas ainda em validação", state.experimentalBackendsEnabled, viewModel::setExperimentalBackendsEnabled) }
 
             item { SettingsSectionLabel("CONTROLE") }
             item {
@@ -585,7 +595,7 @@ fun SettingsSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
             item { SettingsSectionLabel("PRIVACIDADE E SOBRE") }
             item { SettingsInfo(Icons.Rounded.Security, "Privacidade", "Sem conta, anúncios, telemetria ou servidor externo") }
             item { SettingsInfo(Icons.Rounded.Language, "Idioma", "Português; estrutura preparada para traduções") }
-            item { SettingsInfo(Icons.Rounded.Info, "Libre Remote 1.0 RC1", "Projeto comunitário e não afiliado à LG Electronics") }
+            item { SettingsInfo(Icons.Rounded.Info, "Libre Remote Universal 1.1 RC1", "LG completo; Samsung e outros sistemas claramente identificados por nível de suporte") }
         }
     }
 

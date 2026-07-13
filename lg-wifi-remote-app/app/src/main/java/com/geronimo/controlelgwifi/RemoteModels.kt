@@ -5,15 +5,28 @@ import androidx.compose.runtime.Immutable
 @Immutable
 data class TvDevice(
     val ip: String,
-    val name: String = "LG webOS TV",
+    val name: String = "Smart TV",
     val model: String? = null,
+    val manufacturer: String? = null,
     val room: String = "",
     val mac: String? = null,
+    val platform: TvPlatform = TvPlatform.Unknown,
+    val supportLevel: TvSupportLevel = platform.defaultSupportLevel,
+    val stableId: String = "${platform.name}:$ip",
+    val descriptionUrl: String? = null,
+    val avTransportUrl: String? = null,
+    val renderingControlUrl: String? = null,
     val lastSeenAt: Long = System.currentTimeMillis(),
-    val capabilities: Set<TvCapability> = TvCapability.lgDefaults
+    val capabilities: Set<TvCapability> = platform.defaultCapabilities(
+        hasAvTransport = avTransportUrl != null,
+        hasRenderingControl = renderingControlUrl != null
+    )
 ) {
     val displayName: String
         get() = room.takeIf { it.isNotBlank() }?.let { "$it • $name" } ?: name
+
+    val platformLabel: String get() = platform.displayName
+    val supportLabel: String get() = supportLevel.displayName
 }
 
 enum class ConnectionState {
@@ -34,15 +47,23 @@ enum class TvCapability {
     Navigation,
     Pointer,
     Volume,
+    AbsoluteVolume,
     Channels,
     Media,
+    Seek,
+    Queue,
     Apps,
     Inputs,
     Keyboard,
     NumericKeys,
     ColoredKeys,
     Info,
-    Guide;
+    Guide,
+    Captions,
+    AudioTrack,
+    DeviceInfo,
+    WakeOnLan,
+    CloudControl;
 
     companion object {
         val lgDefaults = setOf(
@@ -57,8 +78,26 @@ enum class TvCapability {
             Keyboard,
             NumericKeys,
             ColoredKeys,
-            Info
+            Info,
+            DeviceInfo,
+            WakeOnLan
         )
+
+        val samsungDefaults = setOf(
+            PowerOff,
+            Navigation,
+            Volume,
+            Channels,
+            Media,
+            NumericKeys,
+            ColoredKeys,
+            Info,
+            Guide,
+            DeviceInfo,
+            WakeOnLan
+        )
+
+        val dlnaMediaDefaults = setOf(Media, DeviceInfo)
     }
 }
 
@@ -162,6 +201,8 @@ data class NetworkDiagnostic(
     val tvReachable: Boolean? = null,
     val port3000Reachable: Boolean? = null,
     val port3001Reachable: Boolean? = null,
+    val backendSummary: String? = null,
+    val lastCommandDispatchMs: Double? = null,
     val summary: String = "Pronto para verificar a rede"
 )
 
@@ -174,7 +215,7 @@ data class RemoteUiState(
     val discoveredDevices: List<TvDevice> = emptyList(),
     val apps: List<TvApp> = emptyList(),
     val inputs: List<TvInput> = emptyList(),
-    val capabilities: Set<TvCapability> = TvCapability.lgDefaults,
+    val capabilities: Set<TvCapability> = emptySet(),
     val volume: Int? = null,
     val muted: Boolean = false,
     val hapticsEnabled: Boolean = true,
@@ -182,6 +223,7 @@ data class RemoteUiState(
     val compactMode: Boolean = false,
     val showLabels: Boolean = true,
     val autoConnect: Boolean = true,
+    val experimentalBackendsEnabled: Boolean = true,
     val themeMode: ThemeMode = ThemeMode.System,
     val accentTheme: AccentTheme = AccentTheme.Ocean,
     val controlSurface: ControlSurface = ControlSurface.Remote,
