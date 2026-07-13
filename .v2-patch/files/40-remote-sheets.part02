@@ -1,0 +1,142 @@
++                FlowRow(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
++                    availableActions.forEach { action ->
++                        FilterChip(
++                            selected = action in selectedActions,
++                            onClick = {
++                                selectedActions = if (action in selectedActions) selectedActions - action else selectedActions + action
++                            },
++                            label = { Text(action.displayLabel()) }
++                        )
++                    }
++                }
++                Spacer(Modifier.height(10.dp))
++                Button(
++                    onClick = {
++                        viewModel.createMacro(newName, availableActions.filter(selectedActions::contains))
++                        newName = ""
++                        selectedActions = setOf(RemoteAction.PlayPause)
++                    },
++                    enabled = newName.isNotBlank() && selectedActions.isNotEmpty(),
++                    modifier = Modifier.fillMaxWidth()
++                ) {
++                    Icon(Icons.Rounded.Save, contentDescription = null)
++                    Spacer(Modifier.width(7.dp))
++                    Text("Salvar macro")
++                }
++            }
++        }
++    }
++
++    pendingConfirmation?.let { macro ->
++        AlertDialog(
++            onDismissRequest = { pendingConfirmation = null },
++            title = { Text("Executar ${macro.name}?") },
++            text = { Text("Esta macro inclui uma ação de desligamento. Confira se selecionou a TV correta.") },
++            confirmButton = {
++                Button(onClick = {
++                    pendingConfirmation = null
++                    viewModel.runMacro(macro)
++                }) { Text("Executar") }
++            },
++            dismissButton = { TextButton(onClick = { pendingConfirmation = null }) { Text("Cancelar") } }
++        )
++    }
++}
++
+ @Composable
+ fun PresetEditorSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
++    val context = LocalContext.current
+     var renameText by remember(state.selectedPreset.name) { mutableStateOf(state.selectedPreset.name) }
++    var importText by remember { mutableStateOf("") }
++    var showImport by remember { mutableStateOf(false) }
+     ModalBottomSheet(onDismissRequest = viewModel::closePresetEditor) {
+         LazyColumn(
+             modifier = Modifier.fillMaxWidth().fillMaxHeight(0.9f).imePadding(),
+@@ -471,6 +706,59 @@ fun PresetEditorSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+                         }
+                     }
+                 }
++                item {
++                    SectionTitle("Compartilhar e restaurar")
++                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
++                        OutlinedButton(
++                            onClick = {
++                                val encoded = viewModel.exportSelectedPreset()
++                                val clipboard = context.getSystemService(ClipboardManager::class.java)
++                                clipboard?.setPrimaryClip(ClipData.newPlainText("Libre Remote layout", encoded))
++                                context.startActivity(
++                                    Intent.createChooser(
++                                        Intent(Intent.ACTION_SEND).apply {
++                                            type = "text/plain"
++                                            putExtra(Intent.EXTRA_SUBJECT, "Layout Libre Remote")
++                                            putExtra(Intent.EXTRA_TEXT, encoded)
++                                        },
++                                        "Compartilhar layout"
++                                    )
++                                )
++                            },
++                            modifier = Modifier.weight(1f)
++                        ) {
++                            Icon(Icons.Rounded.Share, contentDescription = null)
++                            Spacer(Modifier.width(6.dp))
++                            Text("Exportar")
++                        }
++                        OutlinedButton(onClick = { showImport = !showImport }, modifier = Modifier.weight(1f)) {
++                            Icon(Icons.Rounded.OpenInNew, contentDescription = null)
++                            Spacer(Modifier.width(6.dp))
++                            Text("Importar")
++                        }
++                    }
++                    if (showImport) {
++                        Spacer(Modifier.height(10.dp))
++                        OutlinedTextField(
++                            value = importText,
++                            onValueChange = { importText = it.take(64 * 1024) },
++                            label = { Text("Cole o JSON do layout") },
++                            minLines = 4,
++                            modifier = Modifier.fillMaxWidth()
++                        )
++                        Spacer(Modifier.height(8.dp))
++                        Button(
++                            onClick = {
++                                if (viewModel.importPreset(importText, state.selectedPresetId).isSuccess) {
++                                    importText = ""
++                                    showImport = false
++                                }
++                            },
++                            enabled = importText.isNotBlank(),
++                            modifier = Modifier.fillMaxWidth()
++                        ) { Text("Validar e importar") }
++                    }
++                }
+                 item {
+                     OutlinedButton(onClick = { viewModel.resetPreset() }, modifier = Modifier.fillMaxWidth()) {
+                         Icon(Icons.Rounded.RestartAlt, contentDescription = null)
+@@ -508,6 +796,7 @@ private fun ModuleEditorRow(
+ 
+ @Composable
+ fun SettingsSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
++    val context = LocalContext.current
+     var editDevice by remember { mutableStateOf(false) }
+     ModalBottomSheet(onDismissRequest = viewModel::closeSettings) {
+         LazyColumn(
+@@ -543,11 +832,21 @@ fun SettingsSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+                     listOfNotNull(
+                         state.diagnostic.summary,
+                         state.diagnostic.backendSummary,
+-                        state.diagnostic.lastCommandDispatchMs?.let { "Envio local: %.2f ms".format(it) }
++                        state.diagnostic.averageCommandDispatchMs?.let { "Média local: %.2f ms".format(it) }
+                     ).joinToString(" • "),
+                     onClick = viewModel::runDiagnostics
+                 )
+             }
++            item {
++                SettingsAction(Icons.Rounded.Share, "Compartilhar diagnóstico", "Gera relatório sanitizado, sem IP, MAC, tokens ou texto digitado") {
++                    val intent = Intent(Intent.ACTION_SEND).apply {
++                        type = "text/plain"
++                        putExtra(Intent.EXTRA_SUBJECT, "Diagnóstico do Libre Remote")
++                        putExtra(Intent.EXTRA_TEXT, viewModel.diagnosticReport())
++                    }
++                    context.startActivity(Intent.createChooser(intent, "Compartilhar diagnóstico"))
++                }
++            }
