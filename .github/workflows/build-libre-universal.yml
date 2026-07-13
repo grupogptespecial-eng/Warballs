@@ -7,6 +7,11 @@ on:
     paths:
       - "lg-wifi-remote-app/**"
       - ".github/workflows/build-libre-universal.yml"
+  pull_request:
+    paths:
+      - "lg-wifi-remote-app/**"
+      - ".universal-overlay/**"
+      - ".github/workflows/build-libre-universal.yml"
   workflow_dispatch:
 
 permissions:
