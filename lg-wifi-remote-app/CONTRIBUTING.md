@@ -1,27 +1,32 @@
 # Contributing
 
-Thanks for helping improve Libre Remote.
+Thank you for improving Libre Remote.
 
-## Principles
+## Non-negotiable product principles
 
-Contributions must preserve the project's core promises: no ads, no tracking, no mandatory account, local-first operation and honest compatibility reporting.
+- no ads, tracking or mandatory Libre Remote account;
+- local-first behavior wherever the platform allows it;
+- truthful compatibility and capability reporting;
+- credentials and signing material never committed;
+- accessible controls and understandable errors;
+- bounded queues, timeouts and cancellation for every protocol.
 
-## Development
+## Setup
 
-1. Use Android Studio with JDK 17.
-2. Build with `gradle :app:assembleDebug` or the repository wrapper when added.
-3. Keep television protocols isolated from the Compose interface.
-4. Avoid proprietary SDKs unless the community has explicitly accepted the trade-off.
-5. Do not include pairing keys, private IP addresses, MAC addresses or other personal information in issues or test fixtures.
+Read `BUILDING.md`, then run:
+
+```bash
+./gradlew :app:testDebugUnitTest :app:lintRelease :app:assembleDebug
+```
+
+## Protocol changes
+
+Keep manufacturer details behind `TvBackend`. Document models/firmware tested, legal/distribution constraints, credential lifecycle, ports and failure behavior. Experimental backends must remain behind the settings toggle until the public physical matrix is sufficient.
 
 ## Pull requests
 
-A pull request should explain the user problem, implementation, models or protocol versions tested, screenshots for interface changes and any privacy or licensing impact.
+Use the repository template. Include the user problem, implementation, tests, screenshots for UI work, accessibility checks and privacy/security impact. Never attach real pairing tokens, typed passwords, full certificate material, private account data or unsanitized logs.
 
 ## Compatibility reports
 
-Include television brand, model, webOS version when available, Android version, network type and the exact features that worked or failed. Attach only sanitized logs.
-
-## Code style
-
-Prefer small protocol-independent models, coroutines for asynchronous work, persistent connections where appropriate and tests for message serialization and state transitions.
+Use `docs/COMPATIBILITY-REPORT.md`. Reports are evidence, not automatic proof that an entire brand is supported.

@@ -1,32 +1,40 @@
-# Privacy Policy
+# Privacy Policy — Libre Remote
 
-Libre Remote is designed to work locally.
+Last updated: 13 July 2026
 
-## Data collection
+Libre Remote is a local-first remote-control application. It does not require a Libre Remote account, display advertisements, embed advertising identifiers or include analytics/telemetry SDKs.
 
-The application does not include advertising, analytics, tracking SDKs, user accounts, cloud synchronization or an external application server.
+## Data handled on the device
 
-## Local data
+The application may store locally:
 
-The application may store the following information only on the Android device:
+- saved television names, rooms, local addresses and capability information;
+- local pairing keys or tokens supplied by a television;
+- custom layouts, macros and preferences;
+- a short bounded diagnostic history containing command category, timing and sanitized error information.
 
-- saved television name and local IP address;
-- the preferred local WebSocket route;
-- the LG webOS pairing key;
-- the trusted local certificate fingerprint;
-- interface preferences such as theme, haptics and touchpad sensitivity;
-- an optional MAC address for Wake-on-LAN.
+Pairing credentials are stored using Android encrypted preferences. The product database and credential stores are excluded from Android backup and device-to-device transfer.
 
-Pairing secrets are stored with Android encrypted preferences backed by the Android Keystore where supported.
+## Local network communication
 
-## Network activity
+Libre Remote discovers and controls compatible devices on the same local network using protocols such as SSDP/UPnP, WebSocket, HTTP/SOAP and Wake-on-LAN. Local device identifiers and commands are sent to the selected television or local media device. Libre Remote does not operate a server that receives this traffic.
 
-Network communication is directed to televisions and discovery services on the user's local network. The application does not intentionally transmit television details, commands or usage information to the project maintainers.
+## Voice input
 
-## Diagnostics
+Voice recognition is initiated only after the user presses the microphone action. Recognition may be provided by the speech service configured on the Android device. Its data practices are governed by that provider. Libre Remote receives the recognized text, parses supported commands locally and does not retain an audio recording.
 
-Future diagnostic exports must be opt-in and should remove pairing keys and other secrets before sharing.
+## Diagnostics and sharing
+
+Diagnostic reports are created locally and are shared only when the user explicitly exports them. Reports are designed to omit pairing credentials, typed television text, passwords and full certificate material. Users should still review a report before publishing it.
+
+## Internet and third parties
+
+The current open-source build does not include SmartThings, cloud accounts, advertising, analytics or Google Cast SDK integration. If an optional cloud module is added later, this policy and the Play Data Safety declaration must be updated before release.
+
+## Deletion
+
+Users can remove a saved television to delete its locally stored pairing information, or clear the application's data/uninstall it to remove all Libre Remote data from the device.
 
 ## Contact
 
-Security or privacy concerns should be reported through the repository's security process rather than a public issue when sensitive information is involved.
+Privacy and security reports should be submitted through the repository instructions in `SECURITY.md`.

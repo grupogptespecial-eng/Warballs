@@ -1,198 +1,238 @@
-# Libre Remote — plano de compatibilidade universal
+# Libre Remote Universal — roteiro técnico, compatibilidade e limites
 
 ## Objetivo
 
-Transformar a interface atual em um controle orientado por capacidades. A tela não deve conhecer LG, Samsung ou qualquer protocolo específico. Ela pergunta ao backend conectado quais funções estão disponíveis e mostra somente essas funções.
+Transformar o Libre Remote em um controle universal por Wi-Fi sem prejudicar a implementação LG webOS que já funciona. O aplicativo deve identificar a plataforma, selecionar o backend correto e mostrar somente recursos que o aparelho realmente oferece.
 
-## Princípio
+## Arquitetura entregue
 
-Não existe um protocolo universal para todas as TVs. O aplicativo será universal por composição de backends independentes, com um nível de suporte declarado e verificável.
+A interface não chama mais um protocolo de fabricante diretamente. Ela trabalha com:
 
-## Níveis de suporte
+- `TvBackend`: contrato comum para conectar, enviar comandos, carregar apps/entradas, mover ponteiro e esquecer credenciais;
+- `TvBackendRegistry`: mantém um backend isolado por plataforma;
+- `TvCapabilities`: descreve o que cada aparelho pode fazer;
+- `TvDevice`: preserva plataforma, suporte, UDN/USN estável e serviços UPnP anunciados;
+- `UniversalRemoteCommand`: vocabulário comum de controle;
+- `TvDiscovery`: executa SSDP multiprotocolo, lê descrições de dispositivo, classifica e deduplica resultados;
+- `RemoteViewModel`: coordena descoberta, conexão, reconexão, comandos otimistas e latência sem conhecer detalhes do fabricante.
 
-- **StableFull**: controle local completo, testado em uma matriz real de modelos.
-- **BetaFull**: controle amplo, ainda com variações por geração ou dependência de conta.
-- **StableMediaOnly**: descoberta e transporte de mídia, sem controle completo da interface da TV.
-- **Experimental**: protocolo não documentado publicamente ou com poucos modelos testados.
-- **BlockedByVendorPolicy**: tecnicamente possível, porém não distribuído devido a política explícita do fabricante.
-- **Unsupported**: sem API pública, protocolo local confiável ou hardware compatível.
+## Plataformas habilitadas nesta fase
 
-## Matriz planejada
+### LG webOS — completo
 
-| Plataforma | Nível inicial | Descoberta | Controle completo | Conta | Direção |
-|---|---|---|---|---|---|
-| LG webOS | StableFull | SSDP + último aparelho | Sim | Não | Manter como referência estável |
-| Samsung Tizen local | Experimental | SSDP + portas Tizen | Parcial/amplo | Não | Backend opcional, claramente Beta |
-| Samsung SmartThings | BetaFull | Conta SmartThings | Conforme capacidades | Sim | Integração oficial em nuvem e opt-in |
-| Google Cast | StableMediaOnly | Cast SDK | Não | Não | Mídia, fila e volume de sessão |
-| Android TV/Google TV | Experimental | Cast/NSD | Não via API pública oficial | Não | Não prometer controle total; pesquisar APIs autorizadas |
-| DLNA/UPnP AV | StableMediaOnly | SSDP | Não | Não | Play, pause, seek e envio de mídia |
-| Fire TV | StableMediaOnly/Experimental | APIs de casting quando autorizadas | Não | Depende | Somente recursos oficialmente documentados |
-| Philips JointSpace | Experimental | SSDP/probe | Depende do modelo | Não | Só após auditoria e testes |
-| Hisense VIDAA | Experimental | SSDP/probe | Depende do modelo | Não | Só após auditoria e testes |
-| Roku | BlockedByVendorPolicy | SSDP | Tecnicamente amplo via ECP | Não | Não ativar no app público enquanto a política proibir apps móveis de terceiros |
-| TVs antigas | Unsupported sem hardware | — | Não | Não | Futuro Libre Bridge Wi-Fi → IR/CEC |
+A implementação LG anterior permanece sendo usada por composição. Suporta:
 
-## Arquitetura
+- pareamento no televisor;
+- D-pad, OK, voltar, home e menu;
+- volume, mudo e canais;
+- números e teclas coloridas;
+- mídia;
+- texto;
+- touchpad;
+- apps;
+- entradas;
+- Wake-on-LAN quando há MAC disponível;
+- WebSocket persistente, seleção de rota e reconexão.
 
-```text
-app/
-core-model/
-core-discovery/
-core-backend/
-core-security/
-core-storage/
-protocol-lg-webos/
-protocol-samsung-tizen/
-protocol-smartthings/
-protocol-google-cast/
-protocol-dlna/
-protocol-fire-tv/
-protocol-philips/
-protocol-vidaa/
-bridge-infrared/
-```
+### Samsung Tizen local — experimental
 
-A primeira migração será feita dentro do módulo atual para reduzir risco. A modularização Gradle ocorre depois que o contrato estiver estável.
+Foi implementado o protocolo remoto local por WebSocket:
 
-## Contrato de backend
+- portas 8001 e 8002;
+- autorização exibida na televisão;
+- token salvo em armazenamento criptografado;
+- tentativa concorrente de endpoints, com preferência pela última rota que funcionou;
+- conexão persistente;
+- fila limitada de comandos;
+- reconexão com backoff;
+- pinning local de certificado por TOFU;
+- D-pad, home, voltar, menu, guia e info;
+- volume, mudo e canais;
+- números, cores, mídia e energia.
 
-Cada backend deve fornecer:
+#### Limites Samsung
 
-- metadados e nível de suporte;
-- descoberta e identificação da plataforma;
-- pareamento e armazenamento seguro de credenciais;
-- conexão, reconexão e fechamento;
-- conjunto de capacidades;
-- envio de comandos universais;
-- lista de apps e entradas quando suportadas;
-- teclado, ponteiro e mídia quando suportados;
-- mensagens de erro próprias para o usuário;
-- diagnóstico sem expor tokens, IPs ou identificadores em logs compartilhados.
+A implementação continua `Experimental` porque o comportamento depende do ano e firmware:
 
-## Descoberta universal
+- alguns modelos não aceitam a porta segura;
+- alguns não devolvem token;
+- algumas teclas variam;
+- ligar por rede depende de configuração e modelo;
+- listagem de apps e entradas não é anunciada nesta fase;
+- teclado e touchpad não são anunciados nesta fase.
 
-O orquestrador executará em paralelo:
+Não é correto declarar Samsung estável antes de uma matriz física ampla.
 
-1. reconexão ao aparelho salvo;
-2. SSDP para alvos específicos e `ssdp:all`;
-3. Android NSD/mDNS para serviços registrados;
-4. Cast SDK para receptores Google Cast;
-5. probes limitados em portas conhecidas, apenas em IPs que responderam a descoberta;
-6. serviços em nuvem autorizados, como SmartThings, somente depois do login opcional;
-7. IP manual em Solução de problemas.
+### DLNA / UPnP MediaRenderer — mídia
 
-Resultados serão deduplicados por identificadores estáveis, MAC quando disponível e combinação plataforma/endereço/modelo. Uma TV que responde por DLNA e por um protocolo completo deve aparecer apenas uma vez, usando o backend de maior capacidade.
+A descoberta coleta URLs de controle dos serviços `AVTransport` e `RenderingControl`. O backend implementa:
 
-## Política de seleção
+- play;
+- pause;
+- stop;
+- volume;
+- mudo;
+- leitura de volume/mudo;
+- transporte SOAP com cliente HTTP compartilhado.
 
-1. backend local completo e pareado;
-2. backend local completo ainda não pareado;
-3. backend oficial em nuvem;
-4. backend de mídia;
-5. experimental, somente com opt-in explícito.
+DLNA não é apresentado como controle completo: normalmente não oferece D-pad, home, canais ou apps.
 
-## Compatibilidade por capacidades
+## Detecção e deduplicação
 
-A UI usa `TvCapability`, não nomes de fabricantes. As capacidades serão ampliadas para incluir:
+A descoberta envia M-SEARCH para múltiplos alvos:
 
-- PowerOff / PowerOn;
-- Navigation / Back / Home / Menu;
-- Pointer;
-- Volume / AbsoluteVolume;
-- Channels / Guide;
-- Media / Seek / Queue;
-- Apps / AppLaunch;
-- Inputs;
-- Keyboard;
-- NumericKeys / ColoredKeys;
-- Captions / AudioTrack;
-- DeviceInfo;
-- WakeOnLan;
-- CloudControl.
+- LG webOS;
+- Samsung RemoteControlReceiver;
+- `MediaRenderer` versões 1–3;
+- DIAL;
+- Roku;
+- `ssdp:all`.
+
+Após receber `LOCATION`, o aplicativo lê a descrição UPnP e extrai:
+
+- fabricante;
+- modelo;
+- nome amigável;
+- UDN/USN;
+- URL de descrição;
+- serviços anunciados e URLs de controle.
+
+O UDN/USN é usado como identidade estável quando disponível. O agregador funde anúncios do mesmo aparelho e prioriza o protocolo com maior controle. Assim, uma LG que aparece como webOS e DLNA não deve ser exibida como duas TVs.
+
+## Latência e velocidade
+
+### Caminho de comando
+
+- o toque dispara comando imediatamente;
+- o `RemoteViewModel` usa dispatcher de I/O;
+- LG e Samsung mantêm WebSocket aberto;
+- a rota conhecida é tentada primeiro;
+- comandos de volume/canal possuem repetição acelerada;
+- touchpad usa fila conflada;
+- Samsung limita a fila a 32 comandos;
+- comandos secundários, apps e entradas são carregados depois da conexão;
+- volume e mudo usam estado otimista;
+- o backend devolve latência local do envio.
+
+### Reconexão
+
+Samsung usa atrasos de 250 ms, 500 ms, 1 s, 2 s, 5 s e 8 s. A arquitetura permite aplicar a mesma política aos demais backends sem alterar a interface.
+
+### Próximas otimizações mensuráveis
+
+- módulo Macrobenchmark;
+- Baseline Profiles gerados por benchmark;
+- métricas `tap → queue`, `queue → socket` e `socket → response`;
+- prewarm do backend da última TV;
+- cache persistente de capacidades, apps e entradas;
+- perfis de inicialização;
+- testes de 60 Hz no touchpad;
+- consumo de bateria e frames lentos.
+
+## Plataformas detectáveis, mas não habilitadas
+
+### Google Cast
+
+Suporte correto deve usar o Google Cast SDK oficial. Ele oferece descoberta, sessão e controle de mídia, não um D-pad universal do sistema. A melhor estrutura é uma variante opcional `play`, mantendo uma variante `foss` sem dependência proprietária.
+
+### Android TV / Google TV
+
+Não existe uma API Android pública geral que permita a qualquer aplicativo móvel controlar a interface completa de qualquer TV Android. Cast deve ser usado para mídia. Controle integral exige protocolo/parceira autorizada e não deve ser anunciado antes disso.
+
+### Samsung SmartThings
+
+Pode complementar Tizen local usando a API oficial e OAuth. Deve ser opcional, preferir LAN e explicar quando usa internet. Não é possível publicar uma integração real sem cadastro de aplicativo, redirect URI e consentimento do usuário.
+
+### Fire TV
+
+A documentação pública encontrada se concentra em aplicativos rodando no Fire TV e eventos de controles pareados. ADB não é apropriado para um app de consumo publicado. O backend permanece desabilitado até existir uma rota autorizada e distribuível.
+
+### Philips JointSpace e Hisense VIDAA
+
+Permanecem em pesquisa/feature flag. Precisam de documentação, revisão de termos, simulador e aparelhos reais antes de aparecerem como suporte.
+
+### Roku
+
+O ECP é tecnicamente conhecido, mas a política pública do fabricante restringe comandos enviados por aplicativos móveis de terceiros. O aplicativo público não habilita esse backend.
+
+## TVs sem protocolo de rede
+
+Nenhum app exclusivamente por Wi-Fi controla uma TV antiga sem receptor/protocolo compatível. A cobertura exige:
+
+- celular com emissor infravermelho;
+- bridge opcional, como ESP32/Raspberry Pi;
+- HDMI-CEC externo;
+- dispositivo comercial compatível e autorizado.
+
+### Libre Bridge planejado
+
+- descoberta mDNS `_libreremote._tcp`;
+- pareamento por QR code;
+- chave local;
+- HTTPS na LAN;
+- aprendizado de códigos por receptor IR;
+- perfis exportáveis;
+- firmware assinado;
+- suporte futuro a HDMI-CEC.
 
 ## Segurança
 
-- comunicação limitada a endereços locais para backends locais;
-- TLS e pinagem por dispositivo quando possível;
-- tokens e chaves no Android Keystore;
-- OAuth com PKCE para integrações de conta;
-- nenhuma senha no repositório;
-- logs com anonimização;
-- nenhum backend experimental habilitado silenciosamente;
-- política de privacidade atualizada por backend.
+### Implementado
 
-## Fases
+- tokens LG e Samsung em `EncryptedSharedPreferences`;
+- PIN/fingerprint local por dispositivo;
+- filas limitadas;
+- timeouts;
+- clientes HTTP compartilhados;
+- sem conta, anúncios, telemetria ou servidor Libre Remote.
 
-### Fase U1 — núcleo universal
+### Antes de uma versão universal estável
 
-- adicionar `TvPlatform`, `TvSupportLevel`, `TvBackend` e registry;
-- encapsular o cliente LG em `LgWebOsBackend`;
-- adicionar plataforma e identificador estável aos dispositivos salvos;
-- migrar preferências sem perder a TV LG já pareada;
-- alterar ViewModel para depender apenas do backend ativo;
-- manter APK funcionalmente idêntico para LG.
+- mover validação TOFU para o trust manager do handshake;
+- bloquear URLs DLNA externas à LAN;
+- desabilitar redirects externos;
+- endurecer parser XML contra DTD/entidades externas;
+- limitar tamanho/profundidade XML;
+- apagar token, rota e fingerprint ao esquecer a TV;
+- relatório sanitizado sem tokens, texto digitado ou certificado completo;
+- auditoria do manifesto de permissões LG;
+- revisar `usesCleartextTraffic` e Network Security Configuration.
 
-Critério: todos os testes LG continuam passando e não há regressão na RC1.
+## Android 17 e rede local
 
-### Fase U2 — descoberta multiprotocolo e DLNA
+Quando o aplicativo subir o `targetSdk` para API 37, será necessário tratar a permissão de rede local. A descoberta e comunicação SSDP, mDNS, TCP, UDP, broadcast e HTTP local podem depender de `ACCESS_LOCAL_NETWORK`. O onboarding deve explicar a finalidade antes da caixa do sistema.
 
-- separar parser SSDP do filtro LG;
-- classificar respostas por fabricante, modelo e serviços;
-- adicionar backend DLNA de mídia;
-- deduplicar a mesma TV encontrada por mais de um protocolo;
-- atualizar seletor para exibir nível de suporte.
+## Testes obrigatórios
 
-Critério: LG continua completa; TVs DLNA aparecem como Controle de mídia.
+### Automatizados
 
-### Fase U3 — Samsung
+- contrato de todos os backends;
+- fila limitada;
+- reconexão cancelada após `close`;
+- mapeamento de comandos;
+- deduplicação UDN/IP;
+- XML UPnP malformado;
+- mudança de certificado;
+- token recusado/expirado;
+- TV que muda de IP;
+- descoberta sem multicast;
+- acessibilidade Compose;
+- Macrobenchmark.
 
-- implementar Tizen local como backend experimental;
-- implementar SmartThings como backend oficial opcional;
-- permitir ao usuário escolher Local ou SmartThings quando ambos existirem;
-- testes por geração Tizen e por conjunto de capacidades SmartThings.
+### Físicos
 
-Critério: navegação, volume, canais e energia confirmados em uma matriz real antes de sair de Beta.
+- pelo menos cinco gerações webOS;
+- pelo menos cinco gerações Tizen;
+- três MediaRenderers DLNA;
+- Android 8–17;
+- Samsung, Pixel, Motorola e Xiaomi;
+- Wi-Fi 2,4/5 GHz, Ethernet, mesh e guest network;
+- televisão dormindo e acordando;
+- várias TVs no mesmo ambiente;
+- roteador trocando IP;
+- horas de uso e reconexão.
 
-### Fase U4 — Google Cast
-
-- integrar Cast Application Framework;
-- mostrar somente controles de sessão de mídia;
-- não chamar o módulo de controle completo de Android TV;
-- lidar com aparelhos sem Google Play Services.
-
-Critério: descoberta, conexão, reprodução, pausa, seek, fila e volume de sessão testados.
-
-### Fase U5 — plataformas experimentais
-
-- Fire TV apenas por APIs autorizadas;
-- Philips JointSpace e VIDAA apenas depois de auditoria de licença, segurança e termos;
-- cada backend atrás de uma opção Experimental;
-- telemetria continua desativada; relatórios são enviados manualmente pelo usuário.
-
-### Fase U6 — Libre Bridge
-
-- protocolo aberto entre app e um bridge ESP32/Raspberry Pi;
-- IR para TVs antigas;
-- HDMI-CEC quando houver hardware compatível;
-- perfis exportáveis e aprendizado de comandos.
-
-## Testes
-
-Para cada backend:
-
-- simulador/fake server;
-- descoberta duplicada e endereço alterado;
-- pareamento aceito, negado e expirado;
-- TV desligada, dormindo e reconectada;
-- comandos não suportados;
-- perda de Wi-Fi;
-- rede de convidados;
-- IPv4 e IPv6 quando aplicável;
-- Android 8 a Android atual;
-- testes físicos por geração e fabricante.
-
-## Critério para anunciar “universal”
+## Critério para chamar de “universal”
 
 O aplicativo só será chamado de universal quando tiver:
 

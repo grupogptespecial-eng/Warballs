@@ -1,3 +1,14 @@
 # Release validation
 
-Libre Remote 1.0.0 RC1 is validated in CI with unit tests, Android lint, a signed release APK and a Play Store Android App Bundle. The generated release artifacts also include a SHA-256 manifest, signature report, source archive, store-listing package and a separately protected upload key.
+The final release workflow must pass all of the following on the exact release commit:
+
+- debug unit tests;
+- Android release lint with `abortOnError=true`;
+- signed release APK;
+- release Android App Bundle;
+- APK signature verification;
+- SHA-256 manifest;
+- source archive without build caches or signing material;
+- Play Store asset and documentation package.
+
+CI success validates the software build. It does not replace physical TV tests, Play pre-launch reports or account/policy review.

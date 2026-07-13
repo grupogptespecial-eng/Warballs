@@ -1,66 +1,53 @@
 # Libre Remote
 
-Controle remoto Android gratuito, sem anúncios e open source para televisões e receptores na rede local.
+Libre Remote is a local-first, ad-free and open-source Android remote for compatible smart TVs and media renderers.
 
-A versão **1.1.0 RC1 Universal** usa uma interface única e seleciona automaticamente um backend conforme o sistema detectado. Funções incompatíveis são escondidas em vez de aparecerem como botões quebrados.
+## Current compatibility
 
-## Compatibilidade desta build
+- **LG webOS:** primary full remote backend — navigation, volume, channels, apps, inputs, media, keyboard, touchpad and Wake-on-LAN where the television supports them.
+- **Samsung Tizen local:** experimental remote-key backend. Pairing and available keys vary by model and firmware.
+- **DLNA/UPnP MediaRenderer:** media transport, volume and mute when the device advertises the corresponding standard services.
 
-| Plataforma | Estado | Recursos |
-|---|---|---|
-| LG webOS | Estável dentro da matriz já implementada | navegação, volume, canais, touchpad, teclado, apps, entradas, mídia e desligamento |
-| Samsung Tizen local | Experimental | pareamento na TV, navegação, volume, canais, mídia, números, cores, guia e desligamento |
-| DLNA / UPnP AV | Controle de mídia | play, pause, stop e volume/mudo quando AVTransport e RenderingControl são anunciados |
-| Roku | Detectável, mas bloqueado | o app público não ativa o controle enquanto houver restrição do fabricante |
-| Google Cast, SmartThings, Fire TV | Arquitetura preparada | não ativados nesta build; exigem SDK, credenciais ou fluxo oficial adicional |
-| Android/Google TV completo, VIDAA e Philips próprios | Experimental/não ativado | aguardam API autorizada, auditoria e testes físicos |
-| TVs sem rede | Não suportadas sem hardware | futuro Libre Bridge Wi-Fi para infravermelho/HDMI-CEC |
+The app intentionally does not claim that every television is supported. Features are generated from the capabilities reported by the selected backend. Platforms that require a cloud account, proprietary SDK, manufacturer registration or an external infrared bridge remain documented but disabled until they can be distributed and tested responsibly.
 
-## Como funciona
+## Product highlights
 
-1. O aplicativo tenta reconectar à última TV salva.
-2. A busca multiprotocolo usa SSDP e descrições UPnP na rede local.
-3. Respostas duplicadas da mesma TV são combinadas e o backend mais completo recebe prioridade.
-4. O seletor mostra o sistema e o nível de suporte antes da conexão.
-5. O layout usa capacidades reais: uma TV DLNA, por exemplo, mostra mídia e volume, mas não mostra D-pad.
+- automatic local discovery and manual local-IP fallback;
+- multiple saved televisions and room names;
+- Simple, Normal, Advanced and three custom presets;
+- bounded priority command scheduler for responsive controls;
+- touchpad, keyboard, apps and inputs when supported;
+- local macros with delays and explicit safety limits;
+- optional Android widget, launcher shortcuts and Quick Settings tile;
+- deterministic Portuguese voice commands;
+- high contrast, left-handed mode, reduced motion and large controls;
+- local, sanitized diagnostics and latency percentiles;
+- no Libre Remote account, ads, telemetry or analytics.
 
-## Desempenho
+## Privacy and security
 
-- conexão WebSocket persistente para LG e Samsung;
-- tentativa paralela de endpoints locais;
-- reconexão progressiva a partir de 250 ms;
-- envio no toque, sem esperar o clique terminar;
-- repetição de volume/canais a cada ~86 ms depois do atraso inicial;
-- fila limitada de comandos Samsung;
-- movimentos LG conflados para descartar eventos antigos;
-- cliente HTTP reutilizado para DLNA;
-- medição local do tempo de despacho do último comando, sem telemetria.
+Pairing credentials are stored with Android encrypted preferences and are excluded from Android backup/device transfer. The structured product database is also excluded from backup. Network discovery and protocol URLs are restricted to the local network, redirects are disabled and queues/timeouts are bounded.
 
-## Privacidade e segurança
+See `PRIVACY.md` and `SECURITY.md`.
 
-- sem anúncios;
-- sem telemetria;
-- sem servidor do projeto;
-- protocolos locais limitados a endereços privados;
-- tokens Samsung e chaves LG em preferências criptografadas;
-- verificação TOFU da impressão digital de certificados locais quando WSS é usado;
-- integrações experimentais claramente identificadas.
+## Build
 
-## Primeira conexão
+Requirements and release signing are documented in `BUILDING.md`. The project uses JDK 17, Android SDK 35, Kotlin, Jetpack Compose, Room, DataStore, OkHttp and AndroidX Security.
 
-1. Mantenha celular e TV na mesma rede.
-2. Toque em **Conectar TV**.
-3. Selecione o aparelho encontrado.
-4. Em LG ou Samsung, aceite o pareamento mostrado na televisão.
+```bash
+./gradlew :app:testDebugUnitTest :app:lintRelease :app:assembleDebug
+```
 
-O IP manual fica disponível como recuperação. Ele identifica automaticamente LG pelas portas 3000/3001 e Samsung pelas portas 8001/8002.
+A signed release requires the four `LIBRE_KEYSTORE_*` environment variables described in `BUILDING.md`.
 
-## Estado do projeto
+## Contributing
 
-Esta é uma release candidate experimental. LG continua sendo o backend mais completo. Samsung e DLNA precisam de testes em aparelhos reais de várias gerações antes de serem anunciados como suporte amplo.
+Read `CONTRIBUTING.md`, `ARCHITECTURE.md`, `TESTING.md`, `COMPATIBILITY.md` and `docs/BACKEND-CONTRACT.md` before changing a protocol. Compatibility reports must never contain pairing tokens, typed passwords or unsanitized device logs.
 
-O projeto não é afiliado a LG Electronics, Samsung Electronics, Google, Roku, Amazon, Philips ou Hisense.
+## Release status
 
-## Licença
+`2.0.0-rc1` is a release candidate. Automated compilation and tests do not replace physical validation across multiple LG/Samsung firmware generations, Play pre-launch testing, permanent release signing or the declarations required in the Play Console.
 
-GPL-3.0-or-later. Consulte `LICENSE.md`, `PRIVACY.md`, `SECURITY.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `THIRD_PARTY_NOTICES.md` e `UNIVERSAL-TV-ROADMAP.md`.
+## License
+
+GPL-3.0-or-later. See `LICENSE`.

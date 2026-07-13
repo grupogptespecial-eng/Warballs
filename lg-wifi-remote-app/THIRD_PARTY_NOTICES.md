@@ -1,21 +1,5 @@
-# Third-Party Notices
+# Third-party notices
 
-Libre Remote depends on open-source Android and networking components. Exact versions are defined in `app/build.gradle.kts`.
+Libre Remote uses open-source Android and Kotlin libraries, including AndroidX Core, Activity, Lifecycle, Jetpack Compose, DataStore, Room, ProfileInstaller and Security Crypto; Kotlin Coroutines; OkHttp/Okio; JUnit; AndroidX Test and Espresso.
 
-## AndroidX and Jetpack Compose
-
-AndroidX Activity, Lifecycle, Compose UI, Material and Material 3 components are provided by the Android Open Source Project and are generally licensed under the Apache License 2.0.
-
-## Kotlin and kotlinx.coroutines
-
-Kotlin and kotlinx.coroutines are maintained by JetBrains and contributors and are licensed under the Apache License 2.0.
-
-## OkHttp
-
-OkHttp is maintained by Square and contributors and is licensed under the Apache License 2.0.
-
-## AndroidX Security Crypto
-
-AndroidX Security Crypto is provided by the Android Open Source Project under the Apache License 2.0.
-
-This file is a practical summary, not a replacement for the license metadata distributed with each dependency. Release automation should generate a complete dependency and license report before store publication.
+Dependency licenses and notices are available from their respective upstream projects and are also included in generated dependency metadata where applicable. The project does not bundle manufacturer logos, proprietary remote-control artwork, Google Cast SDK, SmartThings SDK or an infrared-code database in this release candidate.

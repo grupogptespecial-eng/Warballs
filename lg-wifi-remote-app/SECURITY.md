@@ -1,17 +1,24 @@
 # Security Policy
 
-## Supported versions
+## Supported version
 
-The latest tagged beta and stable release receive security fixes. Experimental branches are not supported releases.
+Security fixes target the latest Libre Remote release candidate and stable release.
 
-## Reporting a vulnerability
+## Reporting
 
-Do not publish pairing keys, local network identifiers, certificate fingerprints or a working exploit in a public issue. Contact the maintainers privately through GitHub's private vulnerability reporting feature once the project is moved to its permanent public repository.
+Do not open a public issue for vulnerabilities that expose pairing credentials, signing material, certificate validation bypasses or arbitrary network access. Contact the maintainers privately through the repository owner's security-reporting channel. Include the affected commit/version, Android version, television model, reproduction steps and impact, but never include a real credential.
 
-A useful report includes the affected version, Android version, television model and system version, reproduction steps, impact and suggested mitigation when available.
+## Design guarantees
 
-## Security design
+- no signing keys or store credentials in the repository;
+- encrypted local storage for pairing secrets;
+- credential/product stores excluded from backup and transfer;
+- local-address validation for local protocol endpoints;
+- no HTTP redirect following in discovery/DLNA clients;
+- bounded queues and request timeouts;
+- certificate pin/TOFU warning when an associated local certificate changes;
+- diagnostic export redaction.
 
-Libre Remote limits connections to local-network targets, stores LG pairing material in encrypted preferences, uses a persistent WebSocket connection and records the first trusted local TLS certificate fingerprint. A changed fingerprint is treated as a potential device change or interception and should require explicit user review.
+## Scope limitations
 
-No security mechanism should be described as perfect. Local network protocols and television firmware vary, and every public release requires continued review.
+Many TV protocols are not formally standardized and firmware behavior varies. A successful compile does not prove that a command is safe or supported on every model. New backends remain experimental until simulator and physical-device tests are recorded.
