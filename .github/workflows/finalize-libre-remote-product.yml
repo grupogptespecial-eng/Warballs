@@ -1,4 +1,4 @@
-name: Finalize Libre Remote Product Branch
+name: Finalize and Build Libre Remote 2
 
 on:
   push:
@@ -6,55 +6,178 @@ on:
       - feature/libre-remote-2-product-foundation
     paths:
       - ".github/workflows/finalize-libre-remote-product.yml"
-      - ".final-materialize/finalize-v2.sh"
+      - ".final-b64/**"
+      - ".final-materialize/**"
   workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: libre-remote-2-final
+  cancel-in-progress: false
+
 jobs:
-  finalize:
+  finalize-build-package:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 55
+
     steps:
-      - name: Checkout preparation commit
+      - name: Checkout final product branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: feature/libre-remote-2-product-foundation
           fetch-depth: 0
 
-      - name: Preserve finalizer outside repository
-        run: cp .final-materialize/finalize-v2.sh /tmp/finalize-libre-remote.sh
-
-      - name: Materialize reviewed final source tree
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
-          BRANCH: feature/libre-remote-2-product-foundation
-          PARENT_SHA: ${{ github.sha }}
-          FINAL_TREE_SHA: ee675bcc8ad8d29fec545bf07759628ceced26f8
+      - name: Materialize clean reviewed source
+        id: materialize
         shell: bash
         run: |
           set -euo pipefail
-          response=$(curl --fail-with-body -sS -X POST \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/$REPOSITORY/git/commits" \
-            -d "$(jq -n --arg message 'Materialize Libre Remote 2 final source [materialized-final-v2]' --arg tree "$FINAL_TREE_SHA" --arg parent "$PARENT_SHA" '{message:$message,tree:$tree,parents:[$parent]}')")
-          commit_sha=$(jq -r '.sha' <<<"$response")
-          test -n "$commit_sha"; test "$commit_sha" != null
-          curl --fail-with-body -sS -X PATCH \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/$REPOSITORY/git/refs/heads/$BRANCH" \
-            -d "$(jq -n --arg sha "$commit_sha" '{sha:$sha,force:false}')"
 
-      - name: Refresh checkout to materialized commit
+          if [ -f .final-b64/part-00 ]; then
+            cp .final-materialize/finalize-v2.sh /tmp/finalize-libre-remote.sh
+            tr -d '\r\n\t ' < .final-b64/part-00 > /tmp/libre-remote-final.b64
+            base64 --decode /tmp/libre-remote-final.b64 > /tmp/libre-remote-final.tar.gz
+            echo "6aee8919e7be880689d92d84cb0b3ad3bd9da5eebbd91dd06ca761cbfdf3a963  /tmp/libre-remote-final.tar.gz" | sha256sum -c -
+            tar -tzf /tmp/libre-remote-final.tar.gz > /tmp/libre-remote-final-files.txt
+            tar -xzf /tmp/libre-remote-final.tar.gz -C "$GITHUB_WORKSPACE"
+            bash /tmp/finalize-libre-remote.sh "$GITHUB_WORKSPACE"
+            rm -rf .final-b64 .final-overlay-exact .final-overlay-v2 .final-overlay-v3 \
+              .final-overlay-v4 .final-overlay-v5 .final-suffix-hex .final-suffix-hex-v2 \
+              .final-suffix-hex-v3 .final-suffix-hex-v4 .final-suffix-outer-small
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            test -f lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/ProductDatabase.kt
+            test -f lg-wifi-remote-app/ARCHITECTURE.md
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Generate and validate Gradle wrapper
+        working-directory: lg-wifi-remote-app
+        shell: bash
         run: |
-          git fetch origin feature/libre-remote-2-product-foundation
-          git reset --hard origin/feature/libre-remote-2-product-foundation
+          set -euo pipefail
+          gradle wrapper --gradle-version 8.10.2 --distribution-type bin
+          chmod +x gradlew
+          ./gradlew --version
 
-      - name: Apply final product cleanup and documentation
-        run: bash /tmp/finalize-libre-remote.sh "$GITHUB_WORKSPACE"
+      - name: Commit clean materialized project
+        if: steps.materialize.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Libre Remote CI"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Materialize Libre Remote 2 final product [skip ci]"
+            git push origin HEAD:feature/libre-remote-2-product-foundation
+          fi
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+
+      - name: Configure temporary test signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          STORE_PASSWORD="$(openssl rand -hex 18)"
+          KEY_PASSWORD="$STORE_PASSWORD"
+          KEY_ALIAS="libre-remote-final-test"
+          echo "::add-mask::$STORE_PASSWORD"
+          keytool -genkeypair -v \
+            -keystore "$GITHUB_WORKSPACE/libre-remote-final-test.jks" \
+            -storepass "$STORE_PASSWORD" \
+            -keypass "$KEY_PASSWORD" \
+            -alias "$KEY_ALIAS" \
+            -keyalg RSA -keysize 4096 -validity 10000 \
+            -dname "CN=Libre Remote Final Test, OU=Open Source, O=Libre Remote Community, L=Rio de Janeiro, ST=RJ, C=BR"
+          echo "LIBRE_KEYSTORE_PATH=$GITHUB_WORKSPACE/libre-remote-final-test.jks" >> "$GITHUB_ENV"
+          echo "LIBRE_KEYSTORE_PASSWORD=$STORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "LIBRE_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "LIBRE_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Unit tests, release lint, APK and AAB
+        working-directory: lg-wifi-remote-app
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew --no-daemon --stacktrace \
+            :app:testDebugUnitTest \
+            :app:lintRelease \
+            :app:assembleRelease \
+            :app:bundleRelease 2>&1 | tee build-final.log
+
+      - name: Verify and package final candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p final-output/source final-output/store-listing
+          APK="lg-wifi-remote-app/app/build/outputs/apk/release/app-release.apk"
+          AAB="lg-wifi-remote-app/app/build/outputs/bundle/release/app-release.aab"
+          test -s "$APK"
+          test -s "$AAB"
+
+          cp "$APK" final-output/Libre-Remote-2.0.0-rc1-test.apk
+          cp "$AAB" final-output/Libre-Remote-2.0.0-rc1-test.aab
+
+          APKSIGNER="$(find "${ANDROID_SDK_ROOT:-$ANDROID_HOME}/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -x "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs "$APK" > final-output/APK-SIGNATURE.txt
+          sha256sum final-output/*.apk final-output/*.aab > final-output/SHA256SUMS.txt
+
+          rsync -a \
+            --exclude build --exclude .gradle --exclude .kotlin --exclude local.properties \
+            lg-wifi-remote-app/ final-output/source/
+          (cd final-output && zip -qr Libre-Remote-2.0.0-rc1-source.zip source && rm -rf source)
+
+          if [ -d lg-wifi-remote-app/store-listing ]; then
+            cp -r lg-wifi-remote-app/store-listing/. final-output/store-listing/
+          fi
+          cat > final-output/store-listing/GRAPHICS-NOTE.txt <<'EOF'
+          Store text and policy files are included here. Final listing graphics are maintained as a separate reviewed delivery asset so binary images never pass through the source-materialization transport.
+          EOF
+          (cd final-output && zip -qr Libre-Remote-2.0.0-play-store-materials.zip store-listing && rm -rf store-listing)
+
+          cp lg-wifi-remote-app/build-final.log final-output/BUILD-LOG.txt
+          cp lg-wifi-remote-app/app/build/reports/lint-results-release.html final-output/LINT-REPORT.html
+          printf 'This candidate is signed with a temporary CI test key. Rebuild the unchanged tagged source with the permanent upload key before the first Play production upload.\n' > final-output/IMPORTANT-SIGNING.txt
+          ls -lh final-output
+
+      - name: Upload final candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: Libre-Remote-2.0.0-RC1-final-candidate
+          path: final-output/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Libre-Remote-2.0.0-final-failure-diagnostics
+          path: |
+            lg-wifi-remote-app/build-final.log
+            lg-wifi-remote-app/app/build/reports/**
+            /tmp/libre-remote-final-files.txt
+          if-no-files-found: warn
+          retention-days: 14
