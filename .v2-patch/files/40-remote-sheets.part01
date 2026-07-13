@@ -1,0 +1,138 @@
++                            Text("Falar comando")
++                        }
++                        if (voiceStatus.isNotBlank()) {
++                            Text(voiceStatus, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
++                        }
++                        Text(
++                            "Exemplos: aumentar volume, abrir home, pausar, executar boa noite ou digitar filme.",
++                            fontSize = 11.sp,
++                            color = MaterialTheme.colorScheme.onSurfaceVariant
++                        )
++                    }
++                }
++            }
+             item {
+                 SectionTitle("Digitar na TV")
+                 Row(verticalAlignment = Alignment.CenterVertically) {
+                     OutlinedTextField(
+                         value = text,
+-                        onValueChange = { text = it },
++                        onValueChange = { text = it.take(500) },
+                         label = { Text("Texto") },
+                         leadingIcon = { Icon(Icons.Rounded.Keyboard, contentDescription = null) },
+                         singleLine = true,
+@@ -354,14 +447,14 @@ fun MoreControlsSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+                                 if (number >= 0) {
+                                     PressControl(
+                                         text = number.toString(),
+-                                        size = 54.dp,
++                                        size = if (state.largeControls) 62.dp else 54.dp,
+                                         enabled = state.connected,
+                                         haptics = state.hapticsEnabled,
+                                         showLabel = false,
+                                         onPress = { viewModel.sendNumber(number) }
+                                     )
+                                 } else {
+-                                    Spacer(Modifier.size(54.dp))
++                                    Spacer(Modifier.size(if (state.largeControls) 62.dp else 54.dp))
+                                 }
+                             }
+                         }
+@@ -384,9 +477,151 @@ fun MoreControlsSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+     }
+ }
+ 
++@Composable
++fun MacrosSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
++    var newName by remember { mutableStateOf("") }
++    var selectedActions by remember { mutableStateOf(setOf(RemoteAction.PlayPause)) }
++    var pendingConfirmation by remember { mutableStateOf<RemoteMacro?>(null) }
++    val availableActions = listOf(
++        RemoteAction.Home,
++        RemoteAction.Back,
++        RemoteAction.PlayPause,
++        RemoteAction.Pause,
++        RemoteAction.Mute,
++        RemoteAction.VolumeUp,
++        RemoteAction.VolumeDown,
++        RemoteAction.ChannelUp,
++        RemoteAction.ChannelDown,
++        RemoteAction.PowerOff
++    )
++
++    ModalBottomSheet(onDismissRequest = viewModel::closeMacros) {
++        LazyColumn(
++            modifier = Modifier.fillMaxWidth().fillMaxHeight(0.92f).imePadding(),
++            contentPadding = androidx.compose.foundation.layout.PaddingValues(18.dp),
++            verticalArrangement = Arrangement.spacedBy(14.dp)
++        ) {
++            item { SheetHeading(Icons.Rounded.AutoAwesome, "Cenas e macros", "Combine comandos locais com atrasos seguros.") }
++            if (state.macroRunState.running) {
++                item {
++                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
++                        Column(Modifier.fillMaxWidth().padding(16.dp)) {
++                            Text(state.macroRunState.macroName ?: "Macro", fontWeight = FontWeight.Bold)
++                            Text(
++                                "Passo ${state.macroRunState.stepIndex} de ${state.macroRunState.totalSteps}: ${state.macroRunState.message}",
++                                fontSize = 12.sp
++                            )
++                            Spacer(Modifier.height(8.dp))
++                            OutlinedButton(onClick = viewModel::cancelMacro) { Text("Cancelar execução") }
++                        }
++                    }
++                }
++            }
++            items(state.macros, key = RemoteMacro::id) { macro ->
++                Card(
++                    shape = RoundedCornerShape(20.dp),
++                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
++                ) {
++                    Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
++                        Row(verticalAlignment = Alignment.CenterVertically) {
++                            Icon(Icons.Rounded.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
++                            Spacer(Modifier.width(10.dp))
++                            Column(Modifier.weight(1f)) {
++                                Text(macro.name, fontWeight = FontWeight.SemiBold)
++                                Text(
++                                    "${macro.steps.size} passos${if (macro.builtIn) " • padrão" else ""}",
++                                    fontSize = 11.sp,
++                                    color = MaterialTheme.colorScheme.onSurfaceVariant
++                                )
++                            }
++                            Button(onClick = {
++                                if (macro.requiresConfirmation) pendingConfirmation = macro else viewModel.runMacro(macro)
++                            }, enabled = state.currentDevice != null) {
++                                Icon(Icons.Rounded.PlayArrow, contentDescription = null, Modifier.size(18.dp))
++                                Spacer(Modifier.width(5.dp))
++                                Text("Executar")
++                            }
++                        }
++                        Text(
++                            macro.steps.joinToString(" → ") { it.shortLabel() },
++                            fontSize = 11.sp,
++                            color = MaterialTheme.colorScheme.onSurfaceVariant,
++                            maxLines = 2,
++                            overflow = TextOverflow.Ellipsis
++                        )
++                        if (!macro.builtIn) {
++                            TextButton(onClick = { viewModel.deleteMacro(macro.id) }) {
++                                Icon(Icons.Rounded.Delete, contentDescription = null, Modifier.size(18.dp))
++                                Spacer(Modifier.width(5.dp))
++                                Text("Excluir")
++                            }
++                        }
++                    }
++                }
++            }
++            item {
++                HorizontalDivider()
++                Spacer(Modifier.height(6.dp))
++                SectionTitle("Criar macro rápida")
++                OutlinedTextField(
++                    value = newName,
++                    onValueChange = { newName = it.take(40) },
++                    label = { Text("Nome") },
++                    singleLine = true,
++                    modifier = Modifier.fillMaxWidth()
++                )
++                Spacer(Modifier.height(9.dp))
