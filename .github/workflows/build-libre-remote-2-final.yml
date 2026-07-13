@@ -5,9 +5,8 @@ on:
     types: [opened, reopened, synchronize]
     paths:
       - "lg-wifi-remote-app/**"
-      - ".final-overlay/**"
-      - ".final-suffix-hex/**"
-      - ".final-suffix-outer-small/**"
+      - ".final-b64/**"
+      - ".final-materialize/**"
       - ".github/workflows/build-libre-remote-2-final.yml"
   workflow_dispatch:
 
@@ -21,7 +20,8 @@ concurrency:
 jobs:
   validate-package-materialize:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 55
+
     steps:
       - name: Checkout product branch
         uses: actions/checkout@v4
@@ -29,119 +29,31 @@ jobs:
           ref: ${{ github.head_ref || github.ref_name }}
           fetch-depth: 0
 
-      - name: Inspect reconstructed payload
-        id: inspect
-        continue-on-error: true
-        shell: bash
-        run: |
-          set -uo pipefail
-          mkdir -p final-diagnostics
-          python3 - <<'PY'
-          from pathlib import Path
-          import base64, hashlib, json, traceback
-
-          report = {}
-          try:
-              prefix_paths = [Path(f'.final-overlay/part-{i:02d}') for i in range(10)]
-              report['prefix_parts'] = {p.name: len(''.join(p.read_text().split())) if p.exists() else None for p in prefix_paths}
-              prefix = bytearray(''.join(''.join(p.read_text().split()) for p in prefix_paths).encode())
-              report['prefix_length'] = len(prefix)
-              report['prefix_byte_60009'] = prefix[60009] if len(prefix) > 60009 else None
-              if len(prefix) > 60009 and prefix[60009] == ord('o'):
-                  prefix[60009] = ord('O')
-              report['prefix_sha_after_fix'] = hashlib.sha256(prefix).hexdigest()
-
-              hex_paths = [Path(f'.final-suffix-hex/chunk-{i:02d}') for i in range(15)]
-              report['hex_parts'] = {p.name: len(''.join(p.read_text().split())) if p.exists() else None for p in hex_paths}
-              first_hex = ''.join(''.join(p.read_text().split()) for p in hex_paths)
-              report['first_hex_length'] = len(first_hex)
-              first_suffix = bytes.fromhex(first_hex)
-              report['first_suffix_length'] = len(first_suffix)
-              report['first_suffix_sha'] = hashlib.sha256(first_suffix).hexdigest()
-
-              outer_paths = sorted(Path('.final-suffix-outer-small').glob('chunk-*'))
-              report['outer_count'] = len(outer_paths)
-              report['outer_parts'] = {p.name: len(''.join(p.read_text().split())) for p in outer_paths}
-              outer = ''.join(''.join(p.read_text().split()) for p in outer_paths).encode()
-              report['outer_length'] = len(outer)
-              report['outer_sha'] = hashlib.sha256(outer).hexdigest()
-              remainder = base64.b64decode(outer, validate=True)
-              report['remainder_length'] = len(remainder)
-              report['remainder_sha'] = hashlib.sha256(remainder).hexdigest()
-
-              payload = bytes(prefix) + first_suffix + remainder
-              report['payload_length'] = len(payload)
-              report['payload_sha'] = hashlib.sha256(payload).hexdigest()
-              archive = base64.b64decode(payload, validate=True)
-              report['archive_length'] = len(archive)
-              report['archive_sha'] = hashlib.sha256(archive).hexdigest()
-              Path('final-diagnostics/reconstructed.tar.gz').write_bytes(archive)
-              report['error'] = None
-          except Exception as exc:
-              report['error'] = f'{type(exc).__name__}: {exc}'
-              report['traceback'] = traceback.format_exc()
-          Path('final-diagnostics/report.json').write_text(json.dumps(report, indent=2, sort_keys=True))
-          print(json.dumps(report, indent=2, sort_keys=True))
-          if report.get('error'):
-              raise SystemExit(1)
-          PY
-
-      - name: Upload reconstruction diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: Libre-Remote-2.0.0-reconstruction-diagnostics
-          path: final-diagnostics/**
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Validate and extract final source
+      - name: Reconstruct reviewed final source
         id: materialize
         shell: bash
         run: |
           set -euo pipefail
-          if [ ! -d .final-overlay ] || [ ! -d .final-suffix-outer-small ]; then
+          if [ -f .final-b64/part-00 ]; then
+            cp .final-materialize/finalize-v2.sh /tmp/finalize-libre-remote.sh
+            tr -d '\r\n\t ' < .final-b64/part-00 > /tmp/libre-remote-final.b64
+            base64 --decode /tmp/libre-remote-final.b64 > /tmp/libre-remote-final.tar.gz
+            echo "6aee8919e7be880689d92d84cb0b3ad3bd9da5eebbd91dd06ca761cbfdf3a963  /tmp/libre-remote-final.tar.gz" | sha256sum -c -
+            mkdir -p lg-wifi-remote-app
+            tar -tzf /tmp/libre-remote-final.tar.gz > /tmp/libre-remote-final-files.txt
+            tar -xzf /tmp/libre-remote-final.tar.gz -C lg-wifi-remote-app
+            bash /tmp/finalize-libre-remote.sh "$GITHUB_WORKSPACE"
+            rm -rf .final-b64 .final-overlay-exact .final-overlay-v2 .final-overlay-v3 \
+              .final-overlay-v4 .final-overlay-v5 .final-suffix-hex .final-suffix-hex-v2 \
+              .final-suffix-hex-v3 .final-suffix-hex-v4 .final-suffix-outer-small
+            echo "materialized=true" >> "$GITHUB_OUTPUT"
+          else
+            test -f lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/ProductDatabase.kt
+            test -f lg-wifi-remote-app/ARCHITECTURE.md
             echo "materialized=false" >> "$GITHUB_OUTPUT"
-            test -f lg-wifi-remote-app/settings.gradle.kts
-            exit 0
           fi
-          python3 - <<'PY'
-          from pathlib import Path
-          import json, tarfile
-          report = json.loads(Path('final-diagnostics/report.json').read_text())
-          expected = {
-              'prefix_length': 80000,
-              'prefix_byte_60009': 111,
-              'first_hex_length': 45000,
-              'first_suffix_length': 22500,
-              'first_suffix_sha': 'd33a57554371a43dcada3cf86ea881e29896ac5c477830a1fd1bbc071ca876b0',
-              'outer_count': 44,
-              'outer_length': 17216,
-              'outer_sha': '5f2c5ffab2920821271060689e289255a16b2adb366b18ab7e126c32fc700d3b',
-              'remainder_length': 12912,
-              'remainder_sha': '88a63d6791218ca4f779568dbd88d11bff3420e0004457b569426b23c7d0f31b',
-              'payload_length': 115412,
-              'payload_sha': '0cf0947a8b46c5cf8bc95a9ede0ac947cac515f0708724921733f14c83081b1e',
-              'archive_length': 86558,
-              'archive_sha': '5f537a05fd3f6615edda498563210d51e7549ad81849a7fd48039f63c3facfe4',
-              'error': None,
-          }
-          mismatches = {key: {'expected': value, 'actual': report.get(key)} for key, value in expected.items() if report.get(key) != value}
-          if mismatches:
-              raise SystemExit(f'Payload validation failed: {mismatches}')
-          archive = Path('final-diagnostics/reconstructed.tar.gz')
-          destination = Path('lg-wifi-remote-app')
-          destination.mkdir(parents=True, exist_ok=True)
-          with tarfile.open(archive, 'r:gz') as tar:
-              names = tar.getnames()
-              if not names or any(name.startswith('/') or '..' in Path(name).parts for name in names):
-                  raise SystemExit('Unsafe archive path detected')
-              Path('final-diagnostics/archive-files.txt').write_text('\n'.join(names) + '\n')
-              tar.extractall(destination, filter='data')
-          PY
-          echo "materialized=true" >> "$GITHUB_OUTPUT"
 
-      - name: Set up Java
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -151,6 +63,7 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Install Android SDK packages
+        shell: bash
         run: |
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
@@ -159,6 +72,15 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.10.2"
+
+      - name: Generate Gradle wrapper
+        working-directory: lg-wifi-remote-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle wrapper --gradle-version 8.10.2 --distribution-type bin
+          chmod +x gradlew
+          ./gradlew --version
 
       - name: Configure temporary release signing
         shell: bash
@@ -178,12 +100,12 @@ jobs:
           echo "LIBRE_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
           echo "LIBRE_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
 
-      - name: Run unit tests, lint and release builds
+      - name: Unit tests, release lint, APK and AAB
         working-directory: lg-wifi-remote-app
         shell: bash
         run: |
           set -o pipefail
-          gradle --no-daemon --stacktrace \
+          ./gradlew --no-daemon --stacktrace \
             :app:testDebugUnitTest \
             :app:lintRelease \
             :app:assembleRelease \
@@ -197,36 +119,42 @@ jobs:
           APK="lg-wifi-remote-app/app/build/outputs/apk/release/app-release.apk"
           AAB="lg-wifi-remote-app/app/build/outputs/bundle/release/app-release.aab"
           test -s "$APK" && test -s "$AAB"
-          cp "$APK" final-output/Libre-Remote-2.0.0-rc1.apk
-          cp "$AAB" final-output/Libre-Remote-2.0.0-rc1.aab
+          cp "$APK" final-output/Libre-Remote-2.0.0-rc1-test.apk
+          cp "$AAB" final-output/Libre-Remote-2.0.0-rc1-test.aab
           APKSIGNER="$(find "${ANDROID_SDK_ROOT:-$ANDROID_HOME}/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -x "$APKSIGNER"
           "$APKSIGNER" verify --verbose --print-certs "$APK" > final-output/APK-SIGNATURE.txt
           sha256sum final-output/*.apk final-output/*.aab > final-output/SHA256SUMS.txt
           rsync -a --exclude build --exclude .gradle --exclude .kotlin --exclude local.properties lg-wifi-remote-app/ final-output/source/
           (cd final-output && zip -qr Libre-Remote-2.0.0-rc1-source.zip source && rm -rf source)
           if [ -d lg-wifi-remote-app/store-listing ]; then
-            cp -r lg-wifi-remote-app/store-listing/* final-output/store/
-            (cd final-output && zip -qr Libre-Remote-2.0.0-rc1-play-store.zip store && rm -rf store)
+            cp -r lg-wifi-remote-app/store-listing/. final-output/store/
+            printf 'Final reviewed graphics are distributed separately from the source-transport archive.\n' > final-output/store/GRAPHICS-NOTE.txt
+            (cd final-output && zip -qr Libre-Remote-2.0.0-play-store-materials.zip store && rm -rf store)
           fi
           cp lg-wifi-remote-app/build-final.log final-output/BUILD-LOG.txt
+          cp lg-wifi-remote-app/app/build/reports/lint-results-release.html final-output/LINT-REPORT.html
+          printf 'Temporary CI test signature. Rebuild the unchanged tagged source with the permanent Play upload key.\n' > final-output/IMPORTANT-SIGNING.txt
 
-      - name: Commit clean materialized source
+      - name: Commit clean source after successful validation
         if: steps.materialize.outputs.materialized == 'true' && github.event_name == 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "Libre Remote CI"
           git config user.email "actions@users.noreply.github.com"
-          rm -rf .final-overlay .final-overlay-hex .final-overlay-v2 .final-overlay-v3 .final-overlay-v4 .final-overlay-v5 .final-suffix-hex .final-suffix-outer .final-suffix-outer-small .final-source-v2
-          rm -f lg-wifi-remote-app/.final-build-trigger
+          rm -rf .final-materialize
+          rm -f lg-wifi-remote-app/.final-build-trigger lg-wifi-remote-app/.universal-* lg-wifi-remote-app/.*trigger*
           git add -A
-          git commit -m "Materialize Libre Remote 2.0 RC1 final source [skip ci]"
-          git push origin HEAD:${GITHUB_HEAD_REF}
+          if ! git diff --cached --quiet; then
+            git commit -m "Materialize validated Libre Remote 2.0 RC1 source [skip ci]"
+            git push origin HEAD:${GITHUB_HEAD_REF}
+          fi
 
       - name: Upload final candidate
         uses: actions/upload-artifact@v4
         with:
-          name: Libre-Remote-2.0.0-rc1
+          name: Libre-Remote-2.0.0-RC1-final-candidate
           path: final-output/*
           if-no-files-found: error
           retention-days: 30
@@ -235,9 +163,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Libre-Remote-2.0.0-build-diagnostics
+          name: Libre-Remote-2.0.0-final-diagnostics
           path: |
-            final-diagnostics/**
+            /tmp/libre-remote-final-files.txt
             lg-wifi-remote-app/build-final.log
             lg-wifi-remote-app/app/build/reports/**
           if-no-files-found: warn
