@@ -5,12 +5,12 @@ on:
     types: [opened, reopened, synchronize]
     paths:
       - "lg-wifi-remote-app/**"
-      - ".final-b64/**"
-      - ".final-materialize/**"
+      - ".final-*/**"
       - ".github/workflows/build-libre-remote-2-final.yml"
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: write
 
 concurrency:
@@ -28,29 +28,69 @@ jobs:
           ref: ${{ github.head_ref || github.ref_name }}
           fetch-depth: 0
 
-      - name: Reconstruct reviewed final source
+      - name: Recover and verify reviewed source archive
         id: materialize
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         shell: bash
         run: |
           set -euo pipefail
-          if [ -f .final-b64/part-00 ]; then
-            cp .final-materialize/finalize-v2.sh /tmp/finalize-libre-remote.sh
-            tr -d '\r\n\t ' < .final-b64/part-00 > /tmp/libre-remote-final.b64
-            base64 --decode /tmp/libre-remote-final.b64 > /tmp/libre-remote-final.tar.gz
-            sha256sum /tmp/libre-remote-final.tar.gz | tee /tmp/libre-remote-final.sha256
-            mkdir -p lg-wifi-remote-app
-            tar -tzf /tmp/libre-remote-final.tar.gz > /tmp/libre-remote-final-files.txt
-            tar -xzf /tmp/libre-remote-final.tar.gz -C lg-wifi-remote-app
-            bash /tmp/finalize-libre-remote.sh "$GITHUB_WORKSPACE"
-            rm -rf .final-b64 .final-overlay-exact .final-overlay-v2 .final-overlay-v3 \
-              .final-overlay-v4 .final-overlay-v5 .final-suffix-hex .final-suffix-hex-v2 \
-              .final-suffix-hex-v3 .final-suffix-hex-v4 .final-suffix-outer-small
-            echo "materialized=true" >> "$GITHUB_OUTPUT"
-          else
-            test -f lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/ProductDatabase.kt
-            test -f lg-wifi-remote-app/ARCHITECTURE.md
+          if [ -f lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/ProductDatabase.kt ]; then
             echo "materialized=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+
+          cp .final-materialize/finalize-v2.sh /tmp/finalize-libre-remote.sh
+          artifact_id=""
+          for attempt in $(seq 1 30); do
+            response=$(curl --fail-with-body -sS \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$REPOSITORY/actions/artifacts?name=libre-final-payload-diagnostics&per_page=100")
+            artifact_id=$(jq -r --arg sha "$HEAD_SHA" \
+              '[.artifacts[] | select(.expired == false and .workflow_run.head_sha == $sha)] | sort_by(.created_at) | last | .id // empty' \
+              <<<"$response")
+            if [ -n "$artifact_id" ]; then break; fi
+            echo "Waiting for source diagnostic artifact ($attempt/30)..."
+            sleep 4
+          done
+          test -n "$artifact_id"
+
+          curl --fail-with-body -sSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPOSITORY/actions/artifacts/$artifact_id/zip" \
+            -o /tmp/source-diagnostic.zip
+          rm -rf /tmp/source-diagnostic
+          mkdir -p /tmp/source-diagnostic
+          unzip -q /tmp/source-diagnostic.zip -d /tmp/source-diagnostic
+          archive=$(find /tmp/source-diagnostic -type f -name reconstructed.tar.gz -print -quit)
+          test -n "$archive"
+
+          python3 - "$archive" <<'PY'
+          from pathlib import Path
+          import sys
+          path = Path(sys.argv[1])
+          data = bytearray(path.read_bytes())
+          expected = {63805: 0o367, 63806: 0o66}
+          replacement = {63805: 0o365, 63806: 0o166}
+          for offset, value in expected.items():
+              if data[offset] != value:
+                  raise SystemExit(f"Unexpected byte at {offset}: {data[offset]:#o}")
+              data[offset] = replacement[offset]
+          path.write_bytes(data)
+          PY
+          echo "5f537a05fd3f6615edda498563210d51e7549ad81849a7fd48039f63c3facfe4  $archive" | sha256sum -c -
+          tar -tzf "$archive" > /tmp/libre-remote-final-files.txt
+          mkdir -p lg-wifi-remote-app
+          tar -xzf "$archive" -C lg-wifi-remote-app
+          bash /tmp/finalize-libre-remote.sh "$GITHUB_WORKSPACE"
+          rm -rf .final-b64 .final-materialize .final-overlay* .final-source* .final-suffix*
+          echo "materialized=true" >> "$GITHUB_OUTPUT"
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -124,12 +164,11 @@ jobs:
           (cd final-output && zip -qr Libre-Remote-2.0.0-rc1-source.zip source && rm -rf source)
           if [ -d lg-wifi-remote-app/store-listing ]; then
             cp -r lg-wifi-remote-app/store-listing/. final-output/store/
-            printf 'Final reviewed graphics are distributed separately from this source transport.\n' > final-output/store/GRAPHICS-NOTE.txt
+            printf 'Final reviewed graphics are delivered separately from the source transport.\n' > final-output/store/GRAPHICS-NOTE.txt
             (cd final-output && zip -qr Libre-Remote-2.0.0-play-store-materials.zip store && rm -rf store)
           fi
           cp lg-wifi-remote-app/build-final.log final-output/BUILD-LOG.txt
           cp lg-wifi-remote-app/app/build/reports/lint-results-release.html final-output/LINT-REPORT.html
-          cp /tmp/libre-remote-final.sha256 final-output/SOURCE-ARCHIVE-SHA256.txt
           printf 'Temporary CI test signature. Rebuild the unchanged tagged source with the permanent Play upload key.\n' > final-output/IMPORTANT-SIGNING.txt
 
       - name: Commit clean source after successful validation
@@ -139,8 +178,7 @@ jobs:
           set -euo pipefail
           git config user.name "Libre Remote CI"
           git config user.email "actions@users.noreply.github.com"
-          rm -rf .final-materialize
-          rm -f lg-wifi-remote-app/.final-build-trigger lg-wifi-remote-app/.final-validation-trigger-2 lg-wifi-remote-app/.universal-* lg-wifi-remote-app/.*trigger*
+          rm -f lg-wifi-remote-app/.*trigger* lg-wifi-remote-app/.universal-*
           git add -A
           if ! git diff --cached --quiet; then
             git commit -m "Materialize validated Libre Remote 2.0 RC1 source [skip ci]"
@@ -162,7 +200,6 @@ jobs:
           name: Libre-Remote-2.0.0-final-diagnostics
           path: |
             /tmp/libre-remote-final-files.txt
-            /tmp/libre-remote-final.sha256
             lg-wifi-remote-app/build-final.log
             lg-wifi-remote-app/app/build/reports/**
           if-no-files-found: warn
