@@ -1,0 +1,336 @@
+diff --git a/app/src/main/java/com/geronimo/controlelgwifi/RemoteViewModel.kt b/app/src/main/java/com/geronimo/controlelgwifi/RemoteViewModel.kt
+index a041e9d..c2fcb83 100644
+--- a/app/src/main/java/com/geronimo/controlelgwifi/RemoteViewModel.kt
++++ b/app/src/main/java/com/geronimo/controlelgwifi/RemoteViewModel.kt
+@@ -1,8 +1,11 @@
+ package com.geronimo.controlelgwifi
+ 
+ import android.app.Application
++import android.os.SystemClock
+ import androidx.lifecycle.AndroidViewModel
+ import androidx.lifecycle.viewModelScope
++import kotlinx.coroutines.CancellationException
++import kotlinx.coroutines.CompletableDeferred
+ import kotlinx.coroutines.Dispatchers
+ import kotlinx.coroutines.Job
+ import kotlinx.coroutines.delay
+@@ -10,15 +13,21 @@ import kotlinx.coroutines.flow.MutableStateFlow
+ import kotlinx.coroutines.flow.StateFlow
+ import kotlinx.coroutines.flow.asStateFlow
+ import kotlinx.coroutines.flow.update
++import java.util.UUID
+ import kotlinx.coroutines.launch
++import kotlinx.coroutines.withTimeoutOrNull
+ 
+ class RemoteViewModel(application: Application) : AndroidViewModel(application), TvBackendListener {
+     private val preferences = RemotePreferences(application)
+     private val registry = TvBackendRegistry(application, this)
+     private val repeatJobs = mutableMapOf<RemoteAction, Job>()
++    private val performanceTracker = PerformanceTracker()
+ 
+     @Volatile private var activeBackend: TvBackend? = null
+     @Volatile private var activePlatform: TvPlatform? = null
++    @Volatile private var connectionStartedAt: Long? = null
++    @Volatile private var connectedSignal = CompletableDeferred<Unit>()
++    private var macroJob: Job? = null
+ 
+     private val _uiState = MutableStateFlow(
+         preferences.loadState().let { loaded ->
+@@ -43,7 +52,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
+     }
+ 
+     fun openConnect() {
+-        _uiState.update { it.copy(showConnectSheet = true, lastError = null) }
++        _uiState.update { it.copy(showConnectSheet = true, showSettingsSheet = false, lastError = null) }
+         discover()
+     }
+ 
+@@ -135,6 +144,8 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
+             activeBackend = backend
+         }
+ 
++        connectionStartedAt = SystemClock.elapsedRealtime()
++        if (connectedSignal.isCompleted) connectedSignal = CompletableDeferred()
+         preferences.selectDevice(device.stableId)
+         val saved = preferences.saveDevice(device)
+         _uiState.update {
+@@ -152,6 +163,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
+             )
+         }
+         backend.connect(device, userInitiated)
++        LibreRemoteWidgetProvider.updateAll(getApplication())
+     }
+ 
+     fun reconnect() {
+@@ -189,6 +201,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
+                 statusText = if (wasCurrent) "TV removida" else it.statusText
+             )
+         }
++        LibreRemoteWidgetProvider.updateAll(getApplication())
+     }
+ 
+     fun updateCurrentDevice(name: String, room: String, mac: String) {
+@@ -200,6 +213,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
+         )
+         val saved = preferences.updateDevice(updated)
+         _uiState.update { it.copy(currentDevice = updated, savedDevices = saved) }
++        LibreRemoteWidgetProvider.updateAll(getApplication())
+     }
+ 
+     fun send(action: RemoteAction) {
+@@ -322,6 +336,25 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
+ 
+     fun resetPreset(id: RemotePresetId = _uiState.value.selectedPresetId) = savePreset(RemotePreset.defaultFor(id))
+ 
++    fun exportSelectedPreset(): String = PresetCodec.encode(_uiState.value.selectedPreset)
++
++    fun importPreset(raw: String, destination: RemotePresetId): Result<RemotePreset> {
++        val result = PresetCodec.decode(raw, destination)
++        result.onSuccess { preset ->
++            savePreset(preset)
++            _uiState.update {
++                it.copy(
++                    selectedPresetId = destination,
++                    statusText = "Layout ${preset.name} importado"
++                )
++            }
++            preferences.saveSettings(_uiState.value)
++        }.onFailure { error ->
++            _uiState.update { it.copy(statusText = error.message ?: "Não foi possível importar o layout") }
++        }
++        return result
++    }
++
+     private fun savePreset(preset: RemotePreset) {
+         preferences.savePreset(preset)
+         _uiState.update { it.copy(presets = it.presets + (preset.id to preset)) }
+@@ -334,6 +367,10 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
+     fun setCompactMode(enabled: Boolean) = updateSettings { it.copy(compactMode = enabled) }
+     fun setShowLabels(enabled: Boolean) = updateSettings { it.copy(showLabels = enabled) }
+     fun setAutoConnect(enabled: Boolean) = updateSettings { it.copy(autoConnect = enabled) }
++    fun setLeftHanded(enabled: Boolean) = updateSettings { it.copy(leftHanded = enabled) }
++    fun setLargeControls(enabled: Boolean) = updateSettings { it.copy(largeControls = enabled) }
++    fun setHighContrast(enabled: Boolean) = updateSettings { it.copy(highContrast = enabled) }
++    fun setVoiceCommandsEnabled(enabled: Boolean) = updateSettings { it.copy(voiceCommandsEnabled = enabled) }
+     fun setExperimentalBackendsEnabled(enabled: Boolean) = updateSettings {
+         it.copy(experimentalBackendsEnabled = enabled)
+     }
+@@ -352,16 +389,178 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
+     fun closeInputs() { _uiState.update { it.copy(showInputsSheet = false) } }
+     fun openMore() { _uiState.update { it.copy(showMoreSheet = true) } }
+     fun closeMore() { _uiState.update { it.copy(showMoreSheet = false) } }
+-    fun openPresetEditor() { _uiState.update { it.copy(showPresetEditor = true) } }
++    fun openMacros() { _uiState.update { it.copy(showMacrosSheet = true, showSettingsSheet = false, showMoreSheet = false) } }
++    fun closeMacros() { _uiState.update { it.copy(showMacrosSheet = false) } }
++    fun openPresetEditor() { _uiState.update { it.copy(showPresetEditor = true, showSettingsSheet = false) } }
+     fun closePresetEditor() { _uiState.update { it.copy(showPresetEditor = false) } }
+     fun dismissDevicePicker() { _uiState.update { it.copy(showDevicePicker = false) } }
+ 
++    fun createMacro(
++        name: String,
++        actions: List<RemoteAction> = listOf(RemoteAction.PlayPause)
++    ): RemoteMacro {
++        val normalizedActions = actions.distinct().take(12).ifEmpty { listOf(RemoteAction.PlayPause) }
++        val steps = buildList {
++            normalizedActions.forEachIndexed { index, action ->
++                add(MacroStep(MacroStepType.Command, action))
++                if (index < normalizedActions.lastIndex) add(MacroStep(MacroStepType.Delay, delayMs = 250))
++            }
++        }
++        val macro = RemoteMacro(
++            id = UUID.randomUUID().toString(),
++            name = name.trim().take(40).ifBlank { "Nova macro" },
++            steps = steps
++        )
++        val macros = preferences.saveMacro(macro)
++        _uiState.update { it.copy(macros = macros) }
++        return macro
++    }
++
++    fun saveMacro(macro: RemoteMacro) {
++        val macros = preferences.saveMacro(macro)
++        _uiState.update { it.copy(macros = macros) }
++    }
++
++    fun deleteMacro(id: String) {
++        if (_uiState.value.macroRunState.macroId == id) cancelMacro()
++        val macros = preferences.deleteMacro(id)
++        _uiState.update { it.copy(macros = macros) }
++    }
++
++    fun runMacro(macro: RemoteMacro) {
++        macroJob?.cancel()
++        macroJob = viewModelScope.launch(Dispatchers.IO) {
++            _uiState.update {
++                it.copy(
++                    showMacrosSheet = false,
++                    macroRunState = MacroRunState(
++                        macroId = macro.id,
++                        macroName = macro.name,
++                        totalSteps = macro.steps.size,
++                        running = true,
++                        message = "Iniciando ${macro.name}…"
++                    )
++                )
++            }
++            val runner = RemoteMacroRunner(object : RemoteMacroRunner.Host {
++                override fun isConnected(): Boolean = _uiState.value.connected
++
++                override suspend fun waitForConnection(): Boolean {
++                    if (_uiState.value.connected) return true
++                    val current = _uiState.value.currentDevice ?: return false
++                    connect(current, userInitiated = false)
++                    return withTimeoutOrNull(8_000) {
++                        connectedSignal.await()
++                        true
++                    } == true
++                }
++
++                override suspend fun send(action: RemoteAction): Boolean {
++                    val backend = activeBackend ?: return false
++                    if (!_uiState.value.connected) return false
++                    if (action == RemoteAction.Mute) {
++                        val target = !_uiState.value.muted
++                        _uiState.update { it.copy(muted = target) }
++                        backend.setMute(target)
++                    } else {
++                        backend.send(action)
++                    }
++                    return true
++                }
++
++                override suspend fun launchApp(appId: String): Boolean {
++                    val app = _uiState.value.apps.firstOrNull { it.id == appId } ?: return false
++                    activeBackend?.launchApp(app) ?: return false
++                    return true
++                }
++
++                override suspend fun switchInput(inputId: String): Boolean {
++                    val input = _uiState.value.inputs.firstOrNull { it.id == inputId } ?: return false
++                    activeBackend?.switchInput(input) ?: return false
++                    return true
++                }
++
++                override suspend fun insertText(text: String): Boolean {
++                    if (TvCapability.Keyboard !in _uiState.value.capabilities) return false
++                    activeBackend?.insertText(text) ?: return false
++                    return true
++                }
++
++                override fun onProgress(index: Int, total: Int, message: String) {
++                    _uiState.update { state ->
++                        state.copy(
++                            macroRunState = state.macroRunState.copy(
++                                stepIndex = index,
++                                totalSteps = total,
++                                running = true,
++                                message = message
++                            )
++                        )
++                    }
++                }
++            })
++            try {
++                val result = runner.execute(macro)
++                _uiState.update {
++                    it.copy(
++                        statusText = result.message,
++                        macroRunState = it.macroRunState.copy(running = false, message = result.message)
++                    )
++                }
++            } catch (_: CancellationException) {
++                _uiState.update {
++                    it.copy(macroRunState = MacroRunState(message = "Macro cancelada"), statusText = "Macro cancelada")
++                }
++            }
++        }
++    }
++
++    fun cancelMacro() {
++        macroJob?.cancel()
++        macroJob = null
++        _uiState.update { it.copy(macroRunState = MacroRunState(message = "Macro cancelada")) }
++    }
++
++    fun handleVoiceTranscript(transcript: String) {
++        when (val parsed = VoiceCommandParser.parse(transcript)) {
++            is ParsedVoiceCommand.Action -> {
++                send(parsed.action)
++                _uiState.update { it.copy(statusText = "Comando de voz: ${parsed.action.name}") }
++            }
++            is ParsedVoiceCommand.Macro -> {
++                val macro = _uiState.value.macros.firstOrNull {
++                    it.name.contains(parsed.query, ignoreCase = true) || it.id.contains(parsed.query, ignoreCase = true)
++                }
++                if (macro != null) runMacro(macro)
++                else _uiState.update { it.copy(statusText = "Macro não encontrada: ${parsed.query}") }
++            }
++            is ParsedVoiceCommand.Text -> {
++                sendText(parsed.value)
++                _uiState.update { it.copy(statusText = "Texto enviado por voz") }
++            }
++            is ParsedVoiceCommand.Unknown -> {
++                _uiState.update { it.copy(statusText = "Não entendi: ${parsed.original.take(80)}") }
++            }
++        }
++    }
++
++    fun diagnosticReport(): String = DiagnosticsReport.build(_uiState.value)
++
+     fun runDiagnostics() {
+         _uiState.update { it.copy(diagnostic = it.diagnostic.copy(summary = "Verificando a rede…")) }
+         viewModelScope.launch(Dispatchers.IO) {
+             val result = TvDiscovery.diagnose(getApplication(), _uiState.value.currentDevice)
++            val performance = performanceTracker.snapshot()
+             _uiState.update { state ->
+-                state.copy(diagnostic = result.copy(lastCommandDispatchMs = state.diagnostic.lastCommandDispatchMs))
++                state.copy(
++                    diagnostic = result.copy(
++                        lastCommandDispatchMs = performance.lastCommandDispatchMs,
++                        averageCommandDispatchMs = performance.averageCommandDispatchMs,
++                        p95CommandDispatchMs = performance.p95CommandDispatchMs,
++                        commandSampleCount = performance.commandSampleCount,
++                        lastConnectionMs = performance.lastConnectionMs
++                    )
++                )
+             }
+         }
+     }
+@@ -376,6 +575,11 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
+             )
+         }
+         if (state == ConnectionState.Connected) {
++            connectionStartedAt?.let { started ->
++                performanceTracker.recordConnection(SystemClock.elapsedRealtime() - started)
++                connectionStartedAt = null
++            }
++            if (!connectedSignal.isCompleted) connectedSignal.complete(Unit)
+             val current = _uiState.value.currentDevice ?: return
+             val refreshed = current.copy(
+                 capabilities = _uiState.value.capabilities,
+@@ -419,15 +623,24 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
+     }
+ 
+     override fun onCommandLatency(milliseconds: Double) {
++        performanceTracker.recordCommandDispatch(milliseconds)
++        val snapshot = performanceTracker.snapshot()
+         _uiState.update { state ->
+             state.copy(
+-                diagnostic = state.diagnostic.copy(lastCommandDispatchMs = milliseconds)
++                diagnostic = state.diagnostic.copy(
++                    lastCommandDispatchMs = snapshot.lastCommandDispatchMs,
++                    averageCommandDispatchMs = snapshot.averageCommandDispatchMs,
++                    p95CommandDispatchMs = snapshot.p95CommandDispatchMs,
++                    commandSampleCount = snapshot.commandSampleCount,
++                    lastConnectionMs = snapshot.lastConnectionMs
++                )
+             )
+         }
+     }
+ 
+     override fun onCleared() {
+         stopAllRepeating()
++        macroJob?.cancel()
+         registry.closeAll()
+         super.onCleared()
+     }
