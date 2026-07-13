@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - recovery/libre-remote-2-export-20260713
+  pull_request:
+    branches:
+      - feature/libre-remote-2-product-foundation
   workflow_dispatch:
 
 permissions:
