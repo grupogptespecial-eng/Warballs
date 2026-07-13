@@ -1,0 +1,338 @@
+diff --git a/.github/ISSUE_TEMPLATE/bug_report.yml b/.github/ISSUE_TEMPLATE/bug_report.yml
+new file mode 100644
+index 0000000..0b52d1c
+--- /dev/null
++++ b/.github/ISSUE_TEMPLATE/bug_report.yml
+@@ -0,0 +1,30 @@
++name: Bug report
++description: Report a reproducible Libre Remote problem
++title: "[Bug]: "
++labels: [bug]
++body:
++  - type: markdown
++    attributes:
++      value: "Do not include pairing keys, IP addresses, MAC addresses, SSIDs or certificate fingerprints."
++  - type: input
++    id: version
++    attributes: {label: App version}
++    validations: {required: true}
++  - type: input
++    id: phone
++    attributes: {label: Phone and Android version}
++    validations: {required: true}
++  - type: input
++    id: tv
++    attributes: {label: TV brand, model and system version}
++    validations: {required: true}
++  - type: textarea
++    id: steps
++    attributes: {label: Reproduction steps}
++    validations: {required: true}
++  - type: textarea
++    id: expected
++    attributes: {label: Expected behavior}
++  - type: textarea
++    id: report
++    attributes: {label: Sanitized diagnostic report}
+diff --git a/.github/ISSUE_TEMPLATE/compatibility_report.yml b/.github/ISSUE_TEMPLATE/compatibility_report.yml
+new file mode 100644
+index 0000000..331140a
+--- /dev/null
++++ b/.github/ISSUE_TEMPLATE/compatibility_report.yml
+@@ -0,0 +1,39 @@
++name: Compatibility report
++description: Record which functions work on a real device
++title: "[Compatibility]: "
++labels: [compatibility]
++body:
++  - type: input
++    id: tv
++    attributes: {label: TV brand and exact model}
++    validations: {required: true}
++  - type: input
++    id: system
++    attributes: {label: TV system and version}
++    validations: {required: true}
++  - type: dropdown
++    id: network
++    attributes:
++      label: TV connection
++      options: [Wi-Fi, Ethernet, Other]
++  - type: checkboxes
++    id: features
++    attributes:
++      label: Confirmed features
++      options:
++        - {label: Pairing and reconnect}
++        - {label: Directional pad and OK}
++        - {label: Volume and mute}
++        - {label: Channels}
++        - {label: Apps}
++        - {label: Inputs}
++        - {label: Touchpad}
++        - {label: Keyboard}
++        - {label: Media controls}
++        - {label: Wake-on-LAN}
++  - type: textarea
++    id: failures
++    attributes: {label: Failed or unavailable features}
++  - type: textarea
++    id: report
++    attributes: {label: Sanitized report}
+diff --git a/.github/dependabot.yml b/.github/dependabot.yml
+new file mode 100644
+index 0000000..bf51a9a
+--- /dev/null
++++ b/.github/dependabot.yml
+@@ -0,0 +1,11 @@
++version: 2
++updates:
++  - package-ecosystem: gradle
++    directory: /
++    schedule:
++      interval: weekly
++    open-pull-requests-limit: 5
++  - package-ecosystem: github-actions
++    directory: /
++    schedule:
++      interval: weekly
+diff --git a/.github/pull_request_template.md b/.github/pull_request_template.md
+new file mode 100644
+index 0000000..df4bdc2
+--- /dev/null
++++ b/.github/pull_request_template.md
+@@ -0,0 +1,17 @@
++## Problem
++
++## Implementation
++
++## Tests
++
++- [ ] Unit tests
++- [ ] Android Lint
++- [ ] Release build
++- [ ] Physical TV/device test, when protocol behavior changed
++
++## Compatibility, privacy and licensing
++
++- [ ] Capabilities remain honest
++- [ ] No secret or personal network data is included
++- [ ] New dependencies and permissions are documented
++- [ ] Screenshots are attached for UI changes
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+new file mode 100644
+index 0000000..6486680
+--- /dev/null
++++ b/.github/workflows/ci.yml
+@@ -0,0 +1,23 @@
++name: Android CI
++on:
++  pull_request:
++  push:
++    branches: [main]
++permissions:
++  contents: read
++jobs:
++  validate:
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v4
++      - uses: actions/setup-java@v4
++        with:
++          distribution: temurin
++          java-version: '17'
++      - uses: android-actions/setup-android@v3
++      - uses: gradle/actions/setup-gradle@v4
++        with:
++          gradle-version: '8.10.2'
++      - run: yes | sdkmanager --licenses >/dev/null || true
++      - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
++      - run: gradle --no-daemon testDebugUnitTest lintRelease assembleRelease
+diff --git a/.github/workflows/codeql.yml b/.github/workflows/codeql.yml
+new file mode 100644
+index 0000000..4fe2422
+--- /dev/null
++++ b/.github/workflows/codeql.yml
+@@ -0,0 +1,21 @@
++name: CodeQL
++on:
++  push:
++    branches: [main]
++  pull_request:
++    branches: [main]
++  schedule:
++    - cron: '20 5 * * 1'
++permissions:
++  contents: read
++  security-events: write
++jobs:
++  analyze:
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v4
++      - uses: github/codeql-action/init@v3
++        with:
++          languages: java-kotlin
++      - uses: github/codeql-action/autobuild@v3
++      - uses: github/codeql-action/analyze@v3
+diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
+new file mode 100644
+index 0000000..2e14800
+--- /dev/null
++++ b/.github/workflows/release.yml
+@@ -0,0 +1,36 @@
++name: Signed release
++on:
++  workflow_dispatch:
++permissions:
++  contents: read
++jobs:
++  build:
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v4
++      - uses: actions/setup-java@v4
++        with:
++          distribution: temurin
++          java-version: '17'
++      - uses: android-actions/setup-android@v3
++      - uses: gradle/actions/setup-gradle@v4
++        with:
++          gradle-version: '8.10.2'
++      - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
++      - name: Restore upload key
++        env:
++          KEYSTORE_B64: ${{ secrets.LIBRE_UPLOAD_KEYSTORE_B64 }}
++        run: echo "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/upload.jks"
++      - name: Build
++        env:
++          LIBRE_KEYSTORE_PATH: ${{ runner.temp }}/upload.jks
++          LIBRE_KEYSTORE_PASSWORD: ${{ secrets.LIBRE_UPLOAD_STORE_PASSWORD }}
++          LIBRE_KEY_ALIAS: ${{ secrets.LIBRE_UPLOAD_KEY_ALIAS }}
++          LIBRE_KEY_PASSWORD: ${{ secrets.LIBRE_UPLOAD_KEY_PASSWORD }}
++        run: gradle --no-daemon clean testDebugUnitTest lintRelease assembleRelease bundleRelease
++      - uses: actions/upload-artifact@v4
++        with:
++          name: libre-remote-release
++          path: |
++            app/build/outputs/apk/release/*.apk
++            app/build/outputs/bundle/release/*.aab
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..af1e39e
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,13 @@
++.gradle/
++.idea/
++.kotlin/
++**/build/
++local.properties
++*.iml
++*.jks
++*.keystore
++*.pem
++*.p12
++*.key
++/private-key/
++.DS_Store
+diff --git a/.universal-build-after-materialization b/.universal-build-after-materialization
+deleted file mode 100644
+index 658dc44..0000000
+--- a/.universal-build-after-materialization
++++ /dev/null
+@@ -1 +0,0 @@
+-Build universal source after deterministic overlay materialization
+diff --git a/.universal-build-log-trigger b/.universal-build-log-trigger
+deleted file mode 100644
+index f2dbc4e..0000000
+--- a/.universal-build-log-trigger
++++ /dev/null
+@@ -1 +0,0 @@
+-Trigger universal build with diagnostic artifact
+diff --git a/.universal-build-trigger b/.universal-build-trigger
+deleted file mode 100644
+index d96e602..0000000
+--- a/.universal-build-trigger
++++ /dev/null
+@@ -1 +0,0 @@
+-Libre Remote Universal 1.1.0 RC1 build trigger
+diff --git a/.universal-diagnostic-trigger b/.universal-diagnostic-trigger
+deleted file mode 100644
+index b9d72bf..0000000
+--- a/.universal-diagnostic-trigger
++++ /dev/null
+@@ -1 +0,0 @@
+-Trigger overlay diagnostics on updated CI base
+diff --git a/.universal-fix1-trigger b/.universal-fix1-trigger
+deleted file mode 100644
+index 39ac4cf..0000000
+--- a/.universal-fix1-trigger
++++ /dev/null
+@@ -1 +0,0 @@
+-Trigger build after TvBackendRegistry listener fix
+diff --git a/.universal-pr-trigger-2 b/.universal-pr-trigger-2
+deleted file mode 100644
+index 074eb6b..0000000
+--- a/.universal-pr-trigger-2
++++ /dev/null
+@@ -1 +0,0 @@
+-Trigger universal RC validation after CI base creation
+diff --git a/.universal-pr-trigger-3 b/.universal-pr-trigger-3
+deleted file mode 100644
+index fe56986..0000000
+--- a/.universal-pr-trigger-3
++++ /dev/null
+@@ -1 +0,0 @@
+-Trigger PR workflow from universal CI base
+diff --git a/ARCHITECTURE.md b/ARCHITECTURE.md
+new file mode 100644
+index 0000000..7f7faf6
+--- /dev/null
++++ b/ARCHITECTURE.md
+@@ -0,0 +1,45 @@
++# Architecture
++
++Libre Remote is a local-first Android application. The user interface never talks directly to a manufacturer protocol. `RemoteViewModel` coordinates discovery, saved devices, layouts, macros and a `TvBackend` selected by `TvBackendRegistry`.
++
++## Runtime layers
++
++1. **UI** — Compose screens and sheets render `RemoteUiState` and emit user intents.
++2. **Application** — `RemoteViewModel`, `RemoteMacroRunner`, voice parsing and performance tracking.
++3. **Domain** — devices, capabilities, commands, presets, macros and diagnostics in `RemoteModels.kt`.
++4. **Protocol adapters** — LG webOS, Samsung Tizen local and DLNA/UPnP implement `TvBackend`.
++5. **Infrastructure** — SSDP discovery, encrypted credentials, Wake-on-LAN, widgets and Quick Settings.
++
++## Backend contract
++
++Every backend must:
++
++- expose only capabilities it really supports;
++- reject non-local endpoints for local-only protocols;
++- avoid network work on the main thread;
++- bound or conflate queues so stale commands are not replayed;
++- clear credentials in `forgetDevice`;
++- normalize connection state through `TvBackendListener`;
++- provide timeouts and close all resources.
++
++A new platform starts as `Experimental`. It becomes stable only after protocol review, automated contract tests and a documented physical-device matrix.
++
++## Device identity
++
++The preferred identity order is device UUID, manufacturer identifier, paired certificate, MAC address, then IP as a last resort. A device may expose several routes, such as webOS and DLNA. Discovery combines duplicates and selects the route with the richest verified capability set.
++
++## Storage
++
++General preferences, devices, presets and macros are local. Pairing secrets are isolated in encrypted preferences backed by Android Keystore where supported. The app disables Android backup. No application server or telemetry pipeline exists.
++
++## Security boundaries
++
++- Cleartext protocols are accepted only for local addresses and only where the television protocol requires them.
++- WSS uses trust-on-first-use per television and rejects certificate changes during the TLS handshake.
++- DLNA control URLs must remain local and cannot contain credentials.
++- Diagnostic exports are sanitized and never include IP, MAC, tokens, certificates or typed text.
++- Roku control is intentionally disabled in public builds while vendor policy restricts third-party mobile clients.
++
++## Source organization
++
++The current release keeps one Android module to minimize release risk, but separates each concern into focused Kotlin files. A future multi-module extraction must preserve API boundaries and migrations, not merely move files.
