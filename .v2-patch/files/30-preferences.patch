@@ -1,0 +1,237 @@
+diff --git a/app/src/main/java/com/geronimo/controlelgwifi/RemotePreferences.kt b/app/src/main/java/com/geronimo/controlelgwifi/RemotePreferences.kt
+index 93fb037..bf9e4c3 100644
+--- a/app/src/main/java/com/geronimo/controlelgwifi/RemotePreferences.kt
++++ b/app/src/main/java/com/geronimo/controlelgwifi/RemotePreferences.kt
+@@ -3,7 +3,14 @@ package com.geronimo.controlelgwifi
+ import android.content.Context
+ import org.json.JSONArray
+ import org.json.JSONObject
++import java.util.UUID
+ 
++/**
++ * Small local product store.
++ *
++ * Pairing credentials are deliberately not stored here; protocol backends keep them in encrypted
++ * stores. This class only persists user-facing settings, devices, layouts and macros.
++ */
+ class RemotePreferences(context: Context) {
+     private val appContext = context.applicationContext
+     private val prefs = appContext.getSharedPreferences("libre_remote_product", Context.MODE_PRIVATE)
+@@ -30,19 +37,29 @@ class RemotePreferences(context: Context) {
+             showLabels = prefs.getBoolean("show_labels", true),
+             autoConnect = prefs.getBoolean("auto_connect", true),
+             experimentalBackendsEnabled = prefs.getBoolean("experimental_backends", true),
++            leftHanded = prefs.getBoolean("left_handed", false),
++            largeControls = prefs.getBoolean("large_controls", false),
++            highContrast = prefs.getBoolean("high_contrast", false),
++            voiceCommandsEnabled = prefs.getBoolean("voice_commands", true),
+             themeMode = enumValueOrDefault(prefs.getString("theme", null), ThemeMode.System),
+             accentTheme = enumValueOrDefault(prefs.getString("accent", null), AccentTheme.Ocean),
+             selectedPresetId = selectedPreset,
+             presets = presetMap,
++            macros = loadMacros(),
+             onboardingComplete = prefs.getBoolean("onboarding_complete", false)
+         )
+     }
+ 
++    fun loadCurrentDevice(): TvDevice? = loadState().currentDevice
++
+     fun saveDevice(device: TvDevice): List<TvDevice> {
+-        val normalized = device.copy(lastSeenAt = System.currentTimeMillis())
++        val normalized = device.copy(
++            addresses = (device.addresses + device.ip).filter(String::isNotBlank).distinct().take(8),
++            lastSeenAt = System.currentTimeMillis()
++        )
+         val updated = (loadDevices().filterNot { it.stableId == normalized.stableId } + normalized)
+-            .sortedByDescending { it.lastSeenAt }
+-            .take(20)
++            .sortedWith(compareByDescending<TvDevice> { it.favorite }.thenByDescending { it.lastSeenAt })
++            .take(30)
+         prefs.edit()
+             .putString("devices", devicesToJson(updated).toString())
+             .putString("current_device_id", normalized.stableId)
+@@ -54,8 +71,9 @@ class RemotePreferences(context: Context) {
+     fun updateDevice(device: TvDevice): List<TvDevice> = saveDevice(device)
+ 
+     fun removeDevice(stableId: String): List<TvDevice> {
+-        val removed = loadDevices().firstOrNull { it.stableId == stableId }
+-        val updated = loadDevices().filterNot { it.stableId == stableId }
++        val existing = loadDevices()
++        val removed = existing.firstOrNull { it.stableId == stableId }
++        val updated = existing.filterNot { it.stableId == stableId }
+         val editor = prefs.edit().putString("devices", devicesToJson(updated).toString())
+         if (prefs.getString("current_device_id", null) == stableId) {
+             editor.remove("current_device_id").remove("current_tv_ip")
+@@ -80,6 +98,10 @@ class RemotePreferences(context: Context) {
+             .putBoolean("show_labels", state.showLabels)
+             .putBoolean("auto_connect", state.autoConnect)
+             .putBoolean("experimental_backends", state.experimentalBackendsEnabled)
++            .putBoolean("left_handed", state.leftHanded)
++            .putBoolean("large_controls", state.largeControls)
++            .putBoolean("high_contrast", state.highContrast)
++            .putBoolean("voice_commands", state.voiceCommandsEnabled)
+             .putString("theme", state.themeMode.name)
+             .putString("accent", state.accentTheme.name)
+             .putString("selected_preset", state.selectedPresetId.name)
+@@ -96,6 +118,33 @@ class RemotePreferences(context: Context) {
+         prefs.edit().putString("preset_${preset.id.name}", json.toString()).apply()
+     }
+ 
++    fun saveMacro(macro: RemoteMacro): List<RemoteMacro> {
++        val normalized = macro.copy(
++            id = macro.id.ifBlank { UUID.randomUUID().toString() },
++            name = macro.name.trim().take(40).ifBlank { "Nova macro" },
++            steps = macro.steps.take(40)
++        )
++        val updated = (loadMacros().filterNot { it.id == normalized.id } + normalized)
++            .sortedWith(compareByDescending<RemoteMacro> { it.favorite }.thenBy { it.name.lowercase() })
++            .take(40)
++        prefs.edit().putString("macros", macrosToJson(updated).toString()).apply()
++        return updated
++    }
++
++    fun deleteMacro(id: String): List<RemoteMacro> {
++        val existing = loadMacros()
++        val defaults = RemoteMacro.defaults().associateBy(RemoteMacro::id)
++        val updated = existing.mapNotNull { macro ->
++            when {
++                macro.id != id -> macro
++                macro.builtIn -> defaults[id]
++                else -> null
++            }
++        }
++        prefs.edit().putString("macros", macrosToJson(updated).toString()).apply()
++        return updated
++    }
++
+     fun resetAll() {
+         prefs.edit().clear().apply()
+     }
+@@ -130,9 +179,16 @@ class RemotePreferences(context: Context) {
+                         item.optString("supportLevel").takeIf(String::isNotBlank),
+                         platform.defaultSupportLevel
+                     )
++                    val deviceUuid = item.optString("deviceUuid").takeIf(String::isNotBlank)
+                     val stableId = item.optString("stableId")
+                         .takeIf(String::isNotBlank)
++                        ?: deviceUuid?.let { "${platform.name}:$it" }
+                         ?: "${platform.name}:$ip"
++                    val addresses = buildList {
++                        val values = item.optJSONArray("addresses") ?: JSONArray()
++                        for (i in 0 until values.length()) values.optString(i).takeIf(String::isNotBlank)?.let(::add)
++                        add(ip)
++                    }.distinct().take(8)
+                     add(
+                         TvDevice(
+                             ip = ip,
+@@ -144,6 +200,9 @@ class RemotePreferences(context: Context) {
+                             platform = platform,
+                             supportLevel = support,
+                             stableId = stableId,
++                            deviceUuid = deviceUuid,
++                            addresses = addresses,
++                            favorite = item.optBoolean("favorite", false),
+                             descriptionUrl = item.optString("descriptionUrl").takeIf(String::isNotBlank),
+                             avTransportUrl = avTransportUrl,
+                             renderingControlUrl = renderingControlUrl,
+@@ -169,6 +228,7 @@ class RemotePreferences(context: Context) {
+                     platform = TvPlatform.LgWebOs,
+                     supportLevel = TvSupportLevel.StableFull,
+                     stableId = "${TvPlatform.LgWebOs.name}:$it",
++                    addresses = listOf(it),
+                     capabilities = TvCapability.lgDefaults
+                 )
+             )
+@@ -189,6 +249,9 @@ class RemotePreferences(context: Context) {
+                 JSONObject()
+                     .put("ip", device.ip)
+                     .put("stableId", device.stableId)
++                    .put("deviceUuid", device.deviceUuid ?: "")
++                    .put("addresses", JSONArray().apply { device.addresses.forEach(::put) })
++                    .put("favorite", device.favorite)
+                     .put("name", device.name)
+                     .put("model", device.model ?: "")
+                     .put("manufacturer", device.manufacturer ?: "")
+@@ -226,6 +289,82 @@ class RemotePreferences(context: Context) {
+         }.getOrDefault(fallback)
+     }
+ 
++    private fun loadMacros(): List<RemoteMacro> {
++        val defaults = RemoteMacro.defaults()
++        val raw = prefs.getString("macros", null) ?: return defaults
++        val loaded = runCatching {
++            val array = JSONArray(raw)
++            buildList {
++                for (index in 0 until array.length()) {
++                    val item = array.optJSONObject(index) ?: continue
++                    val id = item.optString("id").takeIf(String::isNotBlank) ?: continue
++                    val stepsJson = item.optJSONArray("steps") ?: JSONArray()
++                    val steps = buildList {
++                        for (stepIndex in 0 until stepsJson.length()) {
++                            val step = stepsJson.optJSONObject(stepIndex) ?: continue
++                            val type = enumValueOrDefault(
++                                step.optString("type").takeIf(String::isNotBlank),
++                                MacroStepType.Command
++                            )
++                            val action = step.optString("action").takeIf(String::isNotBlank)?.let {
++                                runCatching { RemoteAction.valueOf(it) }.getOrNull()
++                            }
++                            add(
++                                MacroStep(
++                                    type = type,
++                                    action = action,
++                                    value = step.optString("value").takeIf(String::isNotBlank),
++                                    delayMs = step.optLong("delayMs", 0L),
++                                    timeoutMs = step.optLong("timeoutMs", 5_000L),
++                                    continueOnError = step.optBoolean("continueOnError", false)
++                                )
++                            )
++                        }
++                    }
++                    if (steps.isEmpty()) continue
++                    add(
++                        RemoteMacro(
++                            id = id,
++                            name = item.optString("name", "Macro"),
++                            steps = steps,
++                            builtIn = item.optBoolean("builtIn", false),
++                            favorite = item.optBoolean("favorite", false),
++                            requiresConfirmation = item.optBoolean("requiresConfirmation", false)
++                        )
++                    )
++                }
++            }
++        }.getOrDefault(emptyList())
++        val merged = (loaded + defaults.filter { default -> loaded.none { it.id == default.id } })
++        return merged.distinctBy(RemoteMacro::id)
++    }
++
++    private fun macrosToJson(macros: List<RemoteMacro>): JSONArray = JSONArray().apply {
++        macros.forEach { macro ->
++            put(
++                JSONObject()
++                    .put("id", macro.id)
++                    .put("name", macro.name)
++                    .put("builtIn", macro.builtIn)
++                    .put("favorite", macro.favorite)
++                    .put("requiresConfirmation", macro.requiresConfirmation)
++                    .put("steps", JSONArray().apply {
++                        macro.steps.forEach { step ->
++                            put(
++                                JSONObject()
++                                    .put("type", step.type.name)
++                                    .put("action", step.action?.name ?: "")
++                                    .put("value", step.value ?: "")
++                                    .put("delayMs", step.delayMs)
++                                    .put("timeoutMs", step.timeoutMs)
++                                    .put("continueOnError", step.continueOnError)
++                            )
++                        }
++                    })
++            )
++        }
++    }
++
+     private fun defaultName(platform: TvPlatform): String = when (platform) {
+         TvPlatform.LgWebOs -> "LG webOS TV"
+         TvPlatform.SamsungTizenLocal -> "Samsung Smart TV"
