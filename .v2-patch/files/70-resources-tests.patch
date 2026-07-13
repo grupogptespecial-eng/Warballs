@@ -1,0 +1,436 @@
+diff --git a/app/src/main/res/drawable/widget_background.xml b/app/src/main/res/drawable/widget_background.xml
+new file mode 100644
+index 0000000..a6f95cb
+--- /dev/null
++++ b/app/src/main/res/drawable/widget_background.xml
+@@ -0,0 +1,7 @@
++<?xml version="1.0" encoding="utf-8"?>
++<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
++    <solid android:color="#E611171E" />
++    <corners android:radius="24dp" />
++    <stroke android:width="1dp" android:color="#4055C8FF" />
++    <padding android:left="14dp" android:top="12dp" android:right="14dp" android:bottom="12dp" />
++</shape>
+diff --git a/app/src/main/res/drawable/widget_button_background.xml b/app/src/main/res/drawable/widget_button_background.xml
+new file mode 100644
+index 0000000..00c66ae
+--- /dev/null
++++ b/app/src/main/res/drawable/widget_button_background.xml
+@@ -0,0 +1,15 @@
++<?xml version="1.0" encoding="utf-8"?>
++<selector xmlns:android="http://schemas.android.com/apk/res/android">
++    <item android:state_pressed="true">
++        <shape android:shape="rectangle">
++            <solid android:color="#6655C8FF" />
++            <corners android:radius="16dp" />
++        </shape>
++    </item>
++    <item>
++        <shape android:shape="rectangle">
++            <solid android:color="#2DFFFFFF" />
++            <corners android:radius="16dp" />
++        </shape>
++    </item>
++</selector>
+diff --git a/app/src/main/res/layout/widget_remote.xml b/app/src/main/res/layout/widget_remote.xml
+new file mode 100644
+index 0000000..fdaa6ff
+--- /dev/null
++++ b/app/src/main/res/layout/widget_remote.xml
+@@ -0,0 +1,103 @@
++<?xml version="1.0" encoding="utf-8"?>
++<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
++    android:id="@+id/widget_open"
++    android:layout_width="match_parent"
++    android:layout_height="wrap_content"
++    android:background="@drawable/widget_background"
++    android:gravity="center_vertical"
++    android:orientation="vertical">
++
++    <TextView
++        android:id="@+id/widget_tv_name"
++        android:layout_width="match_parent"
++        android:layout_height="wrap_content"
++        android:ellipsize="end"
++        android:maxLines="1"
++        android:text="Libre Remote"
++        android:textColor="#FFFFFFFF"
++        android:textSize="16sp"
++        android:textStyle="bold" />
++
++    <TextView
++        android:id="@+id/widget_tv_status"
++        android:layout_width="match_parent"
++        android:layout_height="wrap_content"
++        android:layout_marginTop="2dp"
++        android:ellipsize="end"
++        android:maxLines="1"
++        android:text="Toque para abrir"
++        android:textColor="#FFB8C5D1"
++        android:textSize="11sp" />
++
++    <LinearLayout
++        android:layout_width="match_parent"
++        android:layout_height="48dp"
++        android:layout_marginTop="10dp"
++        android:gravity="center"
++        android:orientation="horizontal">
++
++        <TextView
++            android:id="@+id/widget_wake"
++            android:layout_width="0dp"
++            android:layout_height="44dp"
++            android:layout_marginEnd="4dp"
++            android:layout_weight="1"
++            android:background="@drawable/widget_button_background"
++            android:gravity="center"
++            android:text="ON"
++            android:textColor="#FF55C8FF"
++            android:textStyle="bold" />
++
++        <TextView
++            android:id="@+id/widget_volume_down"
++            android:layout_width="0dp"
++            android:layout_height="44dp"
++            android:layout_marginStart="4dp"
++            android:layout_marginEnd="4dp"
++            android:layout_weight="1"
++            android:background="@drawable/widget_button_background"
++            android:gravity="center"
++            android:text="VOL−"
++            android:textColor="#FFFFFFFF"
++            android:textStyle="bold" />
++
++        <TextView
++            android:id="@+id/widget_mute"
++            android:layout_width="0dp"
++            android:layout_height="44dp"
++            android:layout_marginStart="4dp"
++            android:layout_marginEnd="4dp"
++            android:layout_weight="1"
++            android:background="@drawable/widget_button_background"
++            android:gravity="center"
++            android:text="MUTE"
++            android:textColor="#FFFFFFFF"
++            android:textSize="11sp"
++            android:textStyle="bold" />
++
++        <TextView
++            android:id="@+id/widget_volume_up"
++            android:layout_width="0dp"
++            android:layout_height="44dp"
++            android:layout_marginStart="4dp"
++            android:layout_marginEnd="4dp"
++            android:layout_weight="1"
++            android:background="@drawable/widget_button_background"
++            android:gravity="center"
++            android:text="VOL+"
++            android:textColor="#FFFFFFFF"
++            android:textStyle="bold" />
++
++        <TextView
++            android:id="@+id/widget_play_pause"
++            android:layout_width="0dp"
++            android:layout_height="44dp"
++            android:layout_marginStart="4dp"
++            android:layout_weight="1"
++            android:background="@drawable/widget_button_background"
++            android:gravity="center"
++            android:text="▶Ⅱ"
++            android:textColor="#FF55C8FF"
++            android:textStyle="bold" />
++    </LinearLayout>
++</LinearLayout>
+diff --git a/app/src/main/res/values-es/strings.xml b/app/src/main/res/values-es/strings.xml
+new file mode 100644
+index 0000000..40bea8e
+--- /dev/null
++++ b/app/src/main/res/values-es/strings.xml
+@@ -0,0 +1,10 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <string name="app_name">Libre Remote</string>
++    <string name="widget_description">Controles rápidos para el televisor seleccionado en Libre Remote</string>
++    <string name="quick_tile_label">Libre Remote</string>
++    <string name="shortcut_connect_short">Conectar TV</string>
++    <string name="shortcut_connect_long">Buscar y conectar un televisor</string>
++    <string name="shortcut_macros_short">Escenas</string>
++    <string name="shortcut_macros_long">Abrir escenas y macros</string>
++</resources>
+diff --git a/app/src/main/res/values-pt-rBR/strings.xml b/app/src/main/res/values-pt-rBR/strings.xml
+new file mode 100644
+index 0000000..16b63d0
+--- /dev/null
++++ b/app/src/main/res/values-pt-rBR/strings.xml
+@@ -0,0 +1,10 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <string name="app_name">Libre Remote</string>
++    <string name="widget_description">Controles rápidos para a TV selecionada no Libre Remote</string>
++    <string name="quick_tile_label">Libre Remote</string>
++    <string name="shortcut_connect_short">Conectar TV</string>
++    <string name="shortcut_connect_long">Procurar e conectar uma TV</string>
++    <string name="shortcut_macros_short">Cenas</string>
++    <string name="shortcut_macros_long">Abrir cenas e macros</string>
++</resources>
+diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
+new file mode 100644
+index 0000000..16b63d0
+--- /dev/null
++++ b/app/src/main/res/values/strings.xml
+@@ -0,0 +1,10 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <string name="app_name">Libre Remote</string>
++    <string name="widget_description">Controles rápidos para a TV selecionada no Libre Remote</string>
++    <string name="quick_tile_label">Libre Remote</string>
++    <string name="shortcut_connect_short">Conectar TV</string>
++    <string name="shortcut_connect_long">Procurar e conectar uma TV</string>
++    <string name="shortcut_macros_short">Cenas</string>
++    <string name="shortcut_macros_long">Abrir cenas e macros</string>
++</resources>
+diff --git a/app/src/main/res/xml/libre_remote_widget_info.xml b/app/src/main/res/xml/libre_remote_widget_info.xml
+new file mode 100644
+index 0000000..39904d6
+--- /dev/null
++++ b/app/src/main/res/xml/libre_remote_widget_info.xml
+@@ -0,0 +1,10 @@
++<?xml version="1.0" encoding="utf-8"?>
++<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
++    android:description="@string/widget_description"
++    android:initialLayout="@layout/widget_remote"
++    android:minWidth="250dp"
++    android:minHeight="100dp"
++    android:previewImage="@mipmap/ic_launcher"
++    android:resizeMode="horizontal|vertical"
++    android:updatePeriodMillis="0"
++    android:widgetCategory="home_screen" />
+diff --git a/app/src/main/res/xml/shortcuts.xml b/app/src/main/res/xml/shortcuts.xml
+new file mode 100644
+index 0000000..7a24497
+--- /dev/null
++++ b/app/src/main/res/xml/shortcuts.xml
+@@ -0,0 +1,25 @@
++<?xml version="1.0" encoding="utf-8"?>
++<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
++    <shortcut
++        android:shortcutId="connect_tv"
++        android:enabled="true"
++        android:icon="@mipmap/ic_launcher"
++        android:shortcutShortLabel="@string/shortcut_connect_short"
++        android:shortcutLongLabel="@string/shortcut_connect_long">
++        <intent
++            android:action="io.github.grupogptespecialeng.libreremote.CONNECT"
++            android:targetPackage="io.github.grupogptespecialeng.libreremote"
++            android:targetClass="com.geronimo.controlelgwifi.MainActivity" />
++    </shortcut>
++    <shortcut
++        android:shortcutId="macros"
++        android:enabled="true"
++        android:icon="@mipmap/ic_launcher"
++        android:shortcutShortLabel="@string/shortcut_macros_short"
++        android:shortcutLongLabel="@string/shortcut_macros_long">
++        <intent
++            android:action="io.github.grupogptespecialeng.libreremote.MACROS"
++            android:targetPackage="io.github.grupogptespecialeng.libreremote"
++            android:targetClass="com.geronimo.controlelgwifi.MainActivity" />
++    </shortcut>
++</shortcuts>
+diff --git a/app/src/test/java/com/geronimo/controlelgwifi/NetworkAddressValidatorTest.kt b/app/src/test/java/com/geronimo/controlelgwifi/NetworkAddressValidatorTest.kt
+new file mode 100644
+index 0000000..eb1bdec
+--- /dev/null
++++ b/app/src/test/java/com/geronimo/controlelgwifi/NetworkAddressValidatorTest.kt
+@@ -0,0 +1,22 @@
++package com.geronimo.controlelgwifi
++
++import org.junit.Assert.assertFalse
++import org.junit.Assert.assertTrue
++import org.junit.Test
++
++class NetworkAddressValidatorTest {
++    @Test
++    fun acceptsPrivateAddresses() {
++        assertTrue(NetworkAddressValidator.isLocalHost("192.168.1.2"))
++        assertTrue(NetworkAddressValidator.isLocalHost("10.0.0.8"))
++        assertTrue(NetworkAddressValidator.isLocalHost("172.20.4.5"))
++        assertTrue(NetworkAddressValidator.isLocalHost("fe80::1"))
++    }
++
++    @Test
++    fun rejectsPublicAddresses() {
++        assertFalse(NetworkAddressValidator.isLocalHost("8.8.8.8"))
++        assertFalse(NetworkAddressValidator.isLocalHost("1.1.1.1"))
++        assertFalse(NetworkAddressValidator.isLocalHost("example.com"))
++    }
++}
+diff --git a/app/src/test/java/com/geronimo/controlelgwifi/PerformanceTrackerTest.kt b/app/src/test/java/com/geronimo/controlelgwifi/PerformanceTrackerTest.kt
+new file mode 100644
+index 0000000..3b4ba01
+--- /dev/null
++++ b/app/src/test/java/com/geronimo/controlelgwifi/PerformanceTrackerTest.kt
+@@ -0,0 +1,28 @@
++package com.geronimo.controlelgwifi
++
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertTrue
++import org.junit.Test
++
++class PerformanceTrackerTest {
++    @Test
++    fun keepsBoundedWindowAndComputesPercentile() {
++        val tracker = PerformanceTracker(maxSamples = 5)
++        (1..10).forEach { tracker.recordCommandDispatch(it.toDouble()) }
++        tracker.recordConnection(320)
++
++        val snapshot = tracker.snapshot()
++        assertEquals(5, snapshot.commandSampleCount)
++        assertEquals(8.0, snapshot.averageCommandDispatchMs ?: 0.0, 0.001)
++        assertEquals(10.0, snapshot.p95CommandDispatchMs ?: 0.0, 0.001)
++        assertEquals(320L, snapshot.lastConnectionMs)
++    }
++
++    @Test
++    fun ignoresInvalidSamples() {
++        val tracker = PerformanceTracker()
++        tracker.recordCommandDispatch(Double.NaN)
++        tracker.recordCommandDispatch(-1.0)
++        assertTrue(tracker.snapshot().commandSampleCount == 0)
++    }
++}
+diff --git a/app/src/test/java/com/geronimo/controlelgwifi/PresetCodecTest.kt b/app/src/test/java/com/geronimo/controlelgwifi/PresetCodecTest.kt
+new file mode 100644
+index 0000000..252dbf5
+--- /dev/null
++++ b/app/src/test/java/com/geronimo/controlelgwifi/PresetCodecTest.kt
+@@ -0,0 +1,27 @@
++package com.geronimo.controlelgwifi
++
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertTrue
++import org.junit.Test
++
++class PresetCodecTest {
++    @Test
++    fun roundTripUsesRequestedCustomSlot() {
++        val source = RemotePreset(
++            id = RemotePresetId.Custom1,
++            name = "Filmes",
++            modules = listOf(RemoteModule.Power, RemoteModule.DPad, RemoteModule.Media),
++            compact = true
++        )
++        val decoded = PresetCodec.decode(PresetCodec.encode(source), RemotePresetId.Custom3).getOrThrow()
++        assertEquals(RemotePresetId.Custom3, decoded.id)
++        assertEquals(source.name, decoded.name)
++        assertEquals(source.modules, decoded.modules)
++        assertTrue(decoded.compact)
++    }
++
++    @Test
++    fun rejectsUnknownFormat() {
++        assertTrue(PresetCodec.decode("{\"format\":\"other\"}", RemotePresetId.Custom1).isFailure)
++    }
++}
+diff --git a/app/src/test/java/com/geronimo/controlelgwifi/RemoteMacroRunnerTest.kt b/app/src/test/java/com/geronimo/controlelgwifi/RemoteMacroRunnerTest.kt
+new file mode 100644
+index 0000000..f13a28f
+--- /dev/null
++++ b/app/src/test/java/com/geronimo/controlelgwifi/RemoteMacroRunnerTest.kt
+@@ -0,0 +1,55 @@
++package com.geronimo.controlelgwifi
++
++import kotlinx.coroutines.test.runTest
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertFalse
++import org.junit.Assert.assertTrue
++import org.junit.Test
++
++class RemoteMacroRunnerTest {
++    @Test
++    fun executesCommandsInOrder() = runTest {
++        val actions = mutableListOf<RemoteAction>()
++        val runner = RemoteMacroRunner(object : RemoteMacroRunner.Host {
++            override fun isConnected() = true
++            override suspend fun waitForConnection() = true
++            override suspend fun send(action: RemoteAction): Boolean { actions += action; return true }
++            override suspend fun launchApp(appId: String) = true
++            override suspend fun switchInput(inputId: String) = true
++            override suspend fun insertText(text: String) = true
++            override fun onProgress(index: Int, total: Int, message: String) = Unit
++        })
++        val macro = RemoteMacro(
++            "test",
++            "Test",
++            listOf(
++                MacroStep(MacroStepType.Command, RemoteAction.Home),
++                MacroStep(MacroStepType.Delay, delayMs = 100),
++                MacroStep(MacroStepType.Command, RemoteAction.PlayPause)
++            )
++        )
++
++        val result = runner.execute(macro)
++
++        assertTrue(result.success)
++        assertEquals(listOf(RemoteAction.Home, RemoteAction.PlayPause), actions)
++    }
++
++    @Test
++    fun stopsOnFailedRequiredStep() = runTest {
++        val runner = RemoteMacroRunner(object : RemoteMacroRunner.Host {
++            override fun isConnected() = true
++            override suspend fun waitForConnection() = true
++            override suspend fun send(action: RemoteAction) = false
++            override suspend fun launchApp(appId: String) = false
++            override suspend fun switchInput(inputId: String) = false
++            override suspend fun insertText(text: String) = false
++            override fun onProgress(index: Int, total: Int, message: String) = Unit
++        })
++        val result = runner.execute(
++            RemoteMacro("test", "Test", listOf(MacroStep(MacroStepType.Command, RemoteAction.Home)))
++        )
++        assertFalse(result.success)
++        assertEquals(0, result.completedSteps)
++    }
++}
+diff --git a/app/src/test/java/com/geronimo/controlelgwifi/VoiceCommandParserTest.kt b/app/src/test/java/com/geronimo/controlelgwifi/VoiceCommandParserTest.kt
+new file mode 100644
+index 0000000..fae7a76
+--- /dev/null
++++ b/app/src/test/java/com/geronimo/controlelgwifi/VoiceCommandParserTest.kt
+@@ -0,0 +1,36 @@
++package com.geronimo.controlelgwifi
++
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertTrue
++import org.junit.Test
++
++class VoiceCommandParserTest {
++    @Test
++    fun parsesPortugueseVolumeCommand() {
++        assertEquals(
++            ParsedVoiceCommand.Action(RemoteAction.VolumeUp),
++            VoiceCommandParser.parse("Aumentar volume")
++        )
++    }
++
++    @Test
++    fun parsesMacroCommandWithoutAccents() {
++        assertEquals(
++            ParsedVoiceCommand.Macro("boa noite"),
++            VoiceCommandParser.parse("Executar boa noite")
++        )
++    }
++
++    @Test
++    fun parsesTextCommand() {
++        assertEquals(
++            ParsedVoiceCommand.Text("filme de aventura"),
++            VoiceCommandParser.parse("digitar filme de aventura")
++        )
++    }
++
++    @Test
++    fun unknownCommandIsPreserved() {
++        assertTrue(VoiceCommandParser.parse("comando inexistente") is ParsedVoiceCommand.Unknown)
++    }
++}
