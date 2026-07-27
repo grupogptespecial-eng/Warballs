@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#05070c">
+  <title>Simulador de Portais — Controle de Velocidade</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <iframe id="simulator" title="Simulador de física topológica"></iframe>
+
+  <section id="setup" class="setup-card">
+    <h1>Carregar núcleo do simulador</h1>
+    <p>Selecione o arquivo <strong>simulador-core.html</strong>. Ele será guardado neste navegador para as próximas aberturas.</p>
+    <label class="file-button">
+      Escolher núcleo HTML
+      <input id="coreFile" type="file" accept=".html,text/html">
+    </label>
+    <p id="setupStatus" class="status">Aguardando o arquivo.</p>
+  </section>
+
+  <nav id="timeControls" class="time-controls" aria-label="Controle da velocidade da simulação">
+    <button id="pauseButton" type="button">Pausar</button>
+    <label>
+      Velocidade
+      <select id="speedSelect">
+        <option value="0.25">0,25×</option>
+        <option value="0.5">0,5×</option>
+        <option value="1">1×</option>
+        <option value="2">2×</option>
+        <option value="4">4×</option>
+      </select>
+    </label>
+    <button id="cycleSpeedButton" type="button" aria-label="Alternar velocidade">1×</button>
+    <button id="changeCoreButton" type="button">Trocar núcleo</button>
+    <span id="engineStatus" class="engine-status">Sem núcleo</span>
+  </nav>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
