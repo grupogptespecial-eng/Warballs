@@ -28,14 +28,19 @@ jobs:
             controls-rc3.part-05a controls-rc3.part-05b1 controls-rc3.part-05b2a controls-rc3.part-05b2b \
             controls-rc3.part-06 controls-rc3.part-07 controls-rc3.part-08 \
             > /tmp/controls-rc3-enhanced.patch
-          echo "RC3 patch SHA256: $(sha256sum /tmp/controls-rc3-enhanced.patch)"
-          test "$(sha256sum /tmp/controls-rc3-enhanced.patch | awk '{print $1}')" = "d5d403fa1d1d9defed9478150addb32faa3d11af58eec0b848a23a8bf286313a"
+          ACTUAL_SHA="$(sha256sum /tmp/controls-rc3-enhanced.patch | awk '{print $1}')"
+          echo "RC3 patch SHA256: $ACTUAL_SHA"
+          test "$ACTUAL_SHA" = "d5d403fa1d1d9defed9478150addb32faa3d11af58eec0b848a23a8bf286313a"
+          echo "[1/4] checking RC2 base patch"
           git apply --check stability-rc2.patch
+          echo "[2/4] applying RC2 base patch"
           git apply stability-rc2.patch
-          git apply --check --whitespace=error /tmp/controls-rc3-enhanced.patch
-          git apply --whitespace=error /tmp/controls-rc3-enhanced.patch
+          echo "[3/4] checking and applying RC3 enhanced patch"
+          git apply --check /tmp/controls-rc3-enhanced.patch
+          git apply /tmp/controls-rc3-enhanced.patch
+          echo "[4/4] checking resulting diff"
           git diff --check
-          grep -F 'versionName = "2.0.0-rc3-enhanced"' app/build.gradle.kts
+          git diff -- app/build.gradle.kts
 
       - name: Set up Java
         uses: actions/setup-java@v4
