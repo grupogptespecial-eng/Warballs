@@ -1,0 +1,107 @@
+name: Build Libre Remote RC3 Controls v2
+
+on:
+  push:
+    branches:
+      - stability/libre-remote-2.0.0-rc3-controls-20260809
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply reviewed patches
+        working-directory: lg-wifi-remote-app
+        run: |
+          set -euo pipefail
+          git apply --check --whitespace=error stability-rc2.patch
+          git apply --whitespace=error stability-rc2.patch
+          git apply --check --whitespace=error controls-rc3.patch
+          git apply --whitespace=error controls-rc3.patch
+          git diff --check
+          git diff -- app/build.gradle.kts
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Generate temporary sideload signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          PASSWORD="$(openssl rand -hex 18)"
+          ALIAS="libre-remote-sideload"
+          echo "::add-mask::$PASSWORD"
+          keytool -genkeypair -v \
+            -keystore "$GITHUB_WORKSPACE/libre-remote-sideload.jks" \
+            -storepass "$PASSWORD" \
+            -keypass "$PASSWORD" \
+            -alias "$ALIAS" \
+            -keyalg RSA -keysize 4096 -validity 10000 \
+            -dname "CN=Libre Remote Sideload, OU=RC3 Controls, O=Libre Remote, L=Rio de Janeiro, ST=RJ, C=BR"
+          echo "LIBRE_KEYSTORE_PATH=$GITHUB_WORKSPACE/libre-remote-sideload.jks" >> "$GITHUB_ENV"
+          echo "LIBRE_KEYSTORE_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
+          echo "LIBRE_KEY_ALIAS=$ALIAS" >> "$GITHUB_ENV"
+          echo "LIBRE_KEY_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Unit tests, release lint and signed APK
+        working-directory: lg-wifi-remote-app
+        run: |
+          set -euo pipefail
+          gradle --no-daemon --stacktrace \
+            :app:testDebugUnitTest \
+            :app:lintRelease \
+            :app:assembleRelease 2>&1 | tee rc3-controls-build.log
+
+      - name: Verify APK and package artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output/source
+          APK="lg-wifi-remote-app/app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          cp "$APK" output/Libre-Remote-2.0.0-rc3-controls.apk
+          APKSIGNER="$(find "${ANDROID_SDK_ROOT:-$ANDROID_HOME}/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -x "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs output/Libre-Remote-2.0.0-rc3-controls.apk > output/APK-SIGNATURE.txt
+          sha256sum output/Libre-Remote-2.0.0-rc3-controls.apk > output/SHA256SUMS.txt
+          cp lg-wifi-remote-app/rc3-controls-build.log output/
+          rsync -a \
+            --exclude build \
+            --exclude .gradle \
+            --exclude local.properties \
+            --exclude stability-rc2.patch \
+            --exclude controls-rc3.patch \
+            lg-wifi-remote-app/ output/source/
+          (cd output && zip -qr Libre-Remote-2.0.0-rc3-controls-source.zip source && rm -rf source)
+          ls -lh output
+
+      - name: Upload RC3 controls build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Libre-Remote-2.0.0-rc3-controls
+          path: output/*
+          if-no-files-found: error
+          retention-days: 30
