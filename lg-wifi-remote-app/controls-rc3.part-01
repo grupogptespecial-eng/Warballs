@@ -1,0 +1,416 @@
+diff --git a/app/build.gradle.kts b/app/build.gradle.kts
+index c4137cb..dfa188a 100644
+--- a/app/build.gradle.kts
++++ b/app/build.gradle.kts
+@@ -12,8 +12,8 @@ android {
+         applicationId = "io.github.grupogptespecialeng.libreremote"
+         minSdk = 23
+         targetSdk = 35
+-        versionCode = 21
+-        versionName = "2.0.0-rc2-stabilized"
++        versionCode = 22
++        versionName = "2.0.0-rc3-enhanced"
+         vectorDrawables.useSupportLibrary = true
+     }
+ 
+diff --git a/app/src/main/java/com/geronimo/controlelgwifi/AppTheme.kt b/app/src/main/java/com/geronimo/controlelgwifi/AppTheme.kt
+index a378065..f3c4257 100644
+--- a/app/src/main/java/com/geronimo/controlelgwifi/AppTheme.kt
++++ b/app/src/main/java/com/geronimo/controlelgwifi/AppTheme.kt
+@@ -2,19 +2,36 @@ package com.geronimo.controlelgwifi
+ 
+ import android.app.Activity
+ import android.os.Build
++import androidx.compose.animation.core.RepeatMode
++import androidx.compose.animation.core.animateFloat
++import androidx.compose.animation.core.infiniteRepeatable
++import androidx.compose.animation.core.rememberInfiniteTransition
++import androidx.compose.animation.core.tween
++import androidx.compose.foundation.Canvas
++import androidx.compose.foundation.background
+ import androidx.compose.foundation.isSystemInDarkTheme
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.fillMaxSize
+ import androidx.compose.material3.ColorScheme
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Typography
+ import androidx.compose.material3.darkColorScheme
+ import androidx.compose.material3.lightColorScheme
+ import androidx.compose.runtime.Composable
++import androidx.compose.runtime.CompositionLocalProvider
+ import androidx.compose.runtime.DisposableEffect
++import androidx.compose.runtime.staticCompositionLocalOf
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.geometry.Offset
+ import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.graphics.toArgb
+ import androidx.compose.ui.platform.LocalView
+ import androidx.core.view.WindowCompat
+ 
++val LocalAnimationPreset = staticCompositionLocalOf { AnimationPreset.Soft }
++val LocalButtonEffect = staticCompositionLocalOf { ButtonEffect.Scale }
++val LocalAppLanguage = staticCompositionLocalOf { AppLanguage.System }
++
+ private data class AccentPalette(
+     val primary: Color,
+     val secondary: Color,
+@@ -27,6 +44,10 @@ private fun AccentTheme.palette(): AccentPalette = when (this) {
+     AccentTheme.Emerald -> AccentPalette(Color(0xFF59E0A1), Color(0xFF7BD8FF), Color(0xFFC0E36B))
+     AccentTheme.Sunset -> AccentPalette(Color(0xFFFF9B73), Color(0xFFFFC857), Color(0xFFE890FF))
+     AccentTheme.Monochrome -> AccentPalette(Color(0xFFE2E8F0), Color(0xFFB8C1CC), Color(0xFFF8FAFC))
++    AccentTheme.Crimson -> AccentPalette(Color(0xFFFF6B7A), Color(0xFFFFA36C), Color(0xFFC68CFF))
++    AccentTheme.Arctic -> AccentPalette(Color(0xFF8FE7FF), Color(0xFFB6F4FF), Color(0xFFA6C8FF))
++    AccentTheme.Gold -> AccentPalette(Color(0xFFFFD166), Color(0xFFFFB347), Color(0xFFFFE3A3))
++    AccentTheme.Cyber -> AccentPalette(Color(0xFF45F3FF), Color(0xFF8BFF6A), Color(0xFFFF5EF1))
+ }
+ 
+ private fun darkScheme(accent: AccentTheme, amoled: Boolean): ColorScheme {
+@@ -52,12 +73,12 @@ private fun darkScheme(accent: AccentTheme, amoled: Boolean): ColorScheme {
+ private fun lightScheme(accent: AccentTheme): ColorScheme {
+     val p = accent.palette()
+     return lightColorScheme(
+-        primary = p.primary.copy(red = p.primary.red * 0.72f, green = p.primary.green * 0.72f, blue = p.primary.blue * 0.72f),
++        primary = p.primary.dim(0.72f),
+         onPrimary = Color.White,
+         primaryContainer = p.primary.copy(alpha = 0.18f).compositeOver(Color.White),
+         onPrimaryContainer = Color(0xFF08131A),
+-        secondary = p.secondary.copy(red = p.secondary.red * 0.66f, green = p.secondary.green * 0.66f, blue = p.secondary.blue * 0.66f),
+-        tertiary = p.tertiary.copy(red = p.tertiary.red * 0.70f, green = p.tertiary.green * 0.70f, blue = p.tertiary.blue * 0.70f),
++        secondary = p.secondary.dim(0.66f),
++        tertiary = p.tertiary.dim(0.70f),
+         background = Color(0xFFF5F7FA),
+         onBackground = Color(0xFF14191F),
+         surface = Color.White,
+@@ -69,12 +90,14 @@ private fun lightScheme(accent: AccentTheme): ColorScheme {
+     )
+ }
+ 
++private fun Color.dim(factor: Float) = Color(red * factor, green * factor, blue * factor, alpha)
++
+ private fun Color.compositeOver(background: Color): Color {
+-    val alpha = alpha
++    val a = alpha
+     return Color(
+-        red = red * alpha + background.red * (1f - alpha),
+-        green = green * alpha + background.green * (1f - alpha),
+-        blue = blue * alpha + background.blue * (1f - alpha),
++        red = red * a + background.red * (1f - a),
++        green = green * a + background.green * (1f - a),
++        blue = blue * a + background.blue * (1f - a),
+         alpha = 1f
+     )
+ }
+@@ -83,6 +106,9 @@ private fun Color.compositeOver(background: Color): Color {
+ fun LibreRemoteTheme(
+     mode: ThemeMode,
+     accent: AccentTheme,
++    animationPreset: AnimationPreset = AnimationPreset.Soft,
++    buttonEffect: ButtonEffect = ButtonEffect.Scale,
++    appLanguage: AppLanguage = AppLanguage.System,
+     content: @Composable () -> Unit
+ ) {
+     val systemDark = isSystemInDarkTheme()
+@@ -105,9 +131,82 @@ fun LibreRemoteTheme(
+             onDispose { }
+         }
+     }
+-    MaterialTheme(
+-        colorScheme = colors,
+-        typography = Typography(),
+-        content = content
+-    )
++    CompositionLocalProvider(
++        LocalAnimationPreset provides animationPreset,
++        LocalButtonEffect provides buttonEffect,
++        LocalAppLanguage provides appLanguage
++    ) {
++        MaterialTheme(
++            colorScheme = colors,
++            typography = Typography(),
++            content = content
++        )
++    }
++}
++
++@Composable
++fun AnimatedBackdrop(
++    modifier: Modifier = Modifier,
++    content: @Composable () -> Unit
++) {
++    val preset = LocalAnimationPreset.current
++    val background = MaterialTheme.colorScheme.background
++    if (preset == AnimationPreset.Off) {
++        Box(modifier.fillMaxSize().background(background)) { content() }
++        return
++    }
++
++    val duration = when (preset) {
++        AnimationPreset.Soft -> 20_000
++        AnimationPreset.Aurora -> 13_000
++        AnimationPreset.Pulse -> 7_000
++        AnimationPreset.Dynamic -> 9_000
++        AnimationPreset.Off -> 20_000
++    }
++    val transition = rememberInfiniteTransition(label = "background-motion")
++    val phase = transition.animateFloat(
++        initialValue = 0f,
++        targetValue = 1f,
++        animationSpec = infiniteRepeatable(
++            animation = tween(duration),
++            repeatMode = RepeatMode.Restart
++        ),
++        label = "background-phase"
++    ).value
++    val pulse = transition.animateFloat(
++        initialValue = 0.82f,
++        targetValue = 1.08f,
++        animationSpec = infiniteRepeatable(
++            animation = tween((duration * 0.55f).toInt()),
++            repeatMode = RepeatMode.Reverse
++        ),
++        label = "background-pulse"
++    ).value
++
++    val primary = MaterialTheme.colorScheme.primary
++    val tertiary = MaterialTheme.colorScheme.tertiary
++    Box(modifier.fillMaxSize().background(background)) {
++        Canvas(Modifier.fillMaxSize()) {
++            val dynamic = preset == AnimationPreset.Dynamic
++            val aurora = preset == AnimationPreset.Aurora
++            val amplitude = if (dynamic) 0.26f else 0.15f
++            val radiusBase = size.minDimension * if (aurora) 0.62f else 0.48f
++            fun wave(offset: Float): Float = kotlin.math.sin((phase * 6.283f + offset).toDouble()).toFloat()
++            val x1 = size.width * (0.25f + amplitude * wave(0f))
++            val y1 = size.height * (0.18f + 0.10f * wave(1.5f))
++            val x2 = size.width * (0.76f - amplitude * wave(0.8f))
++            val y2 = size.height * (0.72f + 0.12f * wave(2.2f))
++            drawCircle(
++                color = primary.copy(alpha = if (preset == AnimationPreset.Pulse) 0.13f * pulse else 0.10f),
++                radius = radiusBase * pulse,
++                center = Offset(x1, y1)
++            )
++            drawCircle(
++                color = tertiary.copy(alpha = if (aurora) 0.12f else 0.08f),
++                radius = radiusBase * 0.82f,
++                center = Offset(x2, y2)
++            )
++        }
++        content()
++    }
+ }
+diff --git a/app/src/main/java/com/geronimo/controlelgwifi/FastLgWebOsClient.kt b/app/src/main/java/com/geronimo/controlelgwifi/FastLgWebOsClient.kt
+index 69b9059..f80eebc 100644
+--- a/app/src/main/java/com/geronimo/controlelgwifi/FastLgWebOsClient.kt
++++ b/app/src/main/java/com/geronimo/controlelgwifi/FastLgWebOsClient.kt
+@@ -67,19 +67,22 @@ class FastLgWebOsClient(
+     @Volatile private var pointerSocket: WebSocket? = null
+     @Volatile private var registered = false
+     @Volatile private var pointerReady = false
++    @Volatile private var pendingMotion: String? = null
+     @Volatile private var manuallyClosed = true
+     @Volatile private var reconnectAttempt = 0
+     @Volatile private var connectionGeneration = 0
+     private val endpointChosen = AtomicBoolean(false)
+     private val endpointFailures = AtomicInteger(0)
+     private var reconnectJob: Job? = null
++    private var pointerRecoveryJob: Job? = null
++    private var pointerOpenWatchdog: Job? = null
+     private var pointerOpening = AtomicBoolean(false)
+     private var cachedCapabilities = TvCapability.lgDefaults.toMutableSet()
+ 
+     init {
+         scope.launch {
+             for (motion in motionChannel) {
+-                sendPointerNow("type:move\ndx:${motion.dx}\ndy:${motion.dy}\ndown:0\n\n")
++                sendPointerMotion(LgPointerProtocol.move(motion.dx, motion.dy))
+                 delay(12)
+             }
+         }
+@@ -301,8 +304,8 @@ class FastLgWebOsClient(
+         if (dx != 0 || dy != 0) motionChannel.trySend(Motion(dx.coerceIn(-240, 240), dy.coerceIn(-240, 240)))
+     }
+ 
+-    fun click() = sendPointer("type:click\n\n", critical = true)
+-    fun scroll(delta: Int) = sendPointer("type:scroll\ndx:0\ndy:${delta.coerceIn(-80, 80)}\n\n")
++    fun click() = sendPointer(LgPointerProtocol.click(), critical = true)
++    fun scroll(delta: Int) = sendPointer(LgPointerProtocol.scroll(delta))
+     fun launchApp(appId: String) = request("ssap://system.launcher/launch", JSONObject().put("id", appId))
+     fun switchInput(inputId: String) = request("ssap://tv/switchInput", JSONObject().put("inputId", inputId))
+ 
+@@ -386,65 +389,124 @@ class FastLgWebOsClient(
+         })
+     }
+ 
+-    private fun button(name: String) = sendPointer("type:button\nname:$name\n\n", critical = true)
++    private fun button(name: String) = sendPointer(LgPointerProtocol.button(name), critical = true)
+ 
+     private fun sendPointer(message: String, critical: Boolean = false) {
+-        if (pointerReady && pointerSocket?.send(message) == true) return
++        val socket = pointerSocket
++        if (pointerReady && socket?.send(message) == true) return
++
++        if (pointerReady || socket != null) {
++            pointerReady = false
++            if (socket === pointerSocket) pointerSocket = null
++            pointerOpening.set(false)
++            socket?.cancel()
++        }
+         synchronized(pointerLock) {
+             if (critical) {
+                 while (pointerQueue.size >= 24 && pointerQueue.isNotEmpty()) pointerQueue.removeFirst()
+                 pointerQueue.addLast(message)
+-            } else {
+-                if (pointerQueue.size < 24) pointerQueue.addLast(message)
++            } else if (pointerQueue.size < 24) {
++                pointerQueue.addLast(message)
+             }
+         }
+         ensurePointerSocket()
+     }
+ 
+-    private fun sendPointerNow(message: String) {
+-        if (pointerReady) pointerSocket?.send(message)
++    private fun sendPointerMotion(message: String) {
++        val socket = pointerSocket
++        if (pointerReady && socket?.send(message) == true) return
++
++        // Motion is high-frequency: keep only the latest unsent delta instead of
++        // replaying a long stale cursor trail when the pointer socket reconnects.
++        pendingMotion = message
++        if (pointerReady || socket != null) {
++            pointerReady = false
++            if (socket === pointerSocket) pointerSocket = null
++            pointerOpening.set(false)
++            socket?.cancel()
++        }
++        ensurePointerSocket()
+     }
+ 
+     private fun ensurePointerSocket() {
+-        if (!registered || pointerReady || !pointerOpening.compareAndSet(false, true)) return
++        if (!registered || manuallyClosed || pointerReady || !pointerOpening.compareAndSet(false, true)) return
++        val openingGeneration = connectionGeneration
++
++        pointerOpenWatchdog?.cancel()
++        pointerOpenWatchdog = scope.launch {
++            delay(4_500)
++            if (
++                openingGeneration == connectionGeneration &&
++                registered && !pointerReady &&
++                pointerOpening.compareAndSet(true, false)
++            ) {
++                schedulePointerRecovery()
++            }
++        }
++
+         request("ssap://com.webos.service.networkinput/getPointerInputSocket", timeoutMs = 4_000, callback = { payload ->
++            pointerOpenWatchdog?.cancel()
++            if (openingGeneration != connectionGeneration || !registered) {
++                pointerOpening.set(false)
++                return@request
++            }
+             val path = payload.optString("socketPath")
+             if (path.isBlank()) {
+                 pointerOpening.set(false)
+-                cachedCapabilities -= TvCapability.Pointer
+-                listener.onCapabilities(cachedCapabilities)
++                schedulePointerRecovery()
+                 return@request
+             }
+             val client = if (path.startsWith("wss://")) tlsClient else plainClient
+             client.newWebSocket(Request.Builder().url(path).build(), object : WebSocketListener() {
+                 override fun onOpen(webSocket: WebSocket, response: Response) {
++                    if (openingGeneration != connectionGeneration || !registered || manuallyClosed) {
++                        webSocket.close(1000, "Stale pointer socket")
++                        return
++                    }
+                     pointerSocket = webSocket
+                     pointerReady = true
+                     pointerOpening.set(false)
++                    pointerOpenWatchdog?.cancel()
++                    pointerRecoveryJob?.cancel()
+                     cachedCapabilities += TvCapability.Pointer
+                     listener.onCapabilities(cachedCapabilities)
++
+                     val queued = mutableListOf<String>()
+                     synchronized(pointerLock) {
+                         while (pointerQueue.isNotEmpty()) queued += pointerQueue.removeFirst()
+                     }
+                     queued.forEach(webSocket::send)
++                    pendingMotion?.also { motion ->
++                        pendingMotion = null
++                        webSocket.send(motion)
++                    }
+                 }
+ 
+                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
++                    if (webSocket === pointerSocket) pointerSocket = null
+                     pointerReady = false
+-                    pointerSocket = null
+                     pointerOpening.set(false)
++                    schedulePointerRecovery()
+                 }
+ 
+                 override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
++                    if (webSocket === pointerSocket) pointerSocket = null
+                     pointerReady = false
+-                    pointerSocket = null
+                     pointerOpening.set(false)
++                    schedulePointerRecovery()
+                 }
+             })
+         })
+     }
+ 
++    private fun schedulePointerRecovery() {
++        if (!registered || manuallyClosed || pointerRecoveryJob?.isActive == true) return
++        pointerRecoveryJob = scope.launch {
++            delay(220)
++            ensurePointerSocket()
++        }
++    }
++
+     private fun request(
+         uri: String,
+         payload: JSONObject = JSONObject(),
+@@ -506,6 +568,9 @@ class FastLgWebOsClient(
+         registered = false
+         pointerReady = false
+         pointerOpening.set(false)
++        pointerRecoveryJob?.cancel()
++        pointerOpenWatchdog?.cancel()
++        pendingMotion = null
+         callbacks.values.forEach { it.timeout.cancel() }
+         callbacks.clear()
+         synchronized(pointerLock) { pointerQueue.clear() }
+diff --git a/app/src/main/java/com/geronimo/controlelgwifi/LgPointerProtocol.kt b/app/src/main/java/com/geronimo/controlelgwifi/LgPointerProtocol.kt
+new file mode 100644
+index 0000000..ab52c7b
+--- /dev/null
++++ b/app/src/main/java/com/geronimo/controlelgwifi/LgPointerProtocol.kt
+@@ -0,0 +1,14 @@
++package com.geronimo.controlelgwifi
++
++internal object LgPointerProtocol {
++    fun button(name: String): String =
++        "type:button\nname:${name.uppercase()}\n\n"
++
++    fun move(dx: Int, dy: Int): String =
++        "type:move\ndx:${dx.coerceIn(-240, 240)}\ndy:${dy.coerceIn(-240, 240)}\ndown:0\n\n"
++
++    fun click(): String = "type:click\n\n"
++
++    fun scroll(delta: Int): String =
++        "type:scroll\ndx:0\ndy:${delta.coerceIn(-80, 80)}\n\n"
++}
+diff --git a/app/src/main/java/com/geronimo/controlelgwifi/Localization.kt b/app/src/main/java/com/geronimo/controlelgwifi/Localization.kt
+new file mode 100644
+index 0000000..daddf50
+--- /dev/null
++++ b/app/src/main/java/com/geronimo/controlelgwifi/Localization.kt
+@@ -0,0 +1,60 @@
++package com.geronimo.controlelgwifi
++
++import java.util.Locale
++
++fun AppLangua

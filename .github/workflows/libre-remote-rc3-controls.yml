@@ -1,4 +1,4 @@
-name: Build Libre Remote RC3 Controls
+name: Build Libre Remote RC3 Enhanced
 
 on:
   push:
@@ -17,16 +17,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Apply stabilization and RC3 controls patches
+      - name: Apply stabilized base and reviewed RC3 enhancements
         working-directory: lg-wifi-remote-app
         run: |
           set -euo pipefail
+          cat \
+            controls-rc3.part-01 \
+            controls-rc3.part-02a controls-rc3.part-02b \
+            controls-rc3.part-03 controls-rc3.part-04 \
+            controls-rc3.part-05a controls-rc3.part-05b1 controls-rc3.part-05b2a controls-rc3.part-05b2b \
+            controls-rc3.part-06 controls-rc3.part-07 controls-rc3.part-08 \
+            > /tmp/controls-rc3-enhanced.patch
+          echo "RC3 patch SHA256: $(sha256sum /tmp/controls-rc3-enhanced.patch)"
+          test "$(sha256sum /tmp/controls-rc3-enhanced.patch | awk '{print $1}')" = "d5d403fa1d1d9defed9478150addb32faa3d11af58eec0b848a23a8bf286313a"
           git apply --check --whitespace=error stability-rc2.patch
           git apply --whitespace=error stability-rc2.patch
-          git apply --check --whitespace=error controls-rc3.patch
-          git apply --whitespace=error controls-rc3.patch
+          git apply --check --whitespace=error /tmp/controls-rc3-enhanced.patch
+          git apply --whitespace=error /tmp/controls-rc3-enhanced.patch
           git diff --check
-          git diff -- app/build.gradle.kts
+          grep -F 'versionName = "2.0.0-rc3-enhanced"' app/build.gradle.kts
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -60,7 +69,7 @@ jobs:
             -keypass "$PASSWORD" \
             -alias "$ALIAS" \
             -keyalg RSA -keysize 4096 -validity 10000 \
-            -dname "CN=Libre Remote Sideload, OU=RC3 Controls, O=Libre Remote, L=Rio de Janeiro, ST=RJ, C=BR"
+            -dname "CN=Libre Remote Sideload, OU=RC3 Enhanced, O=Libre Remote, L=Rio de Janeiro, ST=RJ, C=BR"
           echo "LIBRE_KEYSTORE_PATH=$GITHUB_WORKSPACE/libre-remote-sideload.jks" >> "$GITHUB_ENV"
           echo "LIBRE_KEYSTORE_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
           echo "LIBRE_KEY_ALIAS=$ALIAS" >> "$GITHUB_ENV"
@@ -73,7 +82,7 @@ jobs:
           gradle --no-daemon --stacktrace \
             :app:testDebugUnitTest \
             :app:lintRelease \
-            :app:assembleRelease 2>&1 | tee rc3-controls-build.log
+            :app:assembleRelease 2>&1 | tee rc3-enhanced-build.log
 
       - name: Verify APK and package artifacts
         shell: bash
@@ -82,26 +91,27 @@ jobs:
           mkdir -p output/source
           APK="lg-wifi-remote-app/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
-          cp "$APK" output/Libre-Remote-2.0.0-rc3-controls.apk
+          cp "$APK" output/Libre-Remote-2.0.0-rc3-enhanced.apk
           APKSIGNER="$(find "${ANDROID_SDK_ROOT:-$ANDROID_HOME}/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -x "$APKSIGNER"
-          "$APKSIGNER" verify --verbose --print-certs output/Libre-Remote-2.0.0-rc3-controls.apk > output/APK-SIGNATURE.txt
-          sha256sum output/Libre-Remote-2.0.0-rc3-controls.apk > output/SHA256SUMS.txt
-          cp lg-wifi-remote-app/rc3-controls-build.log output/
+          "$APKSIGNER" verify --verbose --print-certs output/Libre-Remote-2.0.0-rc3-enhanced.apk > output/APK-SIGNATURE.txt
+          sha256sum output/Libre-Remote-2.0.0-rc3-enhanced.apk > output/SHA256SUMS.txt
+          cp lg-wifi-remote-app/rc3-enhanced-build.log output/
           rsync -a \
             --exclude build \
             --exclude .gradle \
             --exclude local.properties \
             --exclude stability-rc2.patch \
+            --exclude 'controls-rc3.part-*' \
             --exclude controls-rc3.patch \
             lg-wifi-remote-app/ output/source/
-          (cd output && zip -qr Libre-Remote-2.0.0-rc3-controls-source.zip source && rm -rf source)
+          (cd output && zip -qr Libre-Remote-2.0.0-rc3-enhanced-source.zip source && rm -rf source)
           ls -lh output
 
-      - name: Upload RC3 controls build
+      - name: Upload RC3 enhanced build
         uses: actions/upload-artifact@v4
         with:
-          name: Libre-Remote-2.0.0-rc3-controls
+          name: Libre-Remote-2.0.0-rc3-enhanced
           path: output/*
           if-no-files-found: error
           retention-days: 30

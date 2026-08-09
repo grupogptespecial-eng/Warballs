@@ -1,0 +1,263 @@
+       SheetHeading(Icons.Rounded.Apps, language.t("Aplicativos", "Apps", "Aplicaciones"), language.t("Abra os aplicativos instalados na TV.", "Open apps installed on the TV.", "Abre las aplicaciones instaladas en el TV."))
+             OutlinedTextField(
+                 value = search,
+                 onValueChange = { search = it },
+-                label = { Text("Pesquisar") },
++                label = { Text(language.t("Pesquisar", "Search", "Buscar")) },
+                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+                 singleLine = true,
+                 modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)
+             )
+             if (filtered.isEmpty()) {
+                 EmptySheetMessage(
+-                    title = if (state.apps.isEmpty()) "Carregando aplicativos" else "Nenhum resultado",
+-                    body = if (state.apps.isEmpty()) "A lista aparecerá quando a TV responder." else "Tente outro nome."
++                    title = if (state.apps.isEmpty()) language.t("Carregando aplicativos", "Loading apps", "Cargando aplicaciones") else language.t("Nenhum resultado", "No results", "Sin resultados"),
++                    body = if (state.apps.isEmpty()) language.t("A lista aparecerá quando a TV responder.", "The list will appear when the TV responds.", "La lista aparecerá cuando el TV responda.") else language.t("Tente outro nome.", "Try another name.", "Prueba otro nombre.")
+                 )
+             } else {
+                 LazyVerticalGrid(
+@@ -283,15 +286,16 @@ fun AppsSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+ 
+ @Composable
+ fun InputsSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
++    val language = state.appLanguage
+     ModalBottomSheet(onDismissRequest = viewModel::closeInputs) {
+         LazyColumn(
+             modifier = Modifier.fillMaxWidth().fillMaxHeight(0.72f),
+             contentPadding = androidx.compose.foundation.layout.PaddingValues(18.dp),
+             verticalArrangement = Arrangement.spacedBy(10.dp)
+         ) {
+-            item { SheetHeading(Icons.Rounded.SettingsRemote, "Entradas", "Troque para HDMI, antena ou outra fonte disponível.") }
++            item { SheetHeading(Icons.Rounded.SettingsRemote, language.t("Entradas", "Inputs", "Entradas"), language.t("Troque para HDMI, antena ou outra fonte disponível.", "Switch to HDMI, antenna or another available source.", "Cambia a HDMI, antena u otra fuente disponible.")) }
+             if (state.inputs.isEmpty()) {
+-                item { EmptySheetMessage("Nenhuma entrada recebida", "Atualize os dados ou confira se a TV permite listar entradas.") }
++                item { EmptySheetMessage(language.t("Nenhuma entrada recebida", "No inputs received", "No se recibieron entradas"), language.t("Atualize os dados ou confira se a TV permite listar entradas.", "Refresh data or check whether the TV allows input listing.", "Actualiza los datos o comprueba si el TV permite listar entradas.")) }
+             } else {
+                 items(state.inputs, key = TvInput::id) { input ->
+                     Card(
+@@ -309,7 +313,7 @@ fun InputsSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+                                 Text(input.label, fontWeight = FontWeight.SemiBold)
+                                 Text(input.id.replace('_', ' '), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                             }
+-                            Text(if (input.connected) "Disponível" else "Desconectada", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
++                            Text(if (input.connected) language.t("Disponível", "Available", "Disponible") else language.t("Desconectada", "Disconnected", "Desconectada"), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                         }
+                     }
+                 }
+@@ -320,6 +324,7 @@ fun InputsSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+ 
+ @Composable
+ fun MoreControlsSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
++    val language = state.appLanguage
+     var text by remember { mutableStateOf("") }
+     ModalBottomSheet(onDismissRequest = viewModel::closeMore) {
+         LazyColumn(
+@@ -327,26 +332,26 @@ fun MoreControlsSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+             contentPadding = androidx.compose.foundation.layout.PaddingValues(18.dp),
+             verticalArrangement = Arrangement.spacedBy(16.dp)
+         ) {
+-            item { SheetHeading(Icons.Rounded.MoreHoriz, "Mais controles", "Funções avançadas sem poluir o controle principal.") }
++            item { SheetHeading(Icons.Rounded.MoreHoriz, language.t("Mais controles", "More controls", "Más controles"), language.t("Funções avançadas sem poluir o controle principal.", "Advanced functions without cluttering the main remote.", "Funciones avanzadas sin saturar el control principal.")) }
+             item {
+-                SectionTitle("Digitar na TV")
++                SectionTitle(language.t("Digitar na TV", "Type on TV", "Escribir en el TV"))
+                 Row(verticalAlignment = Alignment.CenterVertically) {
+                     OutlinedTextField(
+                         value = text,
+                         onValueChange = { text = it },
+-                        label = { Text("Texto") },
++                        label = { Text(language.t("Texto", "Text", "Texto")) },
+                         leadingIcon = { Icon(Icons.Rounded.Keyboard, contentDescription = null) },
+                         singleLine = true,
+                         modifier = Modifier.weight(1f)
+                     )
+                     Spacer(Modifier.width(9.dp))
+                     Button(onClick = { viewModel.sendText(text); text = "" }, enabled = text.isNotBlank()) {
+-                        Text("Enviar")
++                        Text(language.t("Enviar", "Send", "Enviar"))
+                     }
+                 }
+             }
+             item {
+-                SectionTitle("Números")
++                SectionTitle(language.t("Números", "Numbers", "Números"))
+                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                     listOf(listOf(1, 2, 3), listOf(4, 5, 6), listOf(7, 8, 9), listOf(-1, 0, -2)).forEach { row ->
+                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+@@ -369,15 +374,15 @@ fun MoreControlsSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+                 }
+             }
+             item {
+-                SectionTitle("Botões coloridos")
++                SectionTitle(language.t("Botões coloridos", "Color buttons", "Botones de colores"))
+                 ColorButtons(state, viewModel)
+             }
+             item {
+-                SectionTitle("Menu e informações")
++                SectionTitle(language.t("Menu e informações", "Menu and information", "Menú e información"))
+                 InfoMenuRow(state, viewModel)
+             }
+             item {
+-                SectionTitle("Reprodução")
++                SectionTitle(language.t("Reprodução", "Playback", "Reproducción"))
+                 MediaControls(state, viewModel)
+             }
+         }
+@@ -386,6 +391,7 @@ fun MoreControlsSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+ 
+ @Composable
+ fun PresetEditorSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
++    val language = state.appLanguage
+     var renameText by remember(state.selectedPreset.name) { mutableStateOf(state.selectedPreset.name) }
+     ModalBottomSheet(onDismissRequest = viewModel::closePresetEditor) {
+         LazyColumn(
+@@ -393,14 +399,14 @@ fun PresetEditorSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+             contentPadding = androidx.compose.foundation.layout.PaddingValues(18.dp),
+             verticalArrangement = Arrangement.spacedBy(14.dp)
+         ) {
+-            item { SheetHeading(Icons.Rounded.Edit, "Layouts do controle", "Escolha um preset ou monte até três controles personalizados.") }
++            item { SheetHeading(Icons.Rounded.Edit, language.t("Layouts do controle", "Remote layouts", "Diseños del control"), language.t("Escolha um preset ou monte até três controles personalizados.", "Choose a preset or build up to three custom remotes.", "Elige un preset o crea hasta tres controles personalizados.")) }
+             item {
+                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                     RemotePresetId.entries.forEach { id ->
+                         FilterChip(
+                             selected = state.selectedPresetId == id,
+                             onClick = { viewModel.selectPreset(id) },
+-                            label = { Text(state.presets[id]?.name ?: id.title) },
++                            label = { Text((state.presets[id] ?: RemotePreset.defaultFor(id)).localizedName(state.appLanguage)) },
+                             leadingIcon = if (state.selectedPresetId == id) {
+                                 { Icon(Icons.Rounded.Check, contentDescription = null, Modifier.size(18.dp)) }
+                             } else null
+@@ -415,9 +421,9 @@ fun PresetEditorSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+                         shape = RoundedCornerShape(20.dp)
+                     ) {
+                         Column(Modifier.padding(16.dp)) {
+-                            Text("Preset protegido", fontWeight = FontWeight.SemiBold)
++                            Text(language.t("Preset protegido", "Protected preset", "Preset protegido"), fontWeight = FontWeight.SemiBold)
+                             Text(
+-                                "Os presets básicos sempre podem ser restaurados. Copie este layout para personalizá-lo.",
++                                language.t("Os presets básicos sempre podem ser restaurados. Copie este layout para personalizá-lo.", "Built-in presets can always be restored. Copy this layout to customize it.", "Los presets básicos siempre se pueden restaurar. Copia este diseño para personalizarlo."),
+                                 fontSize = 13.sp,
+                                 color = MaterialTheme.colorScheme.onSurfaceVariant
+                             )
+@@ -439,33 +445,34 @@ fun PresetEditorSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+                     OutlinedTextField(
+                         value = renameText,
+                         onValueChange = { renameText = it },
+-                        label = { Text("Nome do layout") },
++                        label = { Text(language.t("Nome do layout", "Layout name", "Nombre del diseño")) },
+                         trailingIcon = {
+                             IconButton(onClick = { viewModel.renamePreset(renameText) }) {
+-                                Icon(Icons.Rounded.Save, contentDescription = "Salvar nome")
++                                Icon(Icons.Rounded.Save, contentDescription = language.t("Salvar nome", "Save name", "Guardar nombre"))
+                             }
+                         },
+                         singleLine = true,
+                         modifier = Modifier.fillMaxWidth()
+                     )
+                 }
+-                item { SectionTitle("Ordem e conteúdo") }
++                item { SectionTitle(language.t("Ordem e conteúdo", "Order and content", "Orden y contenido")) }
+                 items(state.selectedPreset.modules, key = RemoteModule::name) { module ->
+                     ModuleEditorRow(
+                         module = module,
+                         supported = module.requiredCapability == null || module.requiredCapability in state.capabilities,
+                         onRemove = { viewModel.toggleModule(module) },
+                         onUp = { viewModel.moveModule(module, -1) },
+-                        onDown = { viewModel.moveModule(module, 1) }
++                        onDown = { viewModel.moveModule(module, 1) },
++                        language = language
+                     )
+                 }
+                 item {
+-                    SectionTitle("Adicionar controles")
++                    SectionTitle(language.t("Adicionar controles", "Add controls", "Añadir controles"))
+                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                         RemoteModule.entries.filterNot { it in state.selectedPreset.modules }.forEach { module ->
+                             AssistChip(
+                                 onClick = { viewModel.toggleModule(module) },
+-                                label = { Text(module.title) },
++                                label = { Text(module.localizedTitle(state.appLanguage)) },
+                                 leadingIcon = { Icon(Icons.Rounded.Add, contentDescription = null, Modifier.size(18.dp)) }
+                             )
+                         }
+@@ -475,7 +482,7 @@ fun PresetEditorSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+                     OutlinedButton(onClick = { viewModel.resetPreset() }, modifier = Modifier.fillMaxWidth()) {
+                         Icon(Icons.Rounded.RestartAlt, contentDescription = null)
+                         Spacer(Modifier.width(8.dp))
+-                        Text("Restaurar layout")
++                        Text(language.t("Restaurar layout", "Restore layout", "Restaurar diseño"))
+                     }
+                 }
+             }
+@@ -489,19 +496,20 @@ private fun ModuleEditorRow(
+     supported: Boolean,
+     onRemove: () -> Unit,
+     onUp: () -> Unit,
+-    onDown: () -> Unit
++    onDown: () -> Unit,
++    language: AppLanguage
+ ) {
+     Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+         Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+             Icon(Icons.Rounded.SettingsRemote, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+             Spacer(Modifier.width(10.dp))
+             Column(Modifier.weight(1f)) {
+-                Text(module.title, fontWeight = FontWeight.SemiBold)
+-                if (!supported) Text("Pode não funcionar nesta TV", fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
++                Text(module.localizedTitle(language), fontWeight = FontWeight.SemiBold)
++                if (!supported) Text(language.t("Pode não funcionar nesta TV", "May not work on this TV", "Puede no funcionar en este TV"), fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
+             }
+-            IconButton(onClick = onUp) { Icon(Icons.Rounded.ArrowUpward, contentDescription = "Mover para cima") }
+-            IconButton(onClick = onDown) { Icon(Icons.Rounded.ArrowDownward, contentDescription = "Mover para baixo") }
+-            IconButton(onClick = onRemove) { Icon(Icons.Rounded.Close, contentDescription = "Remover") }
++            IconButton(onClick = onUp) { Icon(Icons.Rounded.ArrowUpward, contentDescription = language.t("Mover para cima", "Move up", "Mover arriba")) }
++            IconButton(onClick = onDown) { Icon(Icons.Rounded.ArrowDownward, contentDescription = language.t("Mover para baixo", "Move down", "Mover abajo")) }
++            IconButton(onClick = onRemove) { Icon(Icons.Rounded.Close, contentDescription = language.t("Remover", "Remove", "Eliminar")) }
+         }
+     }
+ }
+@@ -509,6 +517,7 @@ private fun ModuleEditorRow(
+ @Composable
+ fun SettingsSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+     var editDevice by remember { mutableStateOf(false) }
++    val language = state.appLanguage
+     ModalBottomSheet(onDismissRequest = viewModel::closeSettings) {
+         LazyColumn(
+             modifier = Modifier.fillMaxWidth().fillMaxHeight(0.94f),
+@@ -516,86 +525,153 @@ fun SettingsSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+         ) {
+             item {
+                 Column(Modifier.padding(horizontal = 20.dp)) {
+-                    SheetHeading(Icons.Rounded.SettingsRemote, "Configurações", "Personalize o controle sem perder a simplicidade.")
++                    SheetHeading(
++                        Icons.Rounded.SettingsRemote,
++                        language.t("Configurações", "Settings", "Ajustes"),
++                        language.t(
++                            "Personalize o controle sem perder a simplicidade.",
++                            "Customize the remote without losing simplicity.",
++                            "Personaliza el control sin perder la simplicidad."
++                        )
++                    )
+                 }
+             }
+-            item { SettingsSectionLabel("DISPOSITIVOS") }
++            item { SettingsSectionLabel(language.t("DISPOSITIVOS", "DEVICES", "DISPOSITIVOS")) }
+             item {
+                 SettingsAction(
+                     Icons.Rounded.Devices,
+-                    "TVs conectadas",
+-                    state.currentDevice?.displayName ?: "Nenhuma TV selecionada",
++                    language.t("TVs conectadas", "Saved TVs", "TVs guardadas"),
++                    state.currentDevice?.displayName ?: language.t("Nenhuma TV selecionada", "No TV selected", "Ningún TV seleccionado"),
+                     onClick = viewModel::openConnect
+                 )
+             }
+             if (state.currentDevice != null) {
+                 item {
+-                    SettingsAction(Icons.Rounded.Edit, "Nome, cômodo e MAC", "Edite os dados desta TV") { editDevice = true }
++                    SettingsAction(
++                        Icons.Rounded.Edit,
++                        language.t("Nome, cômodo e MAC", "Name, room and MAC", "Nombre, habitación y MAC"),
++                        language.t("Edite os dados desta T

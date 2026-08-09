@@ -1,0 +1,198 @@
+ge.resolved(): AppLanguage = when (this) {
++    AppLanguage.System -> when (Locale.getDefault().language.lowercase(Locale.ROOT)) {
++        "en" -> AppLanguage.English
++        "es" -> AppLanguage.Spanish
++        else -> AppLanguage.Portuguese
++    }
++    else -> this
++}
++
++fun AppLanguage.t(pt: String, en: String, es: String): String = when (resolved()) {
++    AppLanguage.English -> en
++    AppLanguage.Spanish -> es
++    else -> pt
++}
++
++fun AppLanguage.voiceTag(): String = when (resolved()) {
++    AppLanguage.English -> "en-US"
++    AppLanguage.Spanish -> "es-ES"
++    else -> "pt-BR"
++}
++
++fun AppLanguage.label(): String = when (this) {
++    AppLanguage.System -> t("Sistema", "System", "Sistema")
++    AppLanguage.Portuguese -> "Português"
++    AppLanguage.English -> "English"
++    AppLanguage.Spanish -> "Español"
++}
++
++fun RemotePresetId.localizedTitle(language: AppLanguage): String = when (this) {
++    RemotePresetId.Simple -> language.t("Simples", "Simple", "Simple")
++    RemotePresetId.Normal -> language.t("Normal", "Normal", "Normal")
++    RemotePresetId.Advanced -> language.t("Avançado", "Advanced", "Avanzado")
++    RemotePresetId.AdvancedLegacy -> language.t("Avançado AL", "Advanced AL", "Avanzado AL")
++    RemotePresetId.Custom1 -> language.t("Personalizado 1", "Custom 1", "Personalizado 1")
++    RemotePresetId.Custom2 -> language.t("Personalizado 2", "Custom 2", "Personalizado 2")
++    RemotePresetId.Custom3 -> language.t("Personalizado 3", "Custom 3", "Personalizado 3")
++}
++
++fun RemotePreset.localizedName(language: AppLanguage): String =
++    if (id.isCustom && name != id.title) name else id.localizedTitle(language)
++
++fun RemoteModule.localizedTitle(language: AppLanguage): String = when (this) {
++    RemoteModule.Power -> language.t("Energia", "Power", "Energía")
++    RemoteModule.DPad -> language.t("Navegação", "Navigation", "Navegación")
++    RemoteModule.Volume -> language.t("Volume", "Volume", "Volumen")
++    RemoteModule.Channels -> language.t("Canais", "Channels", "Canales")
++    RemoteModule.CoreActions -> language.t("Voltar, Home e Mudo", "Back, Home and Mute", "Volver, Home y Silencio")
++    RemoteModule.Media -> language.t("Reprodução", "Playback", "Reproducción")
++    RemoteModule.Apps -> language.t("Aplicativos", "Apps", "Aplicaciones")
++    RemoteModule.Inputs -> language.t("Entradas", "Inputs", "Entradas")
++    RemoteModule.Keyboard -> language.t("Teclado", "Keyboard", "Teclado")
++    RemoteModule.Numeric -> language.t("Teclado numérico", "Number pad", "Teclado numérico")
++    RemoteModule.Colors -> language.t("Botões coloridos", "Color buttons", "Botones de colores")
++    RemoteModule.InfoMenu -> language.t("Info e Menu", "Info and Menu", "Info y Menú")
++    RemoteModule.TouchpadShortcut -> language.t("Atalho do touchpad", "Touchpad shortcut", "Acceso al panel táctil")
++}
+diff --git a/app/src/main/java/com/geronimo/controlelgwifi/MainActivity.kt b/app/src/main/java/com/geronimo/controlelgwifi/MainActivity.kt
+index 82a8c8f..2a22f65 100644
+--- a/app/src/main/java/com/geronimo/controlelgwifi/MainActivity.kt
++++ b/app/src/main/java/com/geronimo/controlelgwifi/MainActivity.kt
+@@ -1,9 +1,12 @@
+ package com.geronimo.controlelgwifi
+ 
+ import android.Manifest
++import android.app.Activity
++import android.content.Intent
+ import android.content.pm.PackageManager
+ import android.os.Build
+ import android.os.Bundle
++import android.speech.RecognizerIntent
+ import androidx.activity.ComponentActivity
+ import androidx.activity.compose.rememberLauncherForActivityResult
+ import androidx.activity.compose.setContent
+@@ -35,6 +38,7 @@ import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.rounded.CheckCircle
+ import androidx.compose.material.icons.rounded.Devices
+ import androidx.compose.material.icons.rounded.ErrorOutline
++import androidx.compose.material.icons.rounded.Mic
+ import androidx.compose.material.icons.rounded.MoreHoriz
+ import androidx.compose.material.icons.rounded.PowerSettingsNew
+ import androidx.compose.material.icons.rounded.Refresh
+@@ -51,6 +55,7 @@ import androidx.compose.material3.CircularProgressIndicator
+ import androidx.compose.material3.Icon
+ import androidx.compose.material3.IconButton
+ import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.OutlinedTextField
+ import androidx.compose.material3.Scaffold
+ import androidx.compose.material3.Surface
+ import androidx.compose.material3.Text
+@@ -82,7 +87,13 @@ class MainActivity : ComponentActivity() {
+         setContent {
+             val remoteViewModel: RemoteViewModel = viewModel()
+             val state by remoteViewModel.uiState.collectAsStateWithLifecycle()
+-            LibreRemoteTheme(state.themeMode, state.accentTheme) {
++            LibreRemoteTheme(
++                mode = state.themeMode,
++                accent = state.accentTheme,
++                animationPreset = state.animationPreset,
++                buttonEffect = state.buttonEffect,
++                appLanguage = state.appLanguage
++            ) {
+                 LibreRemoteApp(state, remoteViewModel)
+             }
+         }
+@@ -98,6 +109,32 @@ private fun LibreRemoteApp(state: RemoteUiState, viewModel: RemoteViewModel) {
+     ) { granted ->
+         if (granted) viewModel.openConnect() else viewModel.permissionDenied()
+     }
++    val speechLauncher = rememberLauncherForActivityResult(
++        ActivityResultContracts.StartActivityForResult()
++    ) { result ->
++        if (result.resultCode == Activity.RESULT_OK) {
++            val text = result.data
++                ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
++                ?.firstOrNull()
++                ?.trim()
++            if (!text.isNullOrBlank()) viewModel.sendText(text)
++        }
++    }
++    val startVoiceInput: () -> Unit = {
++        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
++            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
++            putExtra(RecognizerIntent.EXTRA_LANGUAGE, state.appLanguage.voiceTag())
++            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, state.appLanguage.voiceTag())
++            putExtra(RecognizerIntent.EXTRA_PROMPT, state.appLanguage.t(
++                "Fale o texto para enviar à TV",
++                "Speak the text to send to the TV",
++                "Di el texto que quieres enviar al televisor"
++            ))
++            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
++        }
++        runCatching { speechLauncher.launch(intent) }
++            .onFailure { viewModel.voiceUnavailable() }
++    }
+     val openConnect: () -> Unit = {
+         if (
+             Build.VERSION.SDK_INT >= 37 &&
+@@ -111,31 +148,34 @@ private fun LibreRemoteApp(state: RemoteUiState, viewModel: RemoteViewModel) {
+ 
+     var confirmPowerOff by rememberSaveable { mutableStateOf(false) }
+ 
+-    Scaffold(
+-        modifier = Modifier.fillMaxSize(),
+-        containerColor = MaterialTheme.colorScheme.background,
+-        topBar = {
+-            AppHeader(
+-                state = state,
+-                onDeviceClick = openConnect,
+-                onSettings = viewModel::openSettings,
+-                onPower = {
+-                    if (state.connected) confirmPowerOff = true else viewModel.wake()
+-                },
+-                onReconnect = viewModel::reconnect
+-            )
+-        }
+-    ) { padding ->
+-        Box(
+-            Modifier
+-                .fillMaxSize()
+-                .padding(padding)
+-                .navigationBarsPadding()
+-        ) {
+-            if (state.currentDevice == null && !state.connected) {
+-                WelcomeScreen(state, openConnect, viewModel::runDiagnostics)
+-            } else {
+-                ControllerScreen(state, viewModel)
++    AnimatedBackdrop(Modifier.fillMaxSize()) {
++        Scaffold(
++            modifier = Modifier.fillMaxSize(),
++            containerColor = Color.Transparent,
++            topBar = {
++                AppHeader(
++                    state = state,
++                    onDeviceClick = openConnect,
++                    onSettings = viewModel::openSettings,
++                    onPower = {
++                        if (state.connected) confirmPowerOff = true else viewModel.wake()
++                    },
++                    onReconnect = viewModel::reconnect,
++                    onVoice = startVoiceInput
++                )
++            }
++        ) { padding ->
++            Box(
++                Modifier
++                    .fillMaxSize()
++                    .padding(padding)
++                    .navigationBarsPadding()
++            ) {
++                if (state.currentDevice == null && !state.connected) {
++                    WelcomeScreen(state, openConnect, viewModel::runDiagnostics)
++                } else {
++                    ControllerScreen(state, viewModel)
++                }
+             }
+         }
+     }
+@@ -151,15 +191,15 @@ private fun LibreRemoteApp

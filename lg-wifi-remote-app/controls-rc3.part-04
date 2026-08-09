@@ -1,0 +1,402 @@
+difier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
++                numbers.forEach { number ->
++                    PressControl(
++                        text = number.toString(),
++                        contentDescription = "Número $number",
++                        size = 54.dp,
++                        enabled = state.connected,
++                        haptics = state.hapticsEnabled,
++                        showLabel = false,
++                        onPress = { viewModel.sendNumber(number) }
++                    )
++                }
++            }
++        }
++        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
++            PressControl(
++                text = "0",
++                contentDescription = "Número zero",
++                size = 54.dp,
++                enabled = state.connected,
++                haptics = state.hapticsEnabled,
++                showLabel = false,
++                onPress = { viewModel.sendNumber(0) }
++            )
++        }
++    }
++}
++
++@Composable
++private fun AdvancedSectionTitle(text: String) {
++    Text(text, fontWeight = FontWeight.Bold, fontSize = 15.sp)
++}
++
++@Composable
++private fun TouchpadPresetShortcut(state: RemoteUiState, viewModel: RemoteViewModel) {
++    Surface(
++        onClick = { viewModel.setControlSurface(ControlSurface.Touchpad) },
++        enabled = state.connected && TvCapability.Pointer in state.capabilities,
++        modifier = Modifier.fillMaxWidth().height(58.dp),
++        shape = RoundedCornerShape(18.dp),
++        color = MaterialTheme.colorScheme.primaryContainer
++    ) {
++        Row(
++            Modifier.padding(horizontal = 16.dp),
++            verticalAlignment = Alignment.CenterVertically,
++            horizontalArrangement = Arrangement.Center
++        ) {
++            Icon(Icons.Rounded.TouchApp, contentDescription = null)
++            Spacer(Modifier.width(8.dp))
++            Text("Abrir mousepad / touchpad", fontWeight = FontWeight.Bold)
++        }
++    }
++}
++
+ private fun connectionColor(state: ConnectionState): Color = when (state) {
+     ConnectionState.Connected -> Color(0xFF42D392)
+     ConnectionState.Error -> Color(0xFFFF6B6B)
+diff --git a/app/src/main/java/com/geronimo/controlelgwifi/RemoteControls.kt b/app/src/main/java/com/geronimo/controlelgwifi/RemoteControls.kt
+index a43b338..c18e660 100644
+--- a/app/src/main/java/com/geronimo/controlelgwifi/RemoteControls.kt
++++ b/app/src/main/java/com/geronimo/controlelgwifi/RemoteControls.kt
+@@ -40,6 +40,7 @@ import androidx.compose.material.icons.rounded.Remove
+ import androidx.compose.material.icons.rounded.Replay
+ import androidx.compose.material.icons.rounded.Settings
+ import androidx.compose.material.icons.rounded.Stop
++import androidx.compose.material.icons.rounded.TouchApp
+ import androidx.compose.material.icons.rounded.Tune
+ import androidx.compose.material.icons.rounded.VolumeOff
+ import androidx.compose.material3.Card
+@@ -70,6 +71,7 @@ import androidx.compose.ui.text.style.TextAlign
+ import androidx.compose.ui.unit.Dp
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
++import kotlin.math.abs
+ import kotlin.math.roundToInt
+ 
+ @Composable
+@@ -88,7 +90,14 @@ fun PressControl(
+     onRelease: () -> Unit = {}
+ ) {
+     var pressed by remember { mutableStateOf(false) }
+-    val scale by animateFloatAsState(if (pressed) 0.94f else 1f, label = "press-scale")
++    val effect = LocalButtonEffect.current
++    val pressedScale = when (effect) {
++        ButtonEffect.Soft -> 0.975f
++        ButtonEffect.Scale -> 0.92f
++        ButtonEffect.Glow -> 0.965f
++        ButtonEffect.Bounce -> 0.88f
++    }
++    val scale by animateFloatAsState(if (pressed) pressedScale else 1f, label = "press-scale")
+     val haptic = LocalHapticFeedback.current
+     val container = when {
+         danger -> MaterialTheme.colorScheme.error.copy(alpha = 0.16f)
+@@ -109,6 +118,11 @@ fun PressControl(
+             modifier = Modifier
+                 .size(size)
+                 .scale(scale)
++                .then(
++                    if (pressed && effect == ButtonEffect.Glow) {
++                        Modifier.border(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.78f), CircleShape)
++                    } else Modifier
++                )
+                 .semantics {
+                     role = Role.Button
+                     this.contentDescription = contentDescription
+@@ -116,22 +130,33 @@ fun PressControl(
+                 .pointerInput(enabled, haptics) {
+                     if (!enabled) return@pointerInput
+                     awaitEachGesture {
+-                            awaitFirstDown(requireUnconsumed = false)
+-                            pressed = true
+-                            if (haptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+-                            onPress()
++                        awaitFirstDown(requireUnconsumed = false)
++                        pressed = true
++                        if (haptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
++                        onPress()
++                        try {
+                             do {
+                                 val event = awaitPointerEvent()
+                                 val stillPressed = event.changes.any { it.pressed }
+                             } while (stillPressed)
++                        } finally {
+                             pressed = false
+-                        onRelease()
++                            onRelease()
++                        }
+                     }
+                 },
+             shape = CircleShape,
+             color = if (enabled) container else container.copy(alpha = 0.42f),
+-            tonalElevation = if (pressed) 0.dp else 2.dp,
+-            shadowElevation = if (pressed) 0.dp else 1.dp
++            tonalElevation = when {
++                pressed && effect == ButtonEffect.Glow -> 7.dp
++                pressed -> 0.dp
++                else -> 2.dp
++            },
++            shadowElevation = when {
++                pressed && effect == ButtonEffect.Glow -> 9.dp
++                pressed -> 0.dp
++                else -> 1.dp
++            }
+         ) {
+             Box(contentAlignment = Alignment.Center) {
+                 when {
+@@ -169,11 +194,15 @@ fun RemoteDPad(
+     enabled: Boolean,
+     haptics: Boolean,
+     compact: Boolean,
+-    onAction: (RemoteAction) -> Unit
++    onAction: (RemoteAction) -> Unit,
++    onDirectionPress: (RemoteAction) -> Unit = onAction,
++    onDirectionRelease: (RemoteAction) -> Unit = {}
+ ) {
+-    val outer = if (compact) 218.dp else 244.dp
++    val language = LocalAppLanguage.current
++    // Keep the directional hit targets physically separated from OK.
++    val outer = if (compact) 244.dp else 276.dp
+     val direction = if (compact) 60.dp else 68.dp
+-    val center = if (compact) 78.dp else 88.dp
++    val center = if (compact) 74.dp else 82.dp
+     Card(
+         modifier = Modifier.size(outer),
+         shape = CircleShape,
+@@ -183,47 +212,51 @@ fun RemoteDPad(
+         Box(Modifier.size(outer).padding(12.dp), contentAlignment = Alignment.Center) {
+             PressControl(
+                 icon = Icons.Rounded.ArrowUpward,
+-                contentDescription = "Cima",
++                contentDescription = language.t("Cima", "Up", "Arriba"),
+                 size = direction,
+                 enabled = enabled,
+                 haptics = haptics,
+                 showLabel = false,
+                 modifier = Modifier.align(Alignment.TopCenter),
+-                onPress = { onAction(RemoteAction.Up) }
++                onPress = { onDirectionPress(RemoteAction.Up) },
++                onRelease = { onDirectionRelease(RemoteAction.Up) }
+             )
+             PressControl(
+                 icon = Icons.Rounded.ArrowDownward,
+-                contentDescription = "Baixo",
++                contentDescription = language.t("Baixo", "Down", "Abajo"),
+                 size = direction,
+                 enabled = enabled,
+                 haptics = haptics,
+                 showLabel = false,
+                 modifier = Modifier.align(Alignment.BottomCenter),
+-                onPress = { onAction(RemoteAction.Down) }
++                onPress = { onDirectionPress(RemoteAction.Down) },
++                onRelease = { onDirectionRelease(RemoteAction.Down) }
+             )
+             PressControl(
+                 text = "◀",
+-                contentDescription = "Esquerda",
++                contentDescription = language.t("Esquerda", "Left", "Izquierda"),
+                 size = direction,
+                 enabled = enabled,
+                 haptics = haptics,
+                 showLabel = false,
+                 modifier = Modifier.align(Alignment.CenterStart),
+-                onPress = { onAction(RemoteAction.Left) }
++                onPress = { onDirectionPress(RemoteAction.Left) },
++                onRelease = { onDirectionRelease(RemoteAction.Left) }
+             )
+             PressControl(
+                 icon = Icons.Rounded.ArrowForward,
+-                contentDescription = "Direita",
++                contentDescription = language.t("Direita", "Right", "Derecha"),
+                 size = direction,
+                 enabled = enabled,
+                 haptics = haptics,
+                 showLabel = false,
+                 modifier = Modifier.align(Alignment.CenterEnd),
+-                onPress = { onAction(RemoteAction.Right) }
++                onPress = { onDirectionPress(RemoteAction.Right) },
++                onRelease = { onDirectionRelease(RemoteAction.Right) }
+             )
+             PressControl(
+                 text = "OK",
+-                contentDescription = "Confirmar",
++                contentDescription = language.t("Confirmar", "Confirm", "Confirmar"),
+                 size = center,
+                 enabled = enabled,
+                 primary = true,
+@@ -242,6 +275,7 @@ fun VolumeAndChannelControls(
+     includeChannels: Boolean,
+     compact: Boolean
+ ) {
++    val language = state.appLanguage
+     val buttonSize = if (compact) 52.dp else 60.dp
+     Row(
+         modifier = Modifier.fillMaxWidth(),
+@@ -262,7 +296,7 @@ fun VolumeAndChannelControls(
+         )
+         PressControl(
+             icon = if (state.muted) Icons.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
+-            text = if (state.muted) "Sem som" else "Mudo",
++            text = if (state.muted) language.t("Sem som", "Muted", "Silenciado") else language.t("Mudo", "Mute", "Silenciar"),
+             size = buttonSize,
+             enabled = state.connected,
+             haptics = state.hapticsEnabled,
+@@ -326,10 +360,11 @@ private fun VerticalRocker(
+ 
+ @Composable
+ fun CoreActionRow(state: RemoteUiState, viewModel: RemoteViewModel) {
++    val language = state.appLanguage
+     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+         PressControl(
+             icon = Icons.AutoMirrored.Rounded.ArrowBack,
+-            text = "Voltar",
++            text = language.t("Voltar", "Back", "Volver"),
+             enabled = state.connected,
+             haptics = state.hapticsEnabled,
+             showLabel = state.showLabels,
+@@ -346,7 +381,7 @@ fun CoreActionRow(state: RemoteUiState, viewModel: RemoteViewModel) {
+         )
+         PressControl(
+             icon = Icons.Rounded.Menu,
+-            text = "Menu",
++            text = language.t("Menu", "Menu", "Menú"),
+             enabled = state.connected,
+             haptics = state.hapticsEnabled,
+             showLabel = state.showLabels,
+@@ -357,10 +392,11 @@ fun CoreActionRow(state: RemoteUiState, viewModel: RemoteViewModel) {
+ 
+ @Composable
+ fun MediaControls(state: RemoteUiState, viewModel: RemoteViewModel) {
++    val language = state.appLanguage
+     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+         PressControl(
+             icon = Icons.Rounded.Replay,
+-            text = "Voltar",
++            text = language.t("Voltar", "Rewind", "Retroceder"),
+             size = 52.dp,
+             enabled = state.connected,
+             haptics = state.hapticsEnabled,
+@@ -369,7 +405,7 @@ fun MediaControls(state: RemoteUiState, viewModel: RemoteViewModel) {
+         )
+         PressControl(
+             icon = Icons.Rounded.PlayArrow,
+-            text = "Reproduzir",
++            text = language.t("Reproduzir", "Play", "Reproducir"),
+             size = 66.dp,
+             enabled = state.connected,
+             primary = true,
+@@ -379,7 +415,7 @@ fun MediaControls(state: RemoteUiState, viewModel: RemoteViewModel) {
+         )
+         PressControl(
+             icon = Icons.Rounded.Pause,
+-            text = "Pausar",
++            text = language.t("Pausar", "Pause", "Pausar"),
+             size = 52.dp,
+             enabled = state.connected,
+             haptics = state.hapticsEnabled,
+@@ -388,7 +424,7 @@ fun MediaControls(state: RemoteUiState, viewModel: RemoteViewModel) {
+         )
+         PressControl(
+             icon = Icons.Rounded.FastForward,
+-            text = "Avançar",
++            text = language.t("Avançar", "Fast forward", "Avanzar"),
+             size = 52.dp,
+             enabled = state.connected,
+             haptics = state.hapticsEnabled,
+@@ -400,25 +436,26 @@ fun MediaControls(state: RemoteUiState, viewModel: RemoteViewModel) {
+ 
+ @Composable
+ fun ShortcutRow(state: RemoteUiState, viewModel: RemoteViewModel) {
++    val language = state.appLanguage
+     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+         ShortcutPill(
+             modifier = Modifier.weight(1f),
+             icon = Icons.Rounded.Apps,
+-            label = "Apps",
++            label = language.t("Apps", "Apps", "Apps"),
+             enabled = state.connected && TvCapability.Apps in state.capabilities,
+             onClick = viewModel::openApps
+         )
+         ShortcutPill(
+             modifier = Modifier.weight(1f),
+             icon = Icons.Rounded.Tune,
+-            label = "Entradas",
++            label = language.t("Entradas", "Inputs", "Entradas"),
+             enabled = state.connected && TvCapability.Inputs in state.capabilities,
+             onClick = viewModel::openInputs
+         )
+         ShortcutPill(
+             modifier = Modifier.weight(1f),
+             icon = Icons.Rounded.Keyboard,
+-            label = "Mais",
++            label = language.t("Mais", "More", "Más"),
+             enabled = state.connected,
+             onClick = viewModel::openMore
+         )
+@@ -454,6 +491,7 @@ private fun ShortcutPill(
+ 
+ @Composable
+ fun InfoMenuRow(state: RemoteUiState, viewModel: RemoteViewModel) {
++    val language = state.appLanguage
+     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+         PressControl(
+             icon = Icons.Rounded.Info,
+@@ -465,7 +503,7 @@ fun InfoMenuRow(state: RemoteUiState, viewModel: RemoteViewModel) {
+         )
+         PressControl(
+             icon = Icons.Rounded.Settings,
+-            text = "Ajustes TV",
++            text = language.t("Ajustes TV", "TV settings", "Ajustes TV"),
+             enabled = state.connected,
+             haptics = state.hapticsEnabled,
+             showLabel = state.showLabels,
+@@ -473,7 +511,7 @@ fun InfoMenuRow(state: RemoteUiState, viewModel: RemoteViewModel) {
+         )
+         PressControl(
+             icon = Icons.Rounded.Stop,
+-            text = "Parar",
++            text = language.t("Parar", "Stop", "Detener"),
+             enabled = state.connected,
+             haptics = state.hapticsEnabled,
+             showLabel = state.showLabels,
+@@ -484,6 +522,7 @@ fun InfoMenuRow(state: RemoteUiState, viewModel: RemoteViewModel) {
+ 
+ @Composable
+ fun ColorButtons(state: RemoteUiState, viewModel: RemoteViewModel) {
++    val language = state.appLanguage
+     val colors = listOf(
+         "RED" to Color(0xFFEF5350),
+         "GREEN" to Color(0xFF43A047),
+@@ -499,7 +538,7 @@ fun ColorButtons(state: RemoteUiState, viewModel: RemoteViewModel) {
+                         if (!state.connected) return@pointerInput
+                         detectTapGestures { viewModel.sendColor(name) }
+                     }
+-                    .semantics { contentDescription = "Botão ${name.lowercase()}" },
++                    .semantics { contentDescription = language.t("Botão ${name.lowercase()}", "${name.lowercase()} button", "Botón ${name.lowercase()}") },
+                 shape = CircleShape,
+                 color = color.copy(alpha = if (state.connected) 1f else 0.35f),
+                 shadowElevation = 2.dp
+@@ -510,7 +549,9 @@ fun ColorButtons(state: RemoteUiState, viewModel: RemoteViewModel) {
+ 
+ @Composable
+ fun TouchpadSurface(state: RemoteUiState, viewModel: RemoteViewModel) {
++    val language = state.appLanguage
+     var dragging by remember { mutableStateOf(false) }
++    var scrollRemainder by remember { mutableStateOf(0f) }
+     val scale by animateFloatAsState(if (dragging) 0.992f else 1f, label = "touchpad-scale")
+     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+         Box(
+@@ -522,35 +563,54 @@ fun TouchpadSurface(state: RemoteUiState, viewModel: RemoteViewModel) {
+                 .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f), RoundedCornerShape(30.dp))
+                 .pointerInput(state.connected) {
+                     if (!state.connected) return@pointerInput
+-                    detectTapGestures(onTap = { viewModel.clickPointer() })
+-                }
+-                .pointerInput(state.connected) {
+-                    if (!state.connected) return@pointerInput
+-                    detectDragGestures(
+-                        onDragStart = { dragging = true },
+-                        onDragEnd = { dragging = false },
+-                        onDragCancel = { dragging = false }
+-                    ) { change, amount ->
+-                        change.c

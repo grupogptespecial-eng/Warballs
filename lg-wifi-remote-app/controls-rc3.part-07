@@ -1,0 +1,275 @@
+V", "Edit this TV's saved data", "Edita los datos guardados de este TV")
++                    ) { editDevice = true }
+                 }
+                 item {
+-                    SettingsAction(Icons.Rounded.PowerSettingsNew, "Ligar TV", "Envia Wake-on-LAN") { viewModel.wake() }
++                    SettingsAction(
++                        Icons.Rounded.PowerSettingsNew,
++                        language.t("Ligar TV", "Turn TV on", "Encender TV"),
++                        "Wake-on-LAN"
++                    ) { viewModel.wake() }
+                 }
+             }
+             item {
+                 SettingsAction(
+                     Icons.Rounded.NetworkCheck,
+-                    "Diagnóstico de rede",
++                    language.t("Diagnóstico de rede", "Network diagnostics", "Diagnóstico de red"),
+                     listOfNotNull(
+                         state.diagnostic.summary,
+                         state.diagnostic.backendSummary,
+-                        state.diagnostic.lastCommandDispatchMs?.let { "Envio local: %.2f ms".format(it) }
++                        state.diagnostic.lastCommandDispatchMs?.let { "%.2f ms".format(it) }
+                     ).joinToString(" • "),
+                     onClick = viewModel::runDiagnostics
+                 )
+             }
+-            item { SettingsToggle(Icons.Rounded.Wifi, "Reconectar automaticamente", "Tenta restaurar a conexão sem interromper você", state.autoConnect, viewModel::setAutoConnect) }
+-            item { SettingsToggle(Icons.Rounded.Devices, "Sistemas experimentais", "Permite testar Samsung Tizen e plataformas ainda em validação", state.experimentalBackendsEnabled, viewModel::setExperimentalBackendsEnabled) }
+-
+-            item { SettingsSectionLabel("CONTROLE") }
+             item {
+-                SettingsAction(Icons.Rounded.SettingsRemote, "Layout", state.selectedPreset.name) { viewModel.openPresetEditor() }
++                SettingsToggle(
++                    Icons.Rounded.Wifi,
++                    language.t("Reconectar automaticamente", "Reconnect automatically", "Reconectar automáticamente"),
++                    language.t("Lembra a última TV e tenta restaurar a conexão", "Remembers the last TV and restores the connection", "Recuerda el último TV y restaura la conexión"),
++                    state.autoConnect,
++                    viewModel::setAutoConnect
++                )
+             }
+-            item { SettingsToggle(Icons.Rounded.Visibility, "Mostrar nomes dos botões", "Útil para aprender os ícones", state.showLabels, viewModel::setShowLabels) }
+-            item { SettingsToggle(Icons.Rounded.Smartphone, "Modo compacto", "Exibe mais funções em telas pequenas", state.compactMode, viewModel::setCompactMode) }
+-            item { SettingsToggle(Icons.Rounded.Vibration, "Vibração", "Resposta tátil ao tocar", state.hapticsEnabled, viewModel::setHaptics) }
++            item { SettingsToggle(Icons.Rounded.Devices, language.t("Sistemas experimentais", "Experimental systems", "Sistemas experimentales"), language.t("Permite testar plataformas ainda em validação", "Allows platforms still under validation", "Permite plataformas aún en validación"), state.experimentalBackendsEnabled, viewModel::setExperimentalBackendsEnabled) }
++
++            item { SettingsSectionLabel(language.t("CONTROLE", "REMOTE", "CONTROL")) }
++            item { SettingsAction(Icons.Rounded.SettingsRemote, language.t("Layout", "Layout", "Diseño"), state.selectedPreset.localizedName(language)) { viewModel.openPresetEditor() } }
++            item { SettingsToggle(Icons.Rounded.Visibility, language.t("Mostrar nomes dos botões", "Show button labels", "Mostrar nombres de botones"), language.t("Útil para aprender os ícones", "Useful while learning the icons", "Útil para aprender los iconos"), state.showLabels, viewModel::setShowLabels) }
++            item { SettingsToggle(Icons.Rounded.Smartphone, language.t("Modo compacto", "Compact mode", "Modo compacto"), language.t("Exibe mais funções em telas pequenas", "Shows more controls on small screens", "Muestra más controles en pantallas pequeñas"), state.compactMode, viewModel::setCompactMode) }
++            item { SettingsToggle(Icons.Rounded.Vibration, language.t("Vibração", "Haptics", "Vibración"), language.t("Resposta tátil ao tocar", "Tactile feedback on press", "Respuesta táctil al tocar"), state.hapticsEnabled, viewModel::setHaptics) }
+ 
+-            item { SettingsSectionLabel("APARÊNCIA") }
++            item { SettingsSectionLabel(language.t("APARÊNCIA E ANIMAÇÕES", "APPEARANCE & MOTION", "APARIENCIA Y ANIMACIONES")) }
+             item {
+                 Column(Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
+-                    Text("Tema", fontWeight = FontWeight.SemiBold)
++                    Text(language.t("Tema", "Theme", "Tema"), fontWeight = FontWeight.SemiBold)
+                     Spacer(Modifier.height(8.dp))
+-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
++                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                         ThemeMode.entries.forEach { mode ->
+-                            FilterChip(
+-                                selected = state.themeMode == mode,
+-                                onClick = { viewModel.setTheme(mode) },
+-                                label = { Text(mode.themeLabel()) }
+-                            )
++                            FilterChip(selected = state.themeMode == mode, onClick = { viewModel.setTheme(mode) }, label = { Text(mode.themeLabel(language)) })
+                         }
+                     }
+                 }
+             }
+             item {
+                 Column(Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
+-                    Text("Cor", fontWeight = FontWeight.SemiBold)
++                    Text(language.t("Paleta de cores", "Color palette", "Paleta de colores"), fontWeight = FontWeight.SemiBold)
+                     Spacer(Modifier.height(8.dp))
+-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
++                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                         AccentTheme.entries.forEach { accent ->
+                             FilterChip(
+                                 selected = state.accentTheme == accent,
+                                 onClick = { viewModel.setAccent(accent) },
+-                                label = { Text(accent.accentLabel()) },
++                                label = { Text(accent.accentLabel(language)) },
+                                 leadingIcon = { Box(Modifier.size(14.dp).background(accent.previewColor(), CircleShape)) }
+                             )
+                         }
+                     }
+                 }
+             }
++            item {
++                Column(Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
++                    Text(language.t("Animação de fundo", "Background animation", "Animación de fondo"), fontWeight = FontWeight.SemiBold)
++                    Spacer(Modifier.height(8.dp))
++                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
++                        AnimationPreset.entries.forEach { preset ->
++                            FilterChip(selected = state.animationPreset == preset, onClick = { viewModel.setAnimationPreset(preset) }, label = { Text(preset.animationLabel(language)) })
++                        }
++                    }
++                }
++            }
++            item {
++                Column(Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
++                    Text(language.t("Efeito ao clicar", "Button press effect", "Efecto al pulsar"), fontWeight = FontWeight.SemiBold)
++                    Spacer(Modifier.height(8.dp))
++                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
++                        ButtonEffect.entries.forEach { effect ->
++                            FilterChip(selected = state.buttonEffect == effect, onClick = { viewModel.setButtonEffect(effect) }, label = { Text(effect.effectLabel(language)) })
++                        }
++                    }
++                }
++            }
++
++            item { SettingsSectionLabel(language.t("IDIOMA E VOZ", "LANGUAGE & VOICE", "IDIOMA Y VOZ")) }
++            item {
++                Column(Modifier.padding(horizontal = 20.dp, vertical = 10.dp)) {
++                    Text(language.t("Idioma do aplicativo e do microfone", "App and microphone language", "Idioma de la app y del micrófono"), fontWeight = FontWeight.SemiBold)
++                    Spacer(Modifier.height(8.dp))
++                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
++                        AppLanguage.entries.forEach { option ->
++                            FilterChip(
++                                selected = state.appLanguage == option,
++                                onClick = { viewModel.setAppLanguage(option) },
++                                label = { Text(option.label()) }
++                            )
++                        }
++                    }
++                    Spacer(Modifier.height(8.dp))
++                    Text(
++                        language.t(
++                            "O botão de microfone usa o reconhecedor de voz do Android e envia a transcrição para a TV.",
++                            "The microphone uses Android speech recognition and sends the transcript to the TV.",
++                            "El micrófono usa el reconocimiento de voz de Android y envía la transcripción al TV."
++                        ),
++                        fontSize = 12.sp,
++                        color = MaterialTheme.colorScheme.onSurfaceVariant
++                    )
++                }
++            }
+ 
+-            item { SettingsSectionLabel("PRIVACIDADE E SOBRE") }
+-            item { SettingsInfo(Icons.Rounded.Security, "Privacidade", "Sem conta, anúncios, telemetria ou servidor externo") }
+-            item { SettingsInfo(Icons.Rounded.Language, "Idioma", "Português; estrutura preparada para traduções") }
+-            item { SettingsInfo(Icons.Rounded.Info, "Libre Remote Universal 1.1 RC1", "LG completo; Samsung e outros sistemas claramente identificados por nível de suporte") }
++            item { SettingsSectionLabel(language.t("PRIVACIDADE E SOBRE", "PRIVACY & ABOUT", "PRIVACIDAD Y ACERCA DE")) }
++            item { SettingsInfo(Icons.Rounded.Security, language.t("Privacidade", "Privacy", "Privacidad"), language.t("Sem conta, anúncios, telemetria ou servidor externo", "No account, ads, telemetry or external server", "Sin cuenta, anuncios, telemetría ni servidor externo")) }
++            item { SettingsInfo(Icons.Rounded.Language, language.t("Idioma salvo", "Saved language", "Idioma guardado"), state.appLanguage.label()) }
++            item { SettingsInfo(Icons.Rounded.Info, "Libre Remote 2.0 RC3", language.t("LG webOS com presets, voz e personalização visual", "LG webOS with presets, voice and visual customization", "LG webOS con presets, voz y personalización visual")) }
+         }
+     }
+ 
+@@ -610,7 +686,8 @@ fun SettingsSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+             onForget = {
+                 viewModel.forgetDevice(state.currentDevice)
+                 editDevice = false
+-            }
++            },
++            language = language
+         )
+     }
+ }
+@@ -620,28 +697,29 @@ private fun EditDeviceDialog(
+     device: TvDevice,
+     onDismiss: () -> Unit,
+     onSave: (String, String, String) -> Unit,
+-    onForget: () -> Unit
++    onForget: () -> Unit,
++    language: AppLanguage
+ ) {
+     var name by remember { mutableStateOf(device.name) }
+     var room by remember { mutableStateOf(device.room) }
+     var mac by remember { mutableStateOf(device.mac.orEmpty()) }
+     AlertDialog(
+         onDismissRequest = onDismiss,
+-        title = { Text("Editar TV") },
++        title = { Text(language.t("Editar TV", "Edit TV", "Editar TV")) },
+         text = {
+             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+-                OutlinedTextField(name, { name = it }, label = { Text("Nome") }, singleLine = true)
+-                OutlinedTextField(room, { room = it }, label = { Text("Cômodo") }, singleLine = true)
+-                OutlinedTextField(mac, { mac = it }, label = { Text("MAC para ligar") }, placeholder = { Text("AA:BB:CC:DD:EE:FF") }, singleLine = true)
++                OutlinedTextField(name, { name = it }, label = { Text(language.t("Nome", "Name", "Nombre")) }, singleLine = true)
++                OutlinedTextField(room, { room = it }, label = { Text(language.t("Cômodo", "Room", "Habitación")) }, singleLine = true)
++                OutlinedTextField(mac, { mac = it }, label = { Text(language.t("MAC para ligar", "Power-on MAC", "MAC para encender")) }, placeholder = { Text("AA:BB:CC:DD:EE:FF") }, singleLine = true)
+                 TextButton(onClick = onForget) {
+                     Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                     Spacer(Modifier.width(6.dp))
+-                    Text("Esquecer esta TV", color = MaterialTheme.colorScheme.error)
++                    Text(language.t("Esquecer esta TV", "Forget this TV", "Olvidar este TV"), color = MaterialTheme.colorScheme.error)
+                 }
+             }
+         },
+-        confirmButton = { Button(onClick = { onSave(name, room, mac) }) { Text("Salvar") } },
+-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
++        confirmButton = { Button(onClick = { onSave(name, room, mac) }) { Text(language.t("Salvar", "Save", "Guardar")) } },
++        dismissButton = { TextButton(onClick = onDismiss) { Text(language.t("Cancelar", "Cancel", "Cancelar")) } }
+     )
+ }
+ 
+@@ -722,19 +800,38 @@ private fun EmptySheetMessage(title: String, body: String) {
+     }
+ }
+ 
+-private fun ThemeMode.themeLabel(): String = when (this) {
+-    ThemeMode.System -> "Sistema"
+-    ThemeMode.Light -> "Claro"
+-    ThemeMode.Dark -> "Escuro"
++private fun ThemeMode.themeLabel(language: AppLanguage): String = when (this) {
++    ThemeMode.System -> language.t("Sistema", "System", "Sistema")
++    ThemeMode.Light -> language.t("Claro", "Light", "Claro")
++    ThemeMode.Dark -> language.t("Escuro", "Dark", "Oscuro")
+     ThemeMode.Amoled -> "AMOLED"
+ }
+ 
+-private fun AccentTheme.accentLabel(): String = when (this) {
+-    AccentTheme.Ocean -> "Oceano"
+-    AccentTheme.Violet -> "Violeta"
+-    AccentTheme.Emerald -> "Esmeralda"
+-    AccentTheme.Sunset -> "Pôr do sol"
+-    AccentTheme.Monochrome -> "Mono"
++private fun AccentTheme.accentLabel(language: AppLanguage): String = when (this) {
++    AccentTheme.Ocean -> language.t("Oceano", "Ocean", "Océano")
++    AccentTheme.Violet -> language.t("Violeta", "Violet", "Violeta")
++    AccentTheme.Emerald -> language.t("Esmeralda", "Emerald", "Esmeralda")
++    AccentTheme.Sunset -> language.t("Pôr do sol", "Sunset", "Atardecer")
++    AccentTheme.Monochrome -> language.t("Mono", "Mono", "Mono")
++    AccentTheme.Crimson -> language.t("Carmesim", "Crimson", "Carmesí")
++    AccentTheme.Arctic -> language.t("Ártico", "Arctic", "Ártico")
++    AccentTheme.Gold -> language.t("Dourado", "Gold", "Dorado")
++    AccentTheme.Cyber -> "Cyber"
++}
++
++private fun AnimationPreset.animationLabel(language: AppLanguage): String = when (this) {
++    AnimationPreset.Off -> language.t("Sem animação", "Off", "Sin animación")
++    AnimationPreset.Soft -> language.t("Suave", "Soft", "Suave")
++    AnimationPreset.Aurora -> "Aurora"
++    AnimationPreset.Pulse -> language.t("Pulso", "Pulse", "Pulso")
++    AnimationPreset.Dynamic -> language.t("Dinâmica", "Dynamic", "Dinámica")
++}
++
++private fun ButtonEffect.effectLabel(language: AppLanguage): String = when (this) {
++    ButtonEffect.Soft -> language.t("Suave", "Soft", "Suave")
++    ButtonEffect.Scale -> language.t("Pressão", "Scale", "Escala")
++    ButtonEffect.Glow -> language.t("Brilho", "Glow", "Brillo")
++    ButtonEffect.Bounce -> language.t("Salto", "Bounce", "Rebote")
+ }
+ 
+ private fun AccentTheme.previewColor(): Color = when (this) {
+@@ -743,4 +840,8 @@ private fun AccentTheme.previewColor(): Color = when (this) {
+     AccentTheme.Emerald -> Color(0xFF59E0A1)
+     AccentTheme.Sunset -> Color(0xFFFF9B73)
+     AccentTheme.Monochrome -> Color(0xFFB8C1CC)
++    AccentTheme.Crimson -> Color(0xFFFF6B7A)
++    AccentTheme.Arctic -> Color(0xFF8FE7FF)
++    AccentTheme.Gold -> Color(0xFFFFD166)
++    AccentTheme.Cyber -> Color(0xFF45F3FF)
+ }
+diff --git a/app/src/main/java/com/geronimo/controlelgwifi/RemoteViewModel.kt b/app/src/main/java/com/geronimo/controlelgwifi/RemoteViewModel.kt
+index a041e9d..b263a67 100644
+--- a/app/src/main/java/com/geronimo/controlelgwifi/RemoteViewModel.kt
++++ b/app/src/main/java/com/geronimo/controlelgwifi/RemoteViewModel.kt
+@@ -237,7 +237,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
+ 
+     fun setControlSurface(surface: ControlSurface) {
+         if (surface == ControlSurface.Touchpad && TvCapability.Pointer !in _uiState.value.capabilities) return
+-        _uiState.update { it.copy(controlSurface = surface) }
++        updateSettings { it.copy(controlSurface = surface) }
+     }
+ 
+     fun movePointer(dx: Int, dy: Int) = activeBackend?.movePointer(dx, dy) ?: Unit
+@@ -252,7 +252,14 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
+     fun refresh() = activeBackend?.refreshDeviceData() ?: Unit
+ 
+     fun wake(device: TvDevice? = _uiState.value.currentDevice, macOverride: String? = null) {
+-        val current = d

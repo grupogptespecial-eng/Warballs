@@ -1,0 +1,173 @@
+onsume()
+-                        viewModel.movePointer(
+-                            (amount.x * 1.65f).roundToInt(),
+-                            (amount.y * 1.65f).roundToInt()
+-                        )
++                    awaitEachGesture {
++                        val down = awaitFirstDown(requireUnconsumed = false)
++                        down.consume()
++                        var totalDrag = 0f
++                        var pastSlop = false
++                        dragging = false
++                        try {
++                            var pressed = true
++                            while (pressed) {
++                                val event = awaitPointerEvent()
++                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
++                                val dx = change.position.x - change.previousPosition.x
++                                val dy = change.position.y - change.previousPosition.y
++                                if (dx != 0f || dy != 0f) {
++                                    totalDrag += abs(dx) + abs(dy)
++                                    if (!pastSlop && totalDrag >= viewConfiguration.touchSlop) {
++                                        pastSlop = true
++                                        dragging = true
++                                    }
++                                    if (pastSlop) {
++                                        change.consume()
++                                        viewModel.movePointer(
++                                            (dx * 1.65f).roundToInt(),
++                                            (dy * 1.65f).roundToInt()
++                                        )
++                                    }
++                                }
++                                pressed = change.pressed
++                            }
++                        } finally {
++                            dragging = false
++                        }
++                        if (!pastSlop) viewModel.clickPointer()
+                     }
+                 },
+             contentAlignment = Alignment.Center
+         ) {
+             Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                 Icon(
+-                    Icons.Rounded.PowerSettingsNew,
++                    Icons.Rounded.TouchApp,
+                     contentDescription = null,
+                     tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.72f),
+                     modifier = Modifier.size(36.dp)
+                 )
+                 Spacer(Modifier.height(12.dp))
+-                Text("Deslize para mover", fontWeight = FontWeight.SemiBold)
++                Text(language.t("Deslize para mover", "Swipe to move", "Desliza para mover"), fontWeight = FontWeight.SemiBold)
+                 Text(
+-                    "Toque para confirmar",
++                    language.t("Toque para confirmar", "Tap to click", "Toca para hacer clic"),
+                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                     fontSize = 13.sp
+                 )
+@@ -571,16 +631,25 @@ fun TouchpadSurface(state: RemoteUiState, viewModel: RemoteViewModel) {
+                     .height(56.dp)
+                     .pointerInput(state.connected) {
+                         if (!state.connected) return@pointerInput
+-                        detectDragGestures { change, amount ->
++                        detectDragGestures(
++                            onDragStart = { scrollRemainder = 0f },
++                            onDragEnd = { scrollRemainder = 0f },
++                            onDragCancel = { scrollRemainder = 0f }
++                        ) { change, amount ->
+                             change.consume()
+-                            viewModel.scrollPointer((amount.y * 0.35f).roundToInt())
++                            scrollRemainder += amount.y * 1.25f
++                            val delta = scrollRemainder.roundToInt()
++                            if (delta != 0) {
++                                viewModel.scrollPointer(delta)
++                                scrollRemainder -= delta
++                            }
+                         }
+                     },
+                 shape = RoundedCornerShape(18.dp),
+                 color = MaterialTheme.colorScheme.surfaceVariant
+             ) {
+                 Box(contentAlignment = Alignment.Center) {
+-                    Text("↕  Rolagem", fontWeight = FontWeight.SemiBold)
++                    Text(language.t("↕  Rolagem", "↕  Scroll", "↕  Desplazar"), fontWeight = FontWeight.SemiBold)
+                 }
+             }
+             PressControl(
+diff --git a/app/src/main/java/com/geronimo/controlelgwifi/RemoteModels.kt b/app/src/main/java/com/geronimo/controlelgwifi/RemoteModels.kt
+index a36727b..b03ea9f 100644
+--- a/app/src/main/java/com/geronimo/controlelgwifi/RemoteModels.kt
++++ b/app/src/main/java/com/geronimo/controlelgwifi/RemoteModels.kt
+@@ -116,13 +116,20 @@ data class TvInput(
+ )
+ 
+ enum class ThemeMode { System, Light, Dark, Amoled }
+-enum class AccentTheme { Ocean, Violet, Emerald, Sunset, Monochrome }
++enum class AccentTheme {
++    Ocean, Violet, Emerald, Sunset, Monochrome, Crimson, Arctic, Gold, Cyber
++}
++
++enum class AnimationPreset { Off, Soft, Aurora, Pulse, Dynamic }
++enum class ButtonEffect { Soft, Scale, Glow, Bounce }
++enum class AppLanguage { System, Portuguese, English, Spanish }
+ enum class ControlSurface { Remote, Touchpad }
+ 
+ enum class RemotePresetId(val title: String) {
+     Simple("Simples"),
+     Normal("Normal"),
+     Advanced("Avançado"),
++    AdvancedLegacy("Avançado AL"),
+     Custom1("Personalizado 1"),
+     Custom2("Personalizado 2"),
+     Custom3("Personalizado 3");
+@@ -184,10 +191,31 @@ data class RemotePreset(
+             modules = RemoteModule.entries.toList(),
+             compact = true
+         )
++        val advancedLegacy = RemotePreset(
++            RemotePresetId.AdvancedLegacy,
++            name = "Avançado AL",
++            modules = listOf(
++                RemoteModule.Power,
++                RemoteModule.DPad,
++                RemoteModule.Volume,
++                RemoteModule.Channels,
++                RemoteModule.CoreActions,
++                RemoteModule.Media,
++                RemoteModule.TouchpadShortcut,
++                RemoteModule.Inputs,
++                RemoteModule.Apps,
++                RemoteModule.Keyboard,
++                RemoteModule.Numeric,
++                RemoteModule.Colors,
++                RemoteModule.InfoMenu
++            ),
++            compact = false
++        )
+         fun defaultFor(id: RemotePresetId): RemotePreset = when (id) {
+             RemotePresetId.Simple -> simple
+             RemotePresetId.Normal -> normal
+             RemotePresetId.Advanced -> advanced
++            RemotePresetId.AdvancedLegacy -> advancedLegacy
+             else -> normal.copy(id = id, name = id.title)
+         }
+     }
+@@ -226,6 +254,9 @@ data class RemoteUiState(
+     val experimentalBackendsEnabled: Boolean = true,
+     val themeMode: ThemeMode = ThemeMode.System,
+     val accentTheme: AccentTheme = AccentTheme.Ocean,
++    val animationPreset: AnimationPreset = AnimationPreset.Soft,
++    val buttonEffect: ButtonEffect = ButtonEffect.Scale,
++    val appLanguage: AppLanguage = AppLanguage.System,
+     val controlSurface: ControlSurface = ControlSurface.Remote,
+     val selectedPresetId: RemotePresetId = RemotePresetId.Normal,
+     val presets: Map<RemotePresetId, RemotePreset> = RemotePresetId.entries.associateWith(RemotePreset::defaultFor),
+diff --git a/app/src/main/java/com/geronimo/controlelgwifi/RemotePreferences.kt b/app/src/main/java/com/geronimo/controlelgwifi/RemotePreferences.kt
+index 1eea673..094c424 100644
+--- a/app/src/main/java/com/geronimo/controlelgwifi/RemotePreferences.kt
++++ b/app/src/main/java/com/geronimo/controlelgwifi/RemotePreferences.kt
+@@ -32,6 +32,10 @@ class RemotePreferences(context: Context) {
+             experimentalBackendsEnabled = prefs.getBoolean("experimental_backends", true),
+             themeMode = enumValueOrDefault(prefs.getString("theme", null), ThemeMode.System),
+             accentTheme = enumValueOrDefault(prefs.getString("accent", null), AccentTheme.Ocean),
++            animationPreset = enumValueOrDefault(prefs.getString("animation_preset", null), AnimationPreset.Soft),
++            buttonEffect = enumValueOrDefault(prefs.getString("button_effect", null), ButtonEffect.Scale),
++            appLanguage = enumValueOrDefault(prefs.getString("app_language", null), AppLanguage.System),
++            controlSurface = enumValueOrDefault(prefs.getString("control_surface", null), ControlSurface.Remote),
+             selectedPresetId = selectedPreset,
+             presets = presetMap,
+             onboardingComplete = prefs.getBoolean("onboarding_complete", false)
+@@ -84,6 +88,10 @@ class RemotePreferences(context: Context) {
+             .putBoolean("experimental_backends", state.expe

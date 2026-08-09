@@ -1,0 +1,341 @@
+ para usar", "Ready to use", "Listo para usar") else state.appLanguage.t("Os botões serão ativados após a conexão", "Buttons become active after connection", "Los botones se activarán después de conectar"),
+                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                             fontSize = 11.sp
+                         )
+@@ -423,7 +477,7 @@ private fun RemotePresetContent(state: RemoteUiState, viewModel: RemoteViewModel
+                         Row(Modifier.padding(horizontal = 11.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                             Icon(Icons.Rounded.MoreHoriz, contentDescription = null, Modifier.size(18.dp))
+                             Spacer(Modifier.width(5.dp))
+-                            Text("Editar", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
++                            Text(state.appLanguage.t("Editar", "Edit", "Editar"), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                         }
+                     }
+                 }
+@@ -440,7 +494,9 @@ private fun RemotePresetContent(state: RemoteUiState, viewModel: RemoteViewModel
+                             enabled = state.connected,
+                             haptics = state.hapticsEnabled,
+                             compact = true,
+-                            onAction = viewModel::send
++                            onAction = viewModel::send,
++                            onDirectionPress = viewModel::startRepeating,
++                            onDirectionRelease = viewModel::stopRepeating
+                         )
+                         Box(Modifier.width(260.dp)) {
+                             VolumeAndChannelControls(
+@@ -460,7 +516,9 @@ private fun RemotePresetContent(state: RemoteUiState, viewModel: RemoteViewModel
+                                 enabled = state.connected,
+                                 haptics = state.hapticsEnabled,
+                                 compact = state.compactMode || preset.compact,
+-                                onAction = viewModel::send
++                                onAction = viewModel::send,
++                                onDirectionPress = viewModel::startRepeating,
++                                onDirectionRelease = viewModel::stopRepeating
+                             )
+                         }
+                     }
+@@ -493,16 +551,360 @@ private fun RemotePresetContent(state: RemoteUiState, viewModel: RemoteViewModel
+                         color = MaterialTheme.colorScheme.surfaceVariant
+                     ) {
+                         Box(contentAlignment = Alignment.Center) {
+-                            Text("Abrir teclado numérico", fontWeight = FontWeight.SemiBold)
++                            Text(state.appLanguage.t("Abrir teclado numérico", "Open number pad", "Abrir teclado numérico"), fontWeight = FontWeight.SemiBold)
+                         }
+                     }
+                 }
+             }
++            if (RemoteModule.TouchpadShortcut in modules && TvCapability.Pointer in state.capabilities) {
++                item { TouchpadPresetShortcut(state, viewModel) }
++            }
+             item { Spacer(Modifier.height(14.dp)) }
+         }
+     }
+ }
+ 
++@Composable
++private fun AdvancedLegacyPresetContent(state: RemoteUiState, viewModel: RemoteViewModel) {
++    val modules = state.selectedPreset.modules.filter { module ->
++        module.requiredCapability == null || module.requiredCapability in state.capabilities
++    }
++    LazyColumn(
++        modifier = Modifier.fillMaxSize(),
++        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
++        verticalArrangement = Arrangement.spacedBy(16.dp)
++    ) {
++        item {
++            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
++                Column(Modifier.weight(1f)) {
++                    Text(RemotePresetId.AdvancedLegacy.localizedTitle(state.appLanguage), fontWeight = FontWeight.Bold, fontSize = 18.sp)
++                    Text(
++                        state.appLanguage.t("Tudo em um só controle • role do início ao fim", "Everything in one remote • scroll from start to finish", "Todo en un solo control • desplázate de principio a fin"),
++                        color = MaterialTheme.colorScheme.onSurfaceVariant,
++                        fontSize = 12.sp
++                    )
++                }
++                Surface(
++                    onClick = viewModel::openPresetEditor,
++                    shape = RoundedCornerShape(14.dp),
++                    color = MaterialTheme.colorScheme.surfaceVariant
++                ) {
++                    Row(Modifier.padding(horizontal = 11.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
++                        Icon(Icons.Rounded.MoreHoriz, contentDescription = null, Modifier.size(18.dp))
++                        Spacer(Modifier.width(5.dp))
++                        Text("Preset", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
++                    }
++                }
++            }
++        }
++
++        item { AdvancedConnectionSection(state, viewModel) }
++
++        if (RemoteModule.DPad in modules) {
++            item {
++                AdvancedSectionTitle(state.appLanguage.t("Navegação", "Navigation", "Navegación"))
++                Spacer(Modifier.height(8.dp))
++                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
++                    RemoteDPad(
++                        enabled = state.connected,
++                        haptics = state.hapticsEnabled,
++                        compact = false,
++                        onAction = viewModel::send,
++                        onDirectionPress = viewModel::startRepeating,
++                        onDirectionRelease = viewModel::stopRepeating
++                    )
++                }
++            }
++        }
++        if (RemoteModule.CoreActions in modules || RemoteModule.Power in modules) {
++            item {
++                AdvancedSectionTitle(state.appLanguage.t("Sistema", "System", "Sistema"))
++                Spacer(Modifier.height(8.dp))
++                if (RemoteModule.CoreActions in modules) CoreActionRow(state, viewModel)
++                if (RemoteModule.Power in modules) {
++                    Spacer(Modifier.height(10.dp))
++                    Surface(
++                        onClick = { viewModel.send(RemoteAction.PowerOff) },
++                        enabled = state.connected && TvCapability.PowerOff in state.capabilities,
++                        modifier = Modifier.fillMaxWidth().height(52.dp),
++                        shape = RoundedCornerShape(17.dp),
++                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.14f)
++                    ) {
++                        Box(contentAlignment = Alignment.Center) {
++                            Text(state.appLanguage.t("Desligar TV", "Turn TV off", "Apagar TV"), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
++                        }
++                    }
++                }
++            }
++        }
++        if (RemoteModule.Volume in modules) {
++            item {
++                AdvancedSectionTitle(state.appLanguage.t("Volume e canais", "Volume and channels", "Volumen y canales"))
++                Spacer(Modifier.height(8.dp))
++                VolumeAndChannelControls(
++                    state = state,
++                    viewModel = viewModel,
++                    includeChannels = RemoteModule.Channels in modules,
++                    compact = false
++                )
++            }
++        }
++        if (RemoteModule.Media in modules) {
++            item {
++                AdvancedSectionTitle(state.appLanguage.t("Reprodução", "Playback", "Reproducción"))
++                Spacer(Modifier.height(8.dp))
++                MediaControls(state, viewModel)
++            }
++        }
++        if (RemoteModule.TouchpadShortcut in modules && TvCapability.Pointer in state.capabilities) {
++            item {
++                AdvancedSectionTitle(state.appLanguage.t("Mousepad / touchpad", "Mousepad / touchpad", "Mousepad / panel táctil"))
++                Spacer(Modifier.height(8.dp))
++                TouchpadSurface(state, viewModel)
++            }
++        }
++        if (RemoteModule.Inputs in modules) item { AdvancedInputsSection(state, viewModel) }
++        if (RemoteModule.Apps in modules) item { AdvancedAppsSection(state, viewModel) }
++        if (RemoteModule.Keyboard in modules) item { AdvancedKeyboardSection(state, viewModel) }
++        if (RemoteModule.Numeric in modules) item { AdvancedNumericSection(state, viewModel) }
++        if (RemoteModule.Colors in modules) {
++            item {
++                AdvancedSectionTitle(state.appLanguage.t("Botões coloridos", "Color buttons", "Botones de colores"))
++                Spacer(Modifier.height(8.dp))
++                ColorButtons(state, viewModel)
++            }
++        }
++        if (RemoteModule.InfoMenu in modules) {
++            item {
++                AdvancedSectionTitle(state.appLanguage.t("Info e ajustes da TV", "TV info and settings", "Información y ajustes del TV"))
++                Spacer(Modifier.height(8.dp))
++                InfoMenuRow(state, viewModel)
++            }
++        }
++        item { Spacer(Modifier.height(24.dp)) }
++    }
++}
++
++@Composable
++private fun AdvancedConnectionSection(state: RemoteUiState, viewModel: RemoteViewModel) {
++    var ip by rememberSaveable(state.currentDevice?.stableId) { mutableStateOf(state.currentDevice?.ip.orEmpty()) }
++    var mac by rememberSaveable(state.currentDevice?.stableId) { mutableStateOf(state.currentDevice?.mac.orEmpty()) }
++    Card(
++        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
++        shape = RoundedCornerShape(24.dp)
++    ) {
++        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
++            AdvancedSectionTitle(state.appLanguage.t("Conexão", "Connection", "Conexión"))
++            Text(
++                state.statusText,
++                color = if (state.connectionState == ConnectionState.Error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
++                fontSize = 12.sp
++            )
++            OutlinedTextField(
++                value = ip,
++                onValueChange = { ip = it },
++                modifier = Modifier.fillMaxWidth(),
++                singleLine = true,
++                label = { Text(state.appLanguage.t("IP / endereço local da TV", "TV IP / local address", "IP / dirección local del TV")) },
++                placeholder = { Text("192.168.1.20") }
++            )
++            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
++                Button(
++                    onClick = { viewModel.connectManual(ip) },
++                    modifier = Modifier.weight(1f),
++                    enabled = ip.isNotBlank() && !state.busy
++                ) { Text(state.appLanguage.t("Conectar", "Connect", "Conectar")) }
++                Button(
++                    onClick = viewModel::openConnect,
++                    modifier = Modifier.weight(1f),
++                    enabled = !state.busy
++                ) { Text(state.appLanguage.t("Buscar TVs", "Find TVs", "Buscar TVs")) }
++            }
++            if (state.currentDevice != null) {
++                Surface(
++                    onClick = viewModel::reconnect,
++                    modifier = Modifier.fillMaxWidth().height(46.dp),
++                    shape = RoundedCornerShape(15.dp),
++                    color = MaterialTheme.colorScheme.primaryContainer
++                ) {
++                    Box(contentAlignment = Alignment.Center) {
++                        Text(state.appLanguage.t("Reconectar ${state.currentDevice.displayName}", "Reconnect ${state.currentDevice.displayName}", "Reconectar ${state.currentDevice.displayName}"), fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
++                    }
++                }
++            }
++            OutlinedTextField(
++                value = mac,
++                onValueChange = { mac = it },
++                modifier = Modifier.fillMaxWidth(),
++                singleLine = true,
++                label = { Text(state.appLanguage.t("MAC para ligar por Wi‑Fi", "MAC for Wi‑Fi power on", "MAC para encender por Wi‑Fi")) },
++                placeholder = { Text("AA:BB:CC:DD:EE:FF") }
++            )
++            Surface(
++                onClick = { viewModel.wake(macOverride = mac) },
++                enabled = state.currentDevice != null && mac.isNotBlank(),
++                modifier = Modifier.fillMaxWidth().height(46.dp),
++                shape = RoundedCornerShape(15.dp),
++                color = MaterialTheme.colorScheme.surface
++            ) {
++                Box(contentAlignment = Alignment.Center) {
++                    Text(state.appLanguage.t("Ligar TV (Wake-on-LAN)", "Turn TV on (Wake-on-LAN)", "Encender TV (Wake-on-LAN)"), fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
++                }
++            }
++        }
++    }
++}
++
++@Composable
++private fun AdvancedInputsSection(state: RemoteUiState, viewModel: RemoteViewModel) {
++    val inputs = state.inputs.ifEmpty {
++        listOf(TvInput("HDMI_1", "HDMI 1"), TvInput("HDMI_2", "HDMI 2"), TvInput("HDMI_3", "HDMI 3"))
++    }
++    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
++        AdvancedSectionTitle(state.appLanguage.t("Entradas", "Inputs", "Entradas"))
++        inputs.chunked(3).forEach { rowInputs ->
++            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
++                rowInputs.forEach { input ->
++                    Surface(
++                        onClick = { viewModel.switchInput(input) },
++                        enabled = state.connected && input.connected,
++                        modifier = Modifier.weight(1f).height(48.dp),
++                        shape = RoundedCornerShape(15.dp),
++                        color = MaterialTheme.colorScheme.surfaceVariant
++                    ) {
++                        Box(contentAlignment = Alignment.Center) {
++                            Text(input.label, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, maxLines = 1)
++                        }
++                    }
++                }
++                repeat(3 - rowInputs.size) { Spacer(Modifier.weight(1f)) }
++            }
++        }
++    }
++}
++
++@Composable
++private fun AdvancedAppsSection(state: RemoteUiState, viewModel: RemoteViewModel) {
++    val apps = state.apps.take(8)
++    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
++        AdvancedSectionTitle(state.appLanguage.t("Aplicativos", "Apps", "Aplicaciones"))
++        if (apps.isEmpty()) {
++            Surface(
++                onClick = viewModel::refresh,
++                enabled = state.connected,
++                modifier = Modifier.fillMaxWidth().height(48.dp),
++                shape = RoundedCornerShape(15.dp),
++                color = MaterialTheme.colorScheme.surfaceVariant
++            ) { Box(contentAlignment = Alignment.Center) { Text(state.appLanguage.t("Carregar aplicativos", "Load apps", "Cargar aplicaciones"), fontWeight = FontWeight.SemiBold) } }
++        } else {
++            apps.chunked(2).forEach { rowApps ->
++                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
++                    rowApps.forEach { app ->
++                        Surface(
++                            onClick = { viewModel.launchApp(app) },
++                            enabled = state.connected,
++                            modifier = Modifier.weight(1f).height(50.dp),
++                            shape = RoundedCornerShape(15.dp),
++                            color = MaterialTheme.colorScheme.surfaceVariant
++                        ) {
++                            Box(Modifier.padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
++                                Text(app.title, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
++                            }
++                        }
++                    }
++                    if (rowApps.size == 1) Spacer(Modifier.weight(1f))
++                }
++            }
++            TextButton(onClick = viewModel::openApps, enabled = state.connected, modifier = Modifier.fillMaxWidth()) {
++                Text("Ver todos os aplicativos")
++            }
++        }
++    }
++}
++
++@Composable
++private fun AdvancedKeyboardSection(state: RemoteUiState, viewModel: RemoteViewModel) {
++    var text by rememberSaveable { mutableStateOf("") }
++    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
++        AdvancedSectionTitle("Digitar na TV")
++        OutlinedTextField(
++            value = text,
++            onValueChange = { text = it },
++            modifier = Modifier.fillMaxWidth(),
++            enabled = state.connected,
++            singleLine = true,
++            label = { Text("Texto") }
++        )
++        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
++            Button(
++                onClick = { if (text.isNotBlank()) { viewModel.sendText(text); text = "" } },
++                enabled = state.connected && text.isNotBlank(),
++                modifier = Modifier.weight(1f)
++            ) { Text("Enviar") }
++            Button(onClick = viewModel::deleteText, enabled = state.connected, modifier = Modifier.weight(1f)) { Text("Apagar") }
++        }
++    }
++}
++
++@Composable
++private fun AdvancedNumericSection(state: RemoteUiState, viewModel: RemoteViewModel) {
++    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
++        AdvancedSectionTitle("Teclado numérico")
++        (1..9).chunked(3).forEach { numbers ->
++            Row(Mo

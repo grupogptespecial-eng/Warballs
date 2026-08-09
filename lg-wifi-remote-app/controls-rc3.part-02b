@@ -1,0 +1,145 @@
+(state: RemoteUiState, viewModel: RemoteViewModel) {
+         AlertDialog(
+             onDismissRequest = { confirmPowerOff = false },
+             icon = { Icon(Icons.Rounded.PowerSettingsNew, contentDescription = null) },
+-            title = { Text("Desligar a TV?") },
+-            text = { Text("Para ligar novamente pelo aplicativo, a TV precisa ter Mobile TV On/Wake-on-LAN ativado.") },
++            title = { Text(state.appLanguage.t("Desligar a TV?", "Turn off the TV?", "¿Apagar el televisor?")) },
++            text = { Text(state.appLanguage.t("Para ligar novamente pelo aplicativo, a TV precisa ter Mobile TV On/Wake-on-LAN ativado.", "To turn it on again from the app, Mobile TV On/Wake-on-LAN must be enabled on the TV.", "Para volver a encenderlo desde la app, Mobile TV On/Wake-on-LAN debe estar activado.")) },
+             confirmButton = {
+                 Button(onClick = {
+                     viewModel.send(RemoteAction.PowerOff)
+                     confirmPowerOff = false
+-                }) { Text("Desligar") }
++                }) { Text(state.appLanguage.t("Desligar", "Turn off", "Apagar")) }
+             },
+-            dismissButton = { TextButton(onClick = { confirmPowerOff = false }) { Text("Cancelar") } }
++            dismissButton = { TextButton(onClick = { confirmPowerOff = false }) { Text(state.appLanguage.t("Cancelar", "Cancel", "Cancelar")) } }
+         )
+     }
+ }
+@@ -170,7 +210,8 @@ private fun AppHeader(
+     onDeviceClick: () -> Unit,
+     onSettings: () -> Unit,
+     onPower: () -> Unit,
+-    onReconnect: () -> Unit
++    onReconnect: () -> Unit,
++    onVoice: () -> Unit
+ ) {
+     Column(
+         modifier = Modifier
+@@ -226,20 +267,29 @@ private fun AppHeader(
+                     )
+                 }
+             }
+-            if (state.connectionState == ConnectionState.Error) {
++            if (state.currentDevice != null && !state.connected && !state.busy) {
+                 IconButton(onClick = onReconnect) {
+-                    Icon(Icons.Rounded.Refresh, contentDescription = "Reconectar")
++                    Icon(Icons.Rounded.Refresh, contentDescription = state.appLanguage.t("Reconectar", "Reconnect", "Reconectar"))
++                }
++            }
++            if (state.connected && TvCapability.Keyboard in state.capabilities) {
++                IconButton(onClick = onVoice) {
++                    Icon(
++                        Icons.Rounded.Mic,
++                        contentDescription = state.appLanguage.t("Microfone", "Microphone", "Micrófono"),
++                        tint = MaterialTheme.colorScheme.primary
++                    )
+                 }
+             }
+             IconButton(onClick = onPower) {
+                 Icon(
+                     Icons.Rounded.PowerSettingsNew,
+-                    contentDescription = if (state.connected) "Desligar TV" else "Ligar TV",
++                    contentDescription = if (state.connected) state.appLanguage.t("Desligar TV", "Turn TV off", "Apagar TV") else state.appLanguage.t("Ligar TV", "Turn TV on", "Encender TV"),
+                     tint = if (state.connected) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                 )
+             }
+             IconButton(onClick = onSettings) {
+-                Icon(Icons.Rounded.Settings, contentDescription = "Configurações")
++                Icon(Icons.Rounded.Settings, contentDescription = state.appLanguage.t("Configurações", "Settings", "Ajustes"))
+             }
+         }
+         AnimatedVisibility(visible = state.busy) {
+@@ -250,7 +300,7 @@ private fun AppHeader(
+                 CircularProgressIndicator(Modifier.size(13.dp), strokeWidth = 2.dp)
+                 Spacer(Modifier.width(7.dp))
+                 Text(
+-                    if (state.connectionState == ConnectionState.Pairing) "Aceite o pedido mostrado na televisão" else state.statusText,
++                    if (state.connectionState == ConnectionState.Pairing) state.appLanguage.t("Aceite o pedido mostrado na televisão", "Accept the pairing request shown on the TV", "Acepta la solicitud que aparece en el televisor") else state.statusText,
+                     fontSize = 11.dp.value.sp,
+                     color = MaterialTheme.colorScheme.primary
+                 )
+@@ -277,10 +327,10 @@ private fun WelcomeScreen(state: RemoteUiState, onConnect: () -> Unit, onDiagnos
+                 )
+             }
+             Spacer(Modifier.height(24.dp))
+-            Text("Seu controle, sem anúncios", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
++            Text(state.appLanguage.t("Seu controle, sem anúncios", "Your remote, without ads", "Tu control, sin anuncios"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+             Spacer(Modifier.height(8.dp))
+             Text(
+-                "Conecte a TV uma vez. Nas próximas aberturas, o aplicativo tenta reconectar automaticamente.",
++                state.appLanguage.t("Conecte a TV uma vez. Nas próximas aberturas, o aplicativo tenta reconectar automaticamente.", "Connect the TV once. On future launches, the app will try to reconnect automatically.", "Conecta el TV una vez. En los próximos inicios, la app intentará reconectarse automáticamente."),
+                 textAlign = TextAlign.Center,
+                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                 modifier = Modifier.fillMaxWidth(0.88f)
+@@ -289,18 +339,18 @@ private fun WelcomeScreen(state: RemoteUiState, onConnect: () -> Unit, onDiagnos
+             Button(onClick = onConnect, modifier = Modifier.fillMaxWidth(0.82f).height(56.dp)) {
+                 Icon(Icons.Rounded.Search, contentDescription = null)
+                 Spacer(Modifier.width(9.dp))
+-                Text("Conectar TV", fontWeight = FontWeight.Bold)
++                Text(state.appLanguage.t("Conectar TV", "Connect TV", "Conectar TV"), fontWeight = FontWeight.Bold)
+             }
+             Spacer(Modifier.height(10.dp))
+             TextButton(onClick = onDiagnose) {
+                 Icon(Icons.Rounded.Wifi, contentDescription = null, Modifier.size(18.dp))
+                 Spacer(Modifier.width(7.dp))
+-                Text("Verificar minha rede")
++                Text(state.appLanguage.t("Verificar minha rede", "Check my network", "Comprobar mi red"))
+             }
+             if (state.connectionState == ConnectionState.PermissionRequired) {
+                 Spacer(Modifier.height(12.dp))
+                 Text(
+-                    "O acesso à rede local é necessário somente para localizar e controlar a TV.",
++                    state.appLanguage.t("O acesso à rede local é necessário somente para localizar e controlar a TV.", "Local network access is only needed to find and control the TV.", "El acceso a la red local solo se usa para encontrar y controlar el TV."),
+                     textAlign = TextAlign.Center,
+                     color = MaterialTheme.colorScheme.error,
+                     fontSize = 12.sp
+@@ -350,14 +400,14 @@ private fun SurfaceSelector(
+             modifier = Modifier.weight(1f),
+             selected = selected == ControlSurface.Remote,
+             icon = Icons.Rounded.Tv,
+-            label = "Controle",
++            label = LocalAppLanguage.current.t("Controle", "Remote", "Control"),
+             onClick = { onSelect(ControlSurface.Remote) }
+         )
+         Segment(
+             modifier = Modifier.weight(1f),
+             selected = selected == ControlSurface.Touchpad,
+             icon = Icons.Rounded.TouchApp,
+-            label = "Touchpad",
++            label = LocalAppLanguage.current.t("Touchpad", "Touchpad", "Panel táctil"),
+             enabled = pointerAvailable,
+             onClick = { onSelect(ControlSurface.Touchpad) }
+         )
+@@ -394,6 +444,10 @@ private fun Segment(
+ 
+ @Composable
+ private fun RemotePresetContent(state: RemoteUiState, viewModel: RemoteViewModel) {
++    if (state.selectedPresetId == RemotePresetId.AdvancedLegacy) {
++        AdvancedLegacyPresetContent(state, viewModel)
++        return
++    }
+     val preset = state.selectedPreset
+     val modules = preset.modules.filter { module ->
+         module.requiredCapability == null || module.requiredCapability in state.capabilities
+@@ -408,9 +462,9 @@ private fun RemotePresetContent(state: RemoteUiState, viewModel: RemoteViewModel
+             item {
+                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                     Column(Modifier.weight(1f)) {
+-                        Text(preset.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
++                        Text(preset.localizedName(state.appLanguage), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                         Text(
+-                            if (state.connected) "Pronto para usar" else "Os botões serão ativados após a conexão",
++                            if (state.connected) state.appLanguage.t("Pronto

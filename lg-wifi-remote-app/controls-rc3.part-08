@@ -1,0 +1,104 @@
+evice ?: return
++        val original = device ?: return
++        val providedMac = macOverride?.trim()?.takeIf(String::isNotBlank)
++        val current = if (providedMac != null && providedMac != original.mac) {
++            val updated = original.copy(mac = providedMac)
++            val saved = preferences.updateDevice(updated)
++            _uiState.update { it.copy(currentDevice = updated, savedDevices = saved) }
++            updated
++        } else original
+         if (TvCapability.WakeOnLan !in current.capabilities && current.platform !in setOf(
+                 TvPlatform.LgWebOs,
+                 TvPlatform.SamsungTizenLocal
+@@ -329,6 +336,22 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
+ 
+     fun setTheme(mode: ThemeMode) = updateSettings { it.copy(themeMode = mode) }
+     fun setAccent(accent: AccentTheme) = updateSettings { it.copy(accentTheme = accent) }
++    fun setAnimationPreset(preset: AnimationPreset) = updateSettings { it.copy(animationPreset = preset) }
++    fun setButtonEffect(effect: ButtonEffect) = updateSettings { it.copy(buttonEffect = effect) }
++    fun setAppLanguage(language: AppLanguage) = updateSettings {
++        it.copy(
++            appLanguage = language,
++            statusText = when {
++                it.connected -> language.t("Conectado", "Connected", "Conectado")
++                it.currentDevice != null -> language.t(
++                    "Pronta para reconectar a ${it.currentDevice.displayName}",
++                    "Ready to reconnect to ${it.currentDevice.displayName}",
++                    "Lista para reconectar a ${it.currentDevice.displayName}"
++                )
++                else -> language.t("Toque em Conectar TV para começar", "Tap Connect TV to begin", "Toca Conectar TV para empezar")
++            }
++        )
++    }
+     fun setHaptics(enabled: Boolean) = updateSettings { it.copy(hapticsEnabled = enabled) }
+     fun setSound(enabled: Boolean) = updateSettings { it.copy(soundEnabled = enabled) }
+     fun setCompactMode(enabled: Boolean) = updateSettings { it.copy(compactMode = enabled) }
+@@ -356,6 +379,16 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
+     fun closePresetEditor() { _uiState.update { it.copy(showPresetEditor = false) } }
+     fun dismissDevicePicker() { _uiState.update { it.copy(showDevicePicker = false) } }
+ 
++    fun voiceUnavailable() {
++        _uiState.update { state ->
++            state.copy(statusText = state.appLanguage.t(
++                "Reconhecimento de voz indisponível neste dispositivo.",
++                "Voice recognition is unavailable on this device.",
++                "El reconocimiento de voz no está disponible en este dispositivo."
++            ))
++        }
++    }
++
+     fun runDiagnostics() {
+         _uiState.update { it.copy(diagnostic = it.diagnostic.copy(summary = "Verificando a rede…")) }
+         viewModelScope.launch(Dispatchers.IO) {
+diff --git a/app/src/test/java/com/geronimo/controlelgwifi/RemoteModelsTest.kt b/app/src/test/java/com/geronimo/controlelgwifi/RemoteModelsTest.kt
+index 303d52f..c181709 100644
+--- a/app/src/test/java/com/geronimo/controlelgwifi/RemoteModelsTest.kt
++++ b/app/src/test/java/com/geronimo/controlelgwifi/RemoteModelsTest.kt
+@@ -102,4 +102,47 @@ class RemoteModelsTest {
+         assertEquals(null, TvDiscovery.normalizeHost("8.8.8.8"))
+     }
+ 
++    @Test
++    fun advancedLegacyPresetKeepsClassicOneScrollControls() {
++        val preset = RemotePreset.advancedLegacy
++        assertEquals(RemotePresetId.AdvancedLegacy, preset.id)
++        assertTrue(RemoteModule.DPad in preset.modules)
++        assertTrue(RemoteModule.Volume in preset.modules)
++        assertTrue(RemoteModule.Channels in preset.modules)
++        assertTrue(RemoteModule.Media in preset.modules)
++        assertTrue(RemoteModule.TouchpadShortcut in preset.modules)
++        assertTrue(RemoteModule.Inputs in preset.modules)
++        assertTrue(RemoteModule.Apps in preset.modules)
++        assertTrue(RemoteModule.Keyboard in preset.modules)
++        assertTrue(RemoteModule.Numeric in preset.modules)
++    }
++
++    @Test
++    fun lgPointerProtocolFramesNavigationAndPointerCommands() {
++        assertEquals("type:button\nname:LEFT\n\n", LgPointerProtocol.button("left"))
++        assertEquals("type:click\n\n", LgPointerProtocol.click())
++        assertEquals("type:move\ndx:240\ndy:-240\ndown:0\n\n", LgPointerProtocol.move(999, -999))
++        assertEquals("type:scroll\ndx:0\ndy:80\n\n", LgPointerProtocol.scroll(999))
++    }
++
++
++
++    @Test
++    fun languageSelectionProvidesUiTextAndSpeechLocale() {
++        assertEquals("Settings", AppLanguage.English.t("Configurações", "Settings", "Ajustes"))
++        assertEquals("Ajustes", AppLanguage.Spanish.t("Configurações", "Settings", "Ajustes"))
++        assertEquals("pt-BR", AppLanguage.Portuguese.voiceTag())
++        assertEquals("en-US", AppLanguage.English.voiceTag())
++        assertEquals("es-ES", AppLanguage.Spanish.voiceTag())
++    }
++
++    @Test
++    fun customizationPresetsExposeSafeFallbacks() {
++        val state = RemoteUiState()
++        assertEquals(AnimationPreset.Soft, state.animationPreset)
++        assertEquals(ButtonEffect.Scale, state.buttonEffect)
++        assertEquals(AppLanguage.System, state.appLanguage)
++        assertTrue(AccentTheme.entries.size >= 9)
++    }
++
+ }

@@ -1,0 +1,71 @@
+rimentalBackendsEnabled)
+             .putString("theme", state.themeMode.name)
+             .putString("accent", state.accentTheme.name)
++            .putString("animation_preset", state.animationPreset.name)
++            .putString("button_effect", state.buttonEffect.name)
++            .putString("app_language", state.appLanguage.name)
++            .putString("control_surface", state.controlSurface.name)
+             .putString("selected_preset", state.selectedPresetId.name)
+             .putBoolean("onboarding_complete", state.onboardingComplete)
+             .apply()
+diff --git a/app/src/main/java/com/geronimo/controlelgwifi/RemoteSheets.kt b/app/src/main/java/com/geronimo/controlelgwifi/RemoteSheets.kt
+index 9f9147d..96b8d2a 100644
+--- a/app/src/main/java/com/geronimo/controlelgwifi/RemoteSheets.kt
++++ b/app/src/main/java/com/geronimo/controlelgwifi/RemoteSheets.kt
+@@ -51,6 +51,7 @@ import androidx.compose.material.icons.rounded.Search
+ import androidx.compose.material.icons.rounded.Security
+ import androidx.compose.material.icons.rounded.SettingsRemote
+ import androidx.compose.material.icons.rounded.Smartphone
++import androidx.compose.material.icons.rounded.TouchApp
+ import androidx.compose.material.icons.rounded.Tv
+ import androidx.compose.material.icons.rounded.Vibration
+ import androidx.compose.material.icons.rounded.Visibility
+@@ -91,6 +92,7 @@ import androidx.compose.ui.unit.sp
+ 
+ @Composable
+ fun ConnectTvSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
++    val language = state.appLanguage
+     var manualIp by remember { mutableStateOf("") }
+     ModalBottomSheet(onDismissRequest = viewModel::closeConnect) {
+         LazyColumn(
+@@ -104,8 +106,8 @@ fun ConnectTvSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+             item {
+                 SheetHeading(
+                     icon = Icons.Rounded.Tv,
+-                    title = "Conectar uma TV",
+-                    subtitle = "A busca acontece somente dentro da sua rede local."
++                    title = language.t("Conectar uma TV", "Connect a TV", "Conectar un TV"),
++                    subtitle = language.t("A busca acontece somente dentro da sua rede local.", "Search only happens inside your local network.", "La búsqueda solo ocurre dentro de tu red local.")
+                 )
+             }
+             item {
+@@ -125,26 +127,26 @@ fun ConnectTvSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+                         Spacer(Modifier.width(12.dp))
+                         Column(Modifier.weight(1f)) {
+                             Text(
+-                                if (state.connectionState == ConnectionState.Discovering) "Procurando TVs…" else state.statusText,
++                                if (state.connectionState == ConnectionState.Discovering) language.t("Procurando TVs…", "Searching for TVs…", "Buscando TVs…") else state.statusText,
+                                 fontWeight = FontWeight.SemiBold
+                             )
+                             Text(
+-                                "Mantenha a TV ligada durante o primeiro pareamento.",
++                                language.t("Mantenha a TV ligada durante o primeiro pareamento.", "Keep the TV on during first pairing.", "Mantén el TV encendido durante el primer emparejamiento."),
+                                 fontSize = 12.sp,
+                                 color = MaterialTheme.colorScheme.onSurfaceVariant
+                             )
+                         }
+                         IconButton(onClick = viewModel::discover) {
+-                            Icon(Icons.Rounded.Refresh, contentDescription = "Procurar novamente")
++                            Icon(Icons.Rounded.Refresh, contentDescription = language.t("Procurar novamente", "Search again", "Buscar de nuevo"))
+                         }
+                     }
+                 }
+             }
+ 
+             if (state.discoveredDevices.isNotEmpty()) {
+-                item { SectionTitle("Encontradas agora") }
++                item { SectionTitle(language.t("Encontradas agora", "Found now", "Encontradas ahora")) }
+                 items(state.discoveredDevices, key = { "found-${it.stableId}" }) { device ->
+-                    DeviceRow(device, connected = state.currentDevice?.stableId == device.stableId && state.connected) {
++                    DeviceRow(device, connected = state.currentDevice?.stableId == device.stableId && state.connected, language = language) {
+    

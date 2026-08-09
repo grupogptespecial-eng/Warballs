@@ -1,0 +1,39 @@
++                        Text(language.t("Conectar", "Connect", "Conectar"))
+                     }
+                 }
+                 Spacer(Modifier.height(8.dp))
+                 Text(
+-                    "O IP manual é um recurso de recuperação. Normalmente basta tocar em Procurar novamente.",
++                    language.t("O IP manual é um recurso de recuperação. Normalmente basta tocar em Procurar novamente.", "Manual IP is a recovery option. Usually Search again is enough.", "La IP manual es una opción de recuperación. Normalmente basta Buscar de nuevo."),
+                     fontSize = 12.sp,
+                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                 )
+@@ -191,7 +193,7 @@ fun ConnectTvSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+ }
+ 
+ @Composable
+-private fun DeviceRow(device: TvDevice, connected: Boolean, onClick: () -> Unit) {
++private fun DeviceRow(device: TvDevice, connected: Boolean, language: AppLanguage, onClick: () -> Unit) {
+     Card(
+         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+         shape = RoundedCornerShape(20.dp),
+@@ -216,7 +218,7 @@ private fun DeviceRow(device: TvDevice, connected: Boolean, onClick: () -> Unit)
+                 )
+             }
+             if (connected) {
+-                Icon(Icons.Rounded.Check, contentDescription = "Conectada", tint = MaterialTheme.colorScheme.primary)
++                Icon(Icons.Rounded.Check, contentDescription = language.t("Conectada", "Connected", "Conectada"), tint = MaterialTheme.colorScheme.primary)
+             }
+         }
+     }
+@@ -224,23 +226,24 @@ private fun DeviceRow(device: TvDevice, connected: Boolean, onClick: () -> Unit)
+ 
+ @Composable
+ fun AppsSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
++    val language = state.appLanguage
+     var search by remember { mutableStateOf("") }
+     val filtered = state.apps.filter { it.title.contains(search, ignoreCase = true) }
+     ModalBottomSheet(onDismissRequest = viewModel::closeApps) {
+         Column(Modifier.fillMaxWidth().fillMaxHeight(0.82f).padding(horizontal = 18.dp)) {
+-            SheetHeading(Icons.Rounded.Apps, "Aplicativos", "Abra os aplicativos instalados na TV.")
++     

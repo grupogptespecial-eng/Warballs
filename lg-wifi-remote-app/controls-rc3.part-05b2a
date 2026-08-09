@@ -1,0 +1,36 @@
+                     viewModel.connect(device)
+                     }
+                 }
+@@ -152,9 +154,9 @@ fun ConnectTvSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+ 
+             val offlineSaved = state.savedDevices.filter { saved -> state.discoveredDevices.none { it.stableId == saved.stableId } }
+             if (offlineSaved.isNotEmpty()) {
+-                item { SectionTitle("Salvas") }
++                item { SectionTitle(language.t("Salvas", "Saved", "Guardadas")) }
+                 items(offlineSaved, key = { "saved-${it.stableId}" }) { device ->
+-                    DeviceRow(device, connected = state.currentDevice?.stableId == device.stableId && state.connected) {
++                    DeviceRow(device, connected = state.currentDevice?.stableId == device.stableId && state.connected, language = language) {
+                         viewModel.connect(device)
+                     }
+                 }
+@@ -162,13 +164,13 @@ fun ConnectTvSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+ 
+             item {
+                 HorizontalDivider(Modifier.padding(vertical = 4.dp))
+-                Text("Minha TV não apareceu", fontWeight = FontWeight.SemiBold)
++                Text(language.t("Minha TV não apareceu", "My TV did not appear", "Mi TV no apareció"), fontWeight = FontWeight.SemiBold)
+                 Spacer(Modifier.height(8.dp))
+                 Row(verticalAlignment = Alignment.CenterVertically) {
+                     OutlinedTextField(
+                         value = manualIp,
+                         onValueChange = { manualIp = it },
+-                        label = { Text("IP da TV") },
++                        label = { Text(language.t("IP da TV", "TV IP", "IP del TV")) },
+                         placeholder = { Text("192.168.1.20") },
+                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                         singleLine = true,
+@@ -176,12 +178,12 @@ fun ConnectTvSheet(state: RemoteUiState, viewModel: RemoteViewModel) {
+                     )
+                     Spacer(Modifier.width(10.dp))
+                     Button(onClick = { viewModel.connectManual(manualIp) }, enabled = manualIp.isNotBlank()) {
+-                        Text("Conectar")
