@@ -49,9 +49,10 @@ jobs:
             cd ..
             tar -xzf /tmp/rc4-overlay.tar.gz -C lg-wifi-remote-app
 
-            cat .rc4-materialize/fastlg-part-00.patch .rc4-materialize/fastlg-part-01.patch .rc4-materialize/fastlg-part-02.patch .rc4-materialize/fastlg-part-03.patch .rc4-materialize/fastlg-part-04.patch > /tmp/fastlg-final.patch
-            echo 'ffd290fa5c69ed18d8fab294801ccc566de641d55144d746f6fe6d80b7b3b056  /tmp/fastlg-final.patch' | sha256sum -c -
-            (cd lg-wifi-remote-app && patch -p0 < /tmp/fastlg-final.patch)
+            cat .rc4-materialize/fastlg-final-part-*.b64 > /tmp/fastlg-final.b64
+            base64 -d /tmp/fastlg-final.b64 > /tmp/fastlg-final.tar.gz
+            echo 'bbc955a3c4c0512cd7290db71293d1ff9cd2ffe4de89e1b320ee18a7776fa6c9  /tmp/fastlg-final.tar.gz' | sha256sum -c -
+            tar -xzf /tmp/fastlg-final.tar.gz -C lg-wifi-remote-app
           fi
           git diff --check
 
