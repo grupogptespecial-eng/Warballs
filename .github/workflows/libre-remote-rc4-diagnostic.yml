@@ -1,0 +1,126 @@
+name: Diagnose Libre Remote RC4 Build
+
+on:
+  push:
+    branches:
+      - release/libre-remote-2.0.0-rc4-final
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Materialize exact RC4 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat \
+            .rc4-materialize/overlay-part-00.b64 \
+            .rc4-materialize/overlay-part-01.b64 \
+            .rc4-materialize/overlay-part-02-00.b64 \
+            .rc4-materialize/overlay-part-02-01.b64 \
+            .rc4-materialize/overlay-part-02-02.b64 \
+            .rc4-materialize/overlay-part-02-03.b64 \
+            .rc4-materialize/overlay-part-02-04.b64 \
+            .rc4-materialize/overlay-part-02-05.b64 \
+            .rc4-materialize/overlay-part-02-06.b64 \
+            .rc4-materialize/overlay-part-03.b64 \
+            .rc4-materialize/overlay-part-04.b64 \
+            .rc4-materialize/overlay-part-05.b64 \
+            .rc4-materialize/overlay-part-06.b64 \
+            .rc4-materialize/overlay-part-07.b64 > /tmp/rc4-overlay.b64
+          base64 -d /tmp/rc4-overlay.b64 > /tmp/rc4-overlay.tar.gz
+          echo '9605dc634c304dd17834ce22cde4e1b61406f4df6157bf929cd22f025dc157f5  /tmp/rc4-overlay.tar.gz' | sha256sum -c -
+          cd lg-wifi-remote-app
+          git apply --check --whitespace=error stability-rc2.patch
+          git apply --whitespace=error stability-rc2.patch
+          git apply --check --whitespace=error controls-rc3.patch
+          git apply --whitespace=error controls-rc3.patch
+          cd ..
+          tar -xzf /tmp/rc4-overlay.tar.gz -C lg-wifi-remote-app
+          cat .rc4-materialize/fastlg-final-part-*.b64 > /tmp/fastlg-final.b64
+          base64 -d /tmp/fastlg-final.b64 > /tmp/fastlg-final.tar.gz
+          echo 'bbc955a3c4c0512cd7290db71293d1ff9cd2ffe4de89e1b320ee18a7776fa6c9  /tmp/fastlg-final.tar.gz' | sha256sum -c -
+          tar -xzf /tmp/fastlg-final.tar.gz -C lg-wifi-remote-app
+          cat .rc4-materialize/tvbackend-final-part-*.patch > /tmp/tvbackend-final.patch
+          echo '9d4d2c517555a470d6e458cf1044728c355047303d9f3815a307193287b844f7  /tmp/tvbackend-final.patch' | sha256sum -c -
+          (cd lg-wifi-remote-app && patch -p0 < /tmp/tvbackend-final.patch)
+          cat .rc4-materialize/tvdiscovery-final-part-*.patch > /tmp/tvdiscovery-final.patch
+          echo '66d90305cfc93b171785da7fa86bbc267e404907c5393107b86f518563f612c5  /tmp/tvdiscovery-final.patch' | sha256sum -c -
+          (cd lg-wifi-remote-app && patch -p0 < /tmp/tvdiscovery-final.patch)
+          git diff --check
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'platform-tools'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Run gate and capture full failure
+        id: gradle
+        working-directory: lg-wifi-remote-app
+        shell: bash
+        run: |
+          set +e
+          set -o pipefail
+          gradle --no-daemon --stacktrace :app:testDebugUnitTest :app:lintRelease :app:assembleRelease 2>&1 | tee rc4-diagnostic.log
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Persist diagnostic excerpt
+        if: steps.gradle.outputs.status != '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          source = Path('lg-wifi-remote-app/rc4-diagnostic.log')
+          lines = source.read_text(errors='replace').splitlines()
+          needles = ('e: ', 'error:', 'failure:', 'what went wrong:', 'unresolved reference', 'type mismatch', 'compilation error', 'failed', 'exception')
+          selected = []
+          seen = set()
+          for i, line in enumerate(lines):
+              low = line.lower()
+              if any(n in low for n in needles):
+                  lo = max(0, i - 5)
+                  hi = min(len(lines), i + 18)
+                  for j in range(lo, hi):
+                      if j not in seen:
+                          selected.append(lines[j])
+                          seen.add(j)
+                  selected.append('')
+          if not selected:
+              selected = lines[-800:]
+          Path('RC4_BUILD_FAILURE.txt').write_text('\n'.join(selected[-1200:]) + '\n')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add RC4_BUILD_FAILURE.txt
+          git commit -m 'Record RC4 Gradle failure diagnostics'
+          git push
+
+      - name: Fail after diagnostic is saved
+        if: steps.gradle.outputs.status != '0'
+        run: exit 1
