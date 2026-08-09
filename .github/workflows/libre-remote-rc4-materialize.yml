@@ -1,0 +1,157 @@
+name: Materialize Libre Remote RC4 Source and Build
+
+on:
+  push:
+    branches:
+      - stability/libre-remote-2.0.0-rc4-personalization-20260809
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize-test-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Materialize exact RC4 source
+        working-directory: lg-wifi-remote-app
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if grep -Fq 'versionName = "2.0.0-rc4-personalization"' app/build.gradle.kts; then
+            echo "RC4 source is already materialized in the repository."
+          else
+            git apply --check --whitespace=error stability-rc2.patch
+            git apply --whitespace=error stability-rc2.patch
+            git apply --check --whitespace=error controls-rc3.patch
+            git apply --whitespace=error controls-rc3.patch
+
+            cat rc4-xz-v2/part-*.b64 > /tmp/rc4-main.xz.b64
+            test "$(wc -c < /tmp/rc4-main.xz.b64)" = "23736"
+            echo "1dbdff4df4d6de1e2c78757f53d9be5f5c7463cf2010ca71561af1a8028ac405  /tmp/rc4-main.xz.b64" | sha256sum -c -
+            base64 -d /tmp/rc4-main.xz.b64 > /tmp/rc4-main.xz
+            echo "63ff82f8b2914124830540941ea8343efd7276f2b731fff3c8394fad67d00d9a  /tmp/rc4-main.xz" | sha256sum -c -
+            xz -dc /tmp/rc4-main.xz > /tmp/rc4-main.patch
+            test "$(wc -c < /tmp/rc4-main.patch)" = "102320"
+            echo "9e8c3f748fc55d8fc28e7d44a709cbefa276aed489019cd934584f4883c6737a  /tmp/rc4-main.patch" | sha256sum -c -
+
+            EXCLUDES=(
+              "--exclude=app/src/main/java/com/geronimo/controlelgwifi/FastLgWebOsClient.kt"
+              "--exclude=app/src/main/java/com/geronimo/controlelgwifi/LgPointerProtocol.kt"
+              "--exclude=app/src/main/java/com/geronimo/controlelgwifi/MainActivity.kt"
+              "--exclude=app/src/main/java/com/geronimo/controlelgwifi/RemoteControls.kt"
+              "--exclude=app/src/main/java/com/geronimo/controlelgwifi/RemoteModels.kt"
+              "--exclude=app/src/test/java/com/geronimo/controlelgwifi/RemoteModelsTest.kt"
+            )
+            git apply --check --whitespace=error "${EXCLUDES[@]}" /tmp/rc4-main.patch
+            git apply --whitespace=error "${EXCLUDES[@]}" /tmp/rc4-main.patch
+
+            cat rc4-ci-supplement/part-*.b64 > /tmp/rc4-supplement.xz.b64
+            test "$(wc -c < /tmp/rc4-supplement.xz.b64)" = "14972"
+            echo "6b310075257fa04feaa58d5dfb063d7bb11a4f24183e9b7eb4b659217c50d826  /tmp/rc4-supplement.xz.b64" | sha256sum -c -
+            base64 -d /tmp/rc4-supplement.xz.b64 > /tmp/rc4-supplement.xz
+            echo "d846c690007c7fe8135fae6ee66a6e2dfbc03907f237cd93f6a50b7877951d38  /tmp/rc4-supplement.xz" | sha256sum -c -
+            xz -dc /tmp/rc4-supplement.xz > /tmp/rc4-supplement.patch
+            test "$(wc -c < /tmp/rc4-supplement.patch)" = "65606"
+            echo "c860909c2e03130164f2c374216112ce6eb18e18811d3a14eabde8aa467ed07e  /tmp/rc4-supplement.patch" | sha256sum -c -
+            git apply --check --whitespace=error /tmp/rc4-supplement.patch
+            git apply --whitespace=error /tmp/rc4-supplement.patch
+          fi
+
+          git diff --check
+          grep -F 'versionCode = 23' app/build.gradle.kts
+          grep -F 'versionName = "2.0.0-rc4-personalization"' app/build.gradle.kts
+
+      - name: Commit materialized source to repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- lg-wifi-remote-app/app; then
+            echo "No source changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lg-wifi-remote-app/app
+          git commit -m "Materialize Libre Remote 2.0.0 RC4 source"
+          git push origin HEAD:stability/libre-remote-2.0.0-rc4-personalization-20260809
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Generate temporary sideload signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          PASSWORD="$(openssl rand -hex 18)"
+          ALIAS="libre-remote-sideload"
+          echo "::add-mask::$PASSWORD"
+          keytool -genkeypair -v \
+            -keystore "$GITHUB_WORKSPACE/libre-remote-sideload.jks" \
+            -storepass "$PASSWORD" \
+            -keypass "$PASSWORD" \
+            -alias "$ALIAS" \
+            -keyalg RSA -keysize 4096 -validity 10000 \
+            -dname "CN=Libre Remote Sideload, OU=RC4 Materialized, O=Libre Remote, L=Rio de Janeiro, ST=RJ, C=BR"
+          echo "LIBRE_KEYSTORE_PATH=$GITHUB_WORKSPACE/libre-remote-sideload.jks" >> "$GITHUB_ENV"
+          echo "LIBRE_KEYSTORE_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
+          echo "LIBRE_KEY_ALIAS=$ALIAS" >> "$GITHUB_ENV"
+          echo "LIBRE_KEY_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Unit tests, release lint and signed APK
+        working-directory: lg-wifi-remote-app
+        run: |
+          set -euo pipefail
+          gradle --no-daemon --stacktrace \
+            :app:testDebugUnitTest \
+            :app:lintRelease \
+            :app:assembleRelease 2>&1 | tee rc4-materialized-build.log
+
+      - name: Verify APK and package source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output/source
+          APK="lg-wifi-remote-app/app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          cp "$APK" output/Libre-Remote-2.0.0-rc4-personalization.apk
+          APKSIGNER="$(find "${ANDROID_SDK_ROOT:-$ANDROID_HOME}/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --verbose --print-certs output/Libre-Remote-2.0.0-rc4-personalization.apk > output/APK-SIGNATURE.txt
+          sha256sum output/Libre-Remote-2.0.0-rc4-personalization.apk > output/SHA256SUMS.txt
+          cp lg-wifi-remote-app/rc4-materialized-build.log output/
+          rsync -a --exclude build --exclude .gradle --exclude local.properties lg-wifi-remote-app/app/ output/source/app/
+          cp lg-wifi-remote-app/build.gradle.kts output/source/ || true
+          cp lg-wifi-remote-app/settings.gradle.kts output/source/ || true
+          (cd output && zip -qr Libre-Remote-2.0.0-rc4-personalization-source.zip source && rm -rf source)
+          ls -lh output
+
+      - name: Upload RC4 materialized build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Libre-Remote-2.0.0-rc4-materialized
+          path: output/*
+          if-no-files-found: error
+          retention-days: 30
