@@ -1,0 +1,42 @@
+--- app/src/main/java/com/geronimo/controlelgwifi/FastLgWebOsClient.kt
++++ app/src/main/java/com/geronimo/controlelgwifi/FastLgWebOsClient.kt
+@@ -67,19 +67,22 @@
+     @Volatile private var pointerSocket: WebSocket? = null
+     @Volatile private var registered = false
+     @Volatile private var pointerReady = false
++    @Volatile private var pendingMotion: String? = null
+     @Volatile private var manuallyClosed = true
+     @Volatile private var reconnectAttempt = 0
+     @Volatile private var connectionGeneration = 0
+     private val endpointChosen = AtomicBoolean(false)
+     private val endpointFailures = AtomicInteger(0)
+     private var reconnectJob: Job? = null
++    private var pointerRecoveryJob: Job? = null
++    private var pointerOpenWatchdog: Job? = null
+     private var pointerOpening = AtomicBoolean(false)
+     private var cachedCapabilities = TvCapability.lgDefaults.toMutableSet()
+ 
+     init {
+         scope.launch {
+             for (motion in motionChannel) {
+-                sendPointer("type:move\ndx:${motion.dx}\ndy:${motion.dy}\ndown:0\n\n")
++                sendPointerMotion(LgPointerProtocol.move(motion.dx, motion.dy))
+                 delay(12)
+             }
+         }
+@@ -301,8 +304,8 @@
+         if (dx != 0 || dy != 0) motionChannel.trySend(Motion(dx.coerceIn(-240, 240), dy.coerceIn(-240, 240)))
+     }
+ 
+-    fun click() = sendPointer("type:click\n\n", critical = true)
+-    fun scroll(delta: Int) = sendPointer("type:scroll\ndx:0\ndy:${delta.coerceIn(-80, 80)}\n\n")
++    fun click() = sendPointer(LgPointerProtocol.click(), critical = true)
++    fun scroll(delta: Int) = sendPointer(LgPointerProtocol.scroll(delta))
+     fun launchApp(appId: String) = request("ssap://system.launcher/launch", JSONObject().put("id", appId))
+     fun switchInput(inputId: String) = request("ssap://tv/switchInput", JSONObject().put("inputId", inputId))
+ 
+@@ -386,68 +389,124 @@
+         })
+     }
+ 
+-    private fun button(name: String) = sendPointer("type:button\nname:$

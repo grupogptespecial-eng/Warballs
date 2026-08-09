@@ -1,0 +1,47 @@
+name\n\n", critical = true)
++    private fun button(name: String) = sendPointer(LgPointerProtocol.button(name), critical = true)
+ 
+     private fun sendPointer(message: String, critical: Boolean = false) {
+-        if (pointerReady && pointerSocket?.send(message) == true) return
++        val socket = pointerSocket
++        if (pointerReady && socket?.send(message) == true) return
++
++        if (pointerReady || socket != null) {
++            pointerReady = false
++            if (socket === pointerSocket) pointerSocket = null
++            pointerOpening.set(false)
++            socket?.cancel()
++        }
+         synchronized(pointerLock) {
+             if (critical) {
+                 while (pointerQueue.size >= 24 && pointerQueue.isNotEmpty()) pointerQueue.removeFirst()
+                 pointerQueue.addLast(message)
+-            } else {
+-                if (pointerQueue.size < 24) pointerQueue.addLast(message)
++            } else if (pointerQueue.size < 24) {
++                pointerQueue.addLast(message)
+             }
+         }
+         ensurePointerSocket()
+     }
+ 
++    private fun sendPointerMotion(message: String) {
++        val socket = pointerSocket
++        if (pointerReady && socket?.send(message) == true) return
++
++        // Motion is high-frequency: keep only the latest unsent delta instead of
++        // replaying a long stale cursor trail when the pointer socket reconnects.
++        pendingMotion = message
++        if (pointerReady || socket != null) {
++            pointerReady = false
++            if (socket === pointerSocket) pointerSocket = null
++            pointerOpening.set(false)
++            socket?.cancel()
++        }
++        ensurePointerSocket()
++    }
++
+     private fun ensurePointerSocket() {
+-        if (!registered || pointerReady || !pointerOpening.compareAndSet(false, true)) return
++        if (!registered || manuallyClosed || pointerReady || !pointerOpening.compareAndSet(false, true)) return
+         val openingGeneration = connec

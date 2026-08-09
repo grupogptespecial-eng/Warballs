@@ -1,0 +1,54 @@
+ TvCapability.Pointer
+                     listener.onCapabilities(cachedCapabilities)
++
+                     val queued = mutableListOf<String>()
+                     synchronized(pointerLock) {
+                         while (pointerQueue.isNotEmpty()) queued += pointerQueue.removeFirst()
+                     }
+                     queued.forEach(webSocket::send)
++                    pendingMotion?.also { motion ->
++                        pendingMotion = null
++                        webSocket.send(motion)
++                    }
+                 }
+ 
+                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
++                    if (webSocket === pointerSocket) pointerSocket = null
+                     pointerReady = false
+-                    pointerSocket = null
+                     pointerOpening.set(false)
++                    schedulePointerRecovery()
+                 }
+ 
+                 override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
++                    if (webSocket === pointerSocket) pointerSocket = null
+                     pointerReady = false
+-                    pointerSocket = null
+                     pointerOpening.set(false)
++                    schedulePointerRecovery()
+                 }
+             })
+         })
+     }
+ 
++    private fun schedulePointerRecovery() {
++        if (!registered || manuallyClosed || pointerRecoveryJob?.isActive == true) return
++        pointerRecoveryJob = scope.launch {
++            delay(220)
++            ensurePointerSocket()
++        }
++    }
++
+     private fun request(
+         uri: String,
+         payload: JSONObject = JSONObject(),
+@@ -509,6 +568,9 @@
+         registered = false
+         pointerReady = false
+         pointerOpening.set(false)
++        pointerRecoveryJob?.cancel()
++        pointerOpenWatchdog?.cancel()
++        pendingMotion = null
+         callbacks.values.forEach { it.timeout.cancel() }
+         callbacks.clear()
+         sy

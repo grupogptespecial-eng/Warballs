@@ -1,0 +1,44 @@
+tionGeneration
+-        scope.launch {
++
++        pointerOpenWatchdog?.cancel()
++        pointerOpenWatchdog = scope.launch {
+             delay(4_500)
+-            if (openingGeneration == connectionGeneration && !pointerReady) {
+-                pointerOpening.set(false)
++            if (
++                openingGeneration == connectionGeneration &&
++                registered && !pointerReady &&
++                pointerOpening.compareAndSet(true, false)
++            ) {
++                schedulePointerRecovery()
+             }
+         }
++
+         request("ssap://com.webos.service.networkinput/getPointerInputSocket", timeoutMs = 4_000, callback = { payload ->
++            pointerOpenWatchdog?.cancel()
++            if (openingGeneration != connectionGeneration || !registered) {
++                pointerOpening.set(false)
++                return@request
++            }
+             val path = payload.optString("socketPath")
+             if (path.isBlank()) {
+                 pointerOpening.set(false)
+-                cachedCapabilities -= TvCapability.Pointer
+-                listener.onCapabilities(cachedCapabilities)
++                schedulePointerRecovery()
+                 return@request
+             }
+             val client = if (path.startsWith("wss://")) tlsClient else plainClient
+             client.newWebSocket(Request.Builder().url(path).build(), object : WebSocketListener() {
+                 override fun onOpen(webSocket: WebSocket, response: Response) {
++                    if (openingGeneration != connectionGeneration || !registered || manuallyClosed) {
++                        webSocket.close(1000, "Stale pointer socket")
++                        return
++                    }
+                     pointerSocket = webSocket
+                     pointerReady = true
+                     pointerOpening.set(false)
++                    pointerOpenWatchdog?.cancel()
++                    pointerRecoveryJob?.cancel()
+                     cachedCapabilities +=

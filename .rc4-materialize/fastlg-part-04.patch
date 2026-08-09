@@ -1,0 +1,1 @@
+nchronized(pointerLock) { pointerQueue.clear() }
