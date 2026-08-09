@@ -18,29 +18,35 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Apply stabilized base and reviewed RC3 enhancements
-        working-directory: lg-wifi-remote-app
         run: |
           set -euo pipefail
           cat \
-            controls-rc3.part-01 \
-            controls-rc3.part-02a controls-rc3.part-02b \
-            controls-rc3.part-03 controls-rc3.part-04 \
-            controls-rc3.part-05a controls-rc3.part-05b1 controls-rc3.part-05b2a controls-rc3.part-05b2b \
-            controls-rc3.part-06 controls-rc3.part-07 controls-rc3.part-08 \
+            lg-wifi-remote-app/controls-rc3.part-01 \
+            lg-wifi-remote-app/controls-rc3.part-02a lg-wifi-remote-app/controls-rc3.part-02b \
+            lg-wifi-remote-app/controls-rc3.part-03 lg-wifi-remote-app/controls-rc3.part-04 \
+            lg-wifi-remote-app/controls-rc3.part-05a lg-wifi-remote-app/controls-rc3.part-05b1 lg-wifi-remote-app/controls-rc3.part-05b2a lg-wifi-remote-app/controls-rc3.part-05b2b \
+            lg-wifi-remote-app/controls-rc3.part-06 lg-wifi-remote-app/controls-rc3.part-07 lg-wifi-remote-app/controls-rc3.part-08 \
             > /tmp/controls-rc3-enhanced.patch
           ACTUAL_SHA="$(sha256sum /tmp/controls-rc3-enhanced.patch | awk '{print $1}')"
           echo "RC3 patch SHA256: $ACTUAL_SHA"
           test "$ACTUAL_SHA" = "d5d403fa1d1d9defed9478150addb32faa3d11af58eec0b848a23a8bf286313a"
-          echo "[1/4] checking RC2 base patch"
-          git apply --check stability-rc2.patch
-          echo "[2/4] applying RC2 base patch"
-          git apply stability-rc2.patch
-          echo "[3/4] checking and applying RC3 enhanced patch"
-          git apply --check /tmp/controls-rc3-enhanced.patch
-          git apply /tmp/controls-rc3-enhanced.patch
-          echo "[4/4] checking resulting diff"
+
+          echo "[1/5] checking RC2 base patch against Android project"
+          git apply --check --directory=lg-wifi-remote-app lg-wifi-remote-app/stability-rc2.patch
+          echo "[2/5] applying RC2 base patch"
+          git apply --directory=lg-wifi-remote-app lg-wifi-remote-app/stability-rc2.patch
+          echo "[3/5] checking RC3 enhanced patch"
+          git apply --check --directory=lg-wifi-remote-app /tmp/controls-rc3-enhanced.patch
+          echo "[4/5] applying RC3 enhanced patch"
+          git apply --directory=lg-wifi-remote-app /tmp/controls-rc3-enhanced.patch
+          echo "[5/5] validating materialized source tree"
           git diff --check
-          git diff -- app/build.gradle.kts
+          grep -F 'versionCode = 22' lg-wifi-remote-app/app/build.gradle.kts
+          grep -F 'versionName = "2.0.0-rc3-enhanced"' lg-wifi-remote-app/app/build.gradle.kts
+          grep -F 'AdvancedLegacy("Avançado AL")' lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/RemoteModels.kt
+          grep -F 'object LgPointerProtocol' lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/LgPointerProtocol.kt
+          grep -F 'RecognizerIntent.ACTION_RECOGNIZE_SPEECH' lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/MainActivity.kt
+          git diff -- lg-wifi-remote-app/app/build.gradle.kts
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -97,11 +103,22 @@ jobs:
           APK="lg-wifi-remote-app/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           cp "$APK" output/Libre-Remote-2.0.0-rc3-enhanced.apk
-          APKSIGNER="$(find "${ANDROID_SDK_ROOT:-$ANDROID_HOME}/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          BUILD_TOOLS_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}/build-tools"
+          APKSIGNER="$(find "$BUILD_TOOLS_ROOT" -type f -name apksigner | sort -V | tail -n 1)"
+          AAPT="$(find "$BUILD_TOOLS_ROOT" -type f -name aapt | sort -V | tail -n 1)"
           test -x "$APKSIGNER"
+          test -x "$AAPT"
+          "$AAPT" dump badging output/Libre-Remote-2.0.0-rc3-enhanced.apk | tee output/APK-BADGING.txt
+          grep -F "versionCode='22'" output/APK-BADGING.txt
+          grep -F "versionName='2.0.0-rc3-enhanced'" output/APK-BADGING.txt
           "$APKSIGNER" verify --verbose --print-certs output/Libre-Remote-2.0.0-rc3-enhanced.apk > output/APK-SIGNATURE.txt
           sha256sum output/Libre-Remote-2.0.0-rc3-enhanced.apk > output/SHA256SUMS.txt
           cp lg-wifi-remote-app/rc3-enhanced-build.log output/
+
+          grep -F 'versionName = "2.0.0-rc3-enhanced"' lg-wifi-remote-app/app/build.gradle.kts
+          grep -F 'AdvancedLegacy("Avançado AL")' lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/RemoteModels.kt
+          grep -F 'object LgPointerProtocol' lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/LgPointerProtocol.kt
+
           rsync -a \
             --exclude build \
             --exclude .gradle \
