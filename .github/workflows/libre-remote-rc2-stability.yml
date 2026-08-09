@@ -23,8 +23,8 @@ jobs:
           set -euo pipefail
           git apply --check stability-rc2.patch
           git apply stability-rc2.patch
-          grep -Fq 'versionCode = 21' app/build.gradle.kts
-          grep -Fq 'versionName = "2.0.0-rc2-stabilized"' app/build.gradle.kts
+          git diff --check
+          git diff -- app/build.gradle.kts
 
       - name: Set up Java
         uses: actions/setup-java@v4
