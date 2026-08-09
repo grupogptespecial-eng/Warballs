@@ -1,0 +1,142 @@
+
+Welcome to Gradle 8.10.2!
+
+Here are the highlights of this release:
+ - Support for Java 23
+ - Faster configuration cache
+ - Better configuration cache reports
+
+For more details see https://docs.gradle.org/8.10.2/release-notes.html
+
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.10.2/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig
+> Task :app:generateDebugResValues
+> Task :app:checkDebugAarMetadata
+> Task :app:mapDebugSourceSetPaths
+> Task :app:generateDebugResources
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug
+> Task :app:mergeDebugResources
+> Task :app:processDebugMainManifest
+> Task :app:packageDebugResources
+> Task :app:parseDebugLocalResources
+> Task :app:processDebugManifest
+> Task :app:processDebugManifestForPackage
+> Task :app:javaPreCompileDebug
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileDebugUnitTest
+> Task :app:mergeDebugShaders
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets
+> Task :app:buildKotlinToolingMetadata
+> Task :app:preReleaseBuild UP-TO-DATE
+> Task :app:generateReleaseBuildConfig
+> Task :app:checkReleaseAarMetadata
+> Task :app:generateReleaseResValues
+> Task :app:mapReleaseSourceSetPaths
+> Task :app:generateReleaseResources
+> Task :app:createReleaseCompatibleScreenManifests
+> Task :app:extractDeepLinksRelease
+> Task :app:processDebugResources
+> Task :app:processReleaseMainManifest
+> Task :app:packageDebugUnitTestForUnitTest
+> Task :app:generateDebugUnitTestConfig
+> Task :app:mergeReleaseResources
+> Task :app:packageReleaseResources
+> Task :app:parseReleaseLocalResources
+> Task :app:processReleaseManifest
+> Task :app:processReleaseManifestForPackage
+> Task :app:processReleaseResources
+> Task :app:compileDebugKotlin
+> Task :app:compileReleaseKotlin
+w: file:///home/runner/work/Warballs/Warballs/lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/AppTheme.kt:104:20 'var statusBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Warballs/Warballs/lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/AppTheme.kt:105:20 'var navigationBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Warballs/Warballs/lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/RemoteControls.kt:240:38 'val Icons.Rounded.ArrowForward: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowForward.
+w: file:///home/runner/work/Warballs/Warballs/lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/RemoteControls.kt:290:51 'val Icons.Rounded.VolumeOff: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.VolumeOff.
+w: file:///home/runner/work/Warballs/Warballs/lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/RemoteSheets.kt:306:48 'val Icons.Rounded.OpenInNew: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.OpenInNew.
+w: file:///home/runner/work/Warballs/Warballs/lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/RemoteSheets.kt:744:48 'val Icons.Rounded.OpenInNew: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.OpenInNew.
+w: file:///home/runner/work/Warballs/Warballs/lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/TvDiscovery.kt:120:28 'val connectionInfo: WifiInfo!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Warballs/Warballs/lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/TvDiscovery.kt:120:43 'val ipAddress: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Warballs/Warballs/lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/WakeOnLan.kt:41:35 'val dhcpInfo: DhcpInfo!' is deprecated. Deprecated in Java.
+
+> Task :app:compileDebugKotlin
+w: file:///home/runner/work/Warballs/Warballs/lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/AppTheme.kt:104:20 'var statusBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Warballs/Warballs/lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/AppTheme.kt:105:20 'var navigationBarColor: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Warballs/Warballs/lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/RemoteControls.kt:240:38 'val Icons.Rounded.ArrowForward: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowForward.
+w: file:///home/runner/work/Warballs/Warballs/lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/RemoteControls.kt:290:51 'val Icons.Rounded.VolumeOff: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.VolumeOff.
+w: file:///home/runner/work/Warballs/Warballs/lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/RemoteSheets.kt:306:48 'val Icons.Rounded.OpenInNew: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.OpenInNew.
+w: file:///home/runner/work/Warballs/Warballs/lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/RemoteSheets.kt:744:48 'val Icons.Rounded.OpenInNew: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.OpenInNew.
+w: file:///home/runner/work/Warballs/Warballs/lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/TvDiscovery.kt:120:28 'val connectionInfo: WifiInfo!' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Warballs/Warballs/lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/TvDiscovery.kt:120:43 'val ipAddress: Int' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/Warballs/Warballs/lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/WakeOnLan.kt:41:35 'val dhcpInfo: DhcpInfo!' is deprecated. Deprecated in Java.
+
+> Task :app:compileDebugJavaWithJavac
+> Task :app:bundleDebugClassesToCompileJar
+> Task :app:bundleDebugClassesToRuntimeJar
+> Task :app:processDebugJavaRes
+> Task :app:javaPreCompileRelease
+> Task :app:compileReleaseJavaWithJavac
+> Task :app:extractProguardFiles
+> Task :app:compileDebugUnitTestKotlin
+> Task :app:generateReleaseLintReportModel
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processDebugUnitTestJavaRes
+> Task :app:testDebugUnitTest
+> Task :app:preReleaseUnitTestBuild UP-TO-DATE
+> Task :app:bundleReleaseClassesToCompileJar
+> Task :app:generateReleaseUnitTestLintModel
+> Task :app:lintAnalyzeReleaseUnitTest
+> Task :app:generateReleaseLintVitalReportModel
+> Task :app:lintAnalyzeRelease
+> Task :app:lintVitalAnalyzeRelease
+> Task :app:lintVitalReportRelease SKIPPED
+> Task :app:lintVitalRelease SKIPPED
+> Task :app:mergeReleaseJniLibFolders
+> Task :app:mergeReleaseNativeLibs
+
+> Task :app:stripReleaseDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so.
+
+> Task :app:extractReleaseNativeSymbolTables
+> Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:checkReleaseDuplicateClasses
+> Task :app:mergeReleaseArtProfile
+> Task :app:expandReleaseArtProfileWildcards
+> Task :app:mergeReleaseGeneratedProguardFiles
+> Task :app:processReleaseJavaRes
+> Task :app:mergeReleaseJavaResource
+> Task :app:mergeReleaseStartupProfile
+> Task :app:minifyReleaseWithR8
+
+> Task :app:lintReportRelease
+Wrote HTML report to file:///home/runner/work/Warballs/Warballs/lg-wifi-remote-app/app/build/reports/lint-results-release.html
+
+> Task :app:lintRelease
+> Task :app:mergeReleaseShaders
+> Task :app:compileReleaseShaders NO-SOURCE
+> Task :app:generateReleaseAssets UP-TO-DATE
+> Task :app:mergeReleaseAssets
+> Task :app:compressReleaseAssets
+> Task :app:extractReleaseVersionControlInfo
+> Task :app:convertLinkedResourcesToProtoRelease
+> Task :app:collectReleaseDependencies
+> Task :app:sdkReleaseDependencyData
+> Task :app:validateSigningRelease
+> Task :app:writeReleaseAppMetadata
+> Task :app:writeReleaseSigningConfigVersions
+> Task :app:compileReleaseArtProfile
+> Task :app:shrinkReleaseRes
+> Task :app:convertShrunkResourcesToBinaryRelease
+> Task :app:optimizeReleaseResources
+> Task :app:packageRelease
+> Task :app:createReleaseApkListingFileRedirect
+> Task :app:assembleRelease
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_5-1786318456846.json
+
+BUILD SUCCESSFUL in 6m 44s
+84 actionable tasks: 84 executed

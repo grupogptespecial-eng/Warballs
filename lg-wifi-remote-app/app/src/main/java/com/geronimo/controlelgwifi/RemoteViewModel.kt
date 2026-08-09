@@ -16,6 +16,8 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
     private val preferences = RemotePreferences(application)
     private val registry = TvBackendRegistry(application, this)
     private val repeatJobs = mutableMapOf<RemoteAction, Job>()
+    private var addressRecoveryJob: Job? = null
+    private var lastAddressRecoveryAt: Long = 0L
 
     @Volatile private var activeBackend: TvBackend? = null
     @Volatile private var activePlatform: TvPlatform? = null
@@ -39,6 +41,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
                 delay(80)
                 connect(state.currentDevice, userInitiated = false)
             }
+            scheduleAddressRecovery(delayMs = 1_500L)
         }
     }
 
@@ -157,6 +160,35 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
     fun reconnect() {
         _uiState.value.currentDevice?.let { connect(it, userInitiated = true) }
             ?: openConnect()
+        scheduleAddressRecovery(delayMs = 700L, force = true)
+    }
+
+    private fun scheduleAddressRecovery(delayMs: Long = 0L, force: Boolean = false) {
+        val now = System.currentTimeMillis()
+        if (!force && now - lastAddressRecoveryAt < 4_000L) return
+        if (addressRecoveryJob?.isActive == true) return
+        addressRecoveryJob = viewModelScope.launch(Dispatchers.IO) {
+            delay(delayMs)
+            val state = _uiState.value
+            val current = state.currentDevice ?: return@launch
+            if (!state.autoConnect || state.connected) return@launch
+            lastAddressRecoveryAt = System.currentTimeMillis()
+
+            val discovered = TvDiscovery.discover(getApplication(), state.savedDevices)
+            val refreshed = discovered.firstOrNull { it.stableId == current.stableId }
+                ?: discovered.firstOrNull { candidate ->
+                    val sameModel = !candidate.model.isNullOrBlank() &&
+                        !current.model.isNullOrBlank() &&
+                        candidate.model.equals(current.model, ignoreCase = true)
+                    candidate.platform == current.platform &&
+                        (sameModel || candidate.name.equals(current.name, ignoreCase = true))
+                }
+                ?: return@launch
+
+            if (refreshed.ip != current.ip || refreshed.stableId != current.stableId) {
+                connect(refreshed, userInitiated = false)
+            }
+        }
     }
 
     fun disconnect() {
@@ -200,6 +232,36 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
         )
         val saved = preferences.updateDevice(updated)
         _uiState.update { it.copy(currentDevice = updated, savedDevices = saved) }
+    }
+
+    fun handleVoiceTranscript(text: String) {
+        val normalized = text.trim().take(500)
+        if (normalized.isBlank()) return
+        val action = VoiceCommandParser.parse(normalized)
+        when {
+            action != null && _uiState.value.connected -> {
+                send(action)
+                _uiState.update { it.copy(statusText = "Voz: $normalized") }
+            }
+            !_uiState.value.connected -> {
+                _uiState.update { it.copy(statusText = "Conecte a TV antes de usar o microfone.") }
+            }
+            TvCapability.Keyboard in _uiState.value.capabilities -> {
+                activeBackend?.insertText(normalized)
+                _uiState.update { it.copy(statusText = "O texto falado foi enviado para a TV.") }
+            }
+            else -> {
+                _uiState.update {
+                    it.copy(statusText = "A TV atual não aceita entrada de texto; tente um comando de voz.")
+                }
+            }
+        }
+    }
+
+    fun voiceUnavailable() {
+        _uiState.update {
+            it.copy(statusText = "Nenhum app de reconhecimento de voz está disponível neste aparelho.")
+        }
     }
 
     fun send(action: RemoteAction) {
@@ -329,6 +391,11 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
 
     fun setTheme(mode: ThemeMode) = updateSettings { it.copy(themeMode = mode) }
     fun setAccent(accent: AccentTheme) = updateSettings { it.copy(accentTheme = accent) }
+    fun setBackgroundEffect(effect: BackgroundEffect) = updateSettings { it.copy(backgroundEffect = effect) }
+    fun setAnimationPreset(preset: AnimationPreset) = updateSettings { it.copy(animationPreset = preset) }
+    fun setButtonEffect(effect: ButtonEffect) = updateSettings { it.copy(buttonEffect = effect) }
+    fun setAppLanguage(language: AppLanguage) = updateSettings { it.copy(appLanguage = language) }
+    fun setVoiceLanguage(language: VoiceLanguage) = updateSettings { it.copy(voiceLanguage = language) }
     fun setHaptics(enabled: Boolean) = updateSettings { it.copy(hapticsEnabled = enabled) }
     fun setSound(enabled: Boolean) = updateSettings { it.copy(soundEnabled = enabled) }
     fun setCompactMode(enabled: Boolean) = updateSettings { it.copy(compactMode = enabled) }
@@ -375,7 +442,15 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
                 lastError = message.takeIf { state == ConnectionState.Error }
             )
         }
+        if (
+            state in setOf(ConnectionState.Reconnecting, ConnectionState.Error) &&
+            reconnectAttempt >= 3 &&
+            _uiState.value.autoConnect
+        ) {
+            scheduleAddressRecovery(delayMs = 250L)
+        }
         if (state == ConnectionState.Connected) {
+            addressRecoveryJob?.cancel()
             val current = _uiState.value.currentDevice ?: return
             val refreshed = current.copy(
                 capabilities = _uiState.value.capabilities,
@@ -428,6 +503,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
 
     override fun onCleared() {
         stopAllRepeating()
+        addressRecoveryJob?.cancel()
         registry.closeAll()
         super.onCleared()
     }

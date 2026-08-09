@@ -70,6 +70,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Composable
@@ -88,7 +89,18 @@ fun PressControl(
     onRelease: () -> Unit = {}
 ) {
     var pressed by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (pressed) 0.94f else 1f, label = "press-scale")
+    val effect = LocalButtonEffect.current
+    val animation = LocalAnimationPreset.current
+    val pressedScale = when (effect) {
+        ButtonEffect.Classic -> 0.96f
+        ButtonEffect.Soft -> 0.94f
+        ButtonEffect.Bounce -> 0.88f
+        ButtonEffect.Glow -> 0.95f
+    }
+    val scale by animateFloatAsState(
+        if (pressed && animation != AnimationPreset.Off) pressedScale else 1f,
+        label = "press-scale"
+    )
     val haptic = LocalHapticFeedback.current
     val container = when {
         danger -> MaterialTheme.colorScheme.error.copy(alpha = 0.16f)
@@ -116,22 +128,29 @@ fun PressControl(
                 .pointerInput(enabled, haptics) {
                     if (!enabled) return@pointerInput
                     awaitEachGesture {
-                            awaitFirstDown(requireUnconsumed = false)
-                            pressed = true
-                            if (haptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onPress()
+                        awaitFirstDown(requireUnconsumed = false)
+                        pressed = true
+                        if (haptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onPress()
+                        try {
                             do {
                                 val event = awaitPointerEvent()
                                 val stillPressed = event.changes.any { it.pressed }
                             } while (stillPressed)
+                        } finally {
                             pressed = false
-                        onRelease()
+                            onRelease()
+                        }
                     }
                 },
             shape = CircleShape,
             color = if (enabled) container else container.copy(alpha = 0.42f),
-            tonalElevation = if (pressed) 0.dp else 2.dp,
-            shadowElevation = if (pressed) 0.dp else 1.dp
+            tonalElevation = if (pressed && effect != ButtonEffect.Glow) 0.dp else 2.dp,
+            shadowElevation = when {
+                pressed && effect == ButtonEffect.Glow -> 8.dp
+                pressed -> 0.dp
+                else -> 1.dp
+            }
         ) {
             Box(contentAlignment = Alignment.Center) {
                 when {
@@ -169,11 +188,14 @@ fun RemoteDPad(
     enabled: Boolean,
     haptics: Boolean,
     compact: Boolean,
-    onAction: (RemoteAction) -> Unit
+    onAction: (RemoteAction) -> Unit,
+    onDirectionPress: (RemoteAction) -> Unit = onAction,
+    onDirectionRelease: (RemoteAction) -> Unit = {}
 ) {
-    val outer = if (compact) 218.dp else 244.dp
+    // Keep the directional hit targets physically separated from OK.
+    val outer = if (compact) 244.dp else 276.dp
     val direction = if (compact) 60.dp else 68.dp
-    val center = if (compact) 78.dp else 88.dp
+    val center = if (compact) 74.dp else 82.dp
     Card(
         modifier = Modifier.size(outer),
         shape = CircleShape,
@@ -183,47 +205,51 @@ fun RemoteDPad(
         Box(Modifier.size(outer).padding(12.dp), contentAlignment = Alignment.Center) {
             PressControl(
                 icon = Icons.Rounded.ArrowUpward,
-                contentDescription = "Cima",
+                contentDescription = tr("Cima"),
                 size = direction,
                 enabled = enabled,
                 haptics = haptics,
                 showLabel = false,
                 modifier = Modifier.align(Alignment.TopCenter),
-                onPress = { onAction(RemoteAction.Up) }
+                onPress = { onDirectionPress(RemoteAction.Up) },
+                onRelease = { onDirectionRelease(RemoteAction.Up) }
             )
             PressControl(
                 icon = Icons.Rounded.ArrowDownward,
-                contentDescription = "Baixo",
+                contentDescription = tr("Baixo"),
                 size = direction,
                 enabled = enabled,
                 haptics = haptics,
                 showLabel = false,
                 modifier = Modifier.align(Alignment.BottomCenter),
-                onPress = { onAction(RemoteAction.Down) }
+                onPress = { onDirectionPress(RemoteAction.Down) },
+                onRelease = { onDirectionRelease(RemoteAction.Down) }
             )
             PressControl(
                 text = "◀",
-                contentDescription = "Esquerda",
+                contentDescription = tr("Esquerda"),
                 size = direction,
                 enabled = enabled,
                 haptics = haptics,
                 showLabel = false,
                 modifier = Modifier.align(Alignment.CenterStart),
-                onPress = { onAction(RemoteAction.Left) }
+                onPress = { onDirectionPress(RemoteAction.Left) },
+                onRelease = { onDirectionRelease(RemoteAction.Left) }
             )
             PressControl(
                 icon = Icons.Rounded.ArrowForward,
-                contentDescription = "Direita",
+                contentDescription = tr("Direita"),
                 size = direction,
                 enabled = enabled,
                 haptics = haptics,
                 showLabel = false,
                 modifier = Modifier.align(Alignment.CenterEnd),
-                onPress = { onAction(RemoteAction.Right) }
+                onPress = { onDirectionPress(RemoteAction.Right) },
+                onRelease = { onDirectionRelease(RemoteAction.Right) }
             )
             PressControl(
                 text = "OK",
-                contentDescription = "Confirmar",
+                contentDescription = tr("Confirmar"),
                 size = center,
                 enabled = enabled,
                 primary = true,
@@ -262,7 +288,7 @@ fun VolumeAndChannelControls(
         )
         PressControl(
             icon = if (state.muted) Icons.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
-            text = if (state.muted) "Sem som" else "Mudo",
+            text = if (state.muted) tr("Sem som") else tr("Mudo"),
             size = buttonSize,
             enabled = state.connected,
             haptics = state.hapticsEnabled,
@@ -329,7 +355,7 @@ fun CoreActionRow(state: RemoteUiState, viewModel: RemoteViewModel) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
         PressControl(
             icon = Icons.AutoMirrored.Rounded.ArrowBack,
-            text = "Voltar",
+            text = tr("Voltar"),
             enabled = state.connected,
             haptics = state.hapticsEnabled,
             showLabel = state.showLabels,
@@ -360,7 +386,7 @@ fun MediaControls(state: RemoteUiState, viewModel: RemoteViewModel) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
         PressControl(
             icon = Icons.Rounded.Replay,
-            text = "Voltar",
+            text = tr("Voltar"),
             size = 52.dp,
             enabled = state.connected,
             haptics = state.hapticsEnabled,
@@ -369,7 +395,7 @@ fun MediaControls(state: RemoteUiState, viewModel: RemoteViewModel) {
         )
         PressControl(
             icon = Icons.Rounded.PlayArrow,
-            text = "Reproduzir",
+            text = tr("Reproduzir"),
             size = 66.dp,
             enabled = state.connected,
             primary = true,
@@ -379,7 +405,7 @@ fun MediaControls(state: RemoteUiState, viewModel: RemoteViewModel) {
         )
         PressControl(
             icon = Icons.Rounded.Pause,
-            text = "Pausar",
+            text = tr("Pausar"),
             size = 52.dp,
             enabled = state.connected,
             haptics = state.hapticsEnabled,
@@ -388,7 +414,7 @@ fun MediaControls(state: RemoteUiState, viewModel: RemoteViewModel) {
         )
         PressControl(
             icon = Icons.Rounded.FastForward,
-            text = "Avançar",
+            text = tr("Avançar"),
             size = 52.dp,
             enabled = state.connected,
             haptics = state.hapticsEnabled,
@@ -404,21 +430,21 @@ fun ShortcutRow(state: RemoteUiState, viewModel: RemoteViewModel) {
         ShortcutPill(
             modifier = Modifier.weight(1f),
             icon = Icons.Rounded.Apps,
-            label = "Apps",
+            label = tr("Apps"),
             enabled = state.connected && TvCapability.Apps in state.capabilities,
             onClick = viewModel::openApps
         )
         ShortcutPill(
             modifier = Modifier.weight(1f),
             icon = Icons.Rounded.Tune,
-            label = "Entradas",
+            label = tr("Entradas"),
             enabled = state.connected && TvCapability.Inputs in state.capabilities,
             onClick = viewModel::openInputs
         )
         ShortcutPill(
             modifier = Modifier.weight(1f),
             icon = Icons.Rounded.Keyboard,
-            label = "Mais",
+            label = tr("Mais"),
             enabled = state.connected,
             onClick = viewModel::openMore
         )
@@ -457,7 +483,7 @@ fun InfoMenuRow(state: RemoteUiState, viewModel: RemoteViewModel) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
         PressControl(
             icon = Icons.Rounded.Info,
-            text = "Info",
+            text = tr("Info"),
             enabled = state.connected,
             haptics = state.hapticsEnabled,
             showLabel = state.showLabels,
@@ -465,7 +491,7 @@ fun InfoMenuRow(state: RemoteUiState, viewModel: RemoteViewModel) {
         )
         PressControl(
             icon = Icons.Rounded.Settings,
-            text = "Ajustes TV",
+            text = tr("Ajustes TV"),
             enabled = state.connected,
             haptics = state.hapticsEnabled,
             showLabel = state.showLabels,
@@ -473,7 +499,7 @@ fun InfoMenuRow(state: RemoteUiState, viewModel: RemoteViewModel) {
         )
         PressControl(
             icon = Icons.Rounded.Stop,
-            text = "Parar",
+            text = tr("Parar"),
             enabled = state.connected,
             haptics = state.hapticsEnabled,
             showLabel = state.showLabels,
@@ -511,6 +537,7 @@ fun ColorButtons(state: RemoteUiState, viewModel: RemoteViewModel) {
 @Composable
 fun TouchpadSurface(state: RemoteUiState, viewModel: RemoteViewModel) {
     var dragging by remember { mutableStateOf(false) }
+    var scrollRemainder by remember { mutableStateOf(0f) }
     val scale by animateFloatAsState(if (dragging) 0.992f else 1f, label = "touchpad-scale")
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Box(
@@ -522,20 +549,39 @@ fun TouchpadSurface(state: RemoteUiState, viewModel: RemoteViewModel) {
                 .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f), RoundedCornerShape(30.dp))
                 .pointerInput(state.connected) {
                     if (!state.connected) return@pointerInput
-                    detectTapGestures(onTap = { viewModel.clickPointer() })
-                }
-                .pointerInput(state.connected) {
-                    if (!state.connected) return@pointerInput
-                    detectDragGestures(
-                        onDragStart = { dragging = true },
-                        onDragEnd = { dragging = false },
-                        onDragCancel = { dragging = false }
-                    ) { change, amount ->
-                        change.consume()
-                        viewModel.movePointer(
-                            (amount.x * 1.65f).roundToInt(),
-                            (amount.y * 1.65f).roundToInt()
-                        )
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        down.consume()
+                        var totalDrag = 0f
+                        var pastSlop = false
+                        dragging = false
+                        try {
+                            var pressed = true
+                            while (pressed) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                val dx = change.position.x - change.previousPosition.x
+                                val dy = change.position.y - change.previousPosition.y
+                                if (dx != 0f || dy != 0f) {
+                                    totalDrag += abs(dx) + abs(dy)
+                                    if (!pastSlop && totalDrag >= viewConfiguration.touchSlop) {
+                                        pastSlop = true
+                                        dragging = true
+                                    }
+                                    if (pastSlop) {
+                                        change.consume()
+                                        viewModel.movePointer(
+                                            (dx * 1.65f).roundToInt(),
+                                            (dy * 1.65f).roundToInt()
+                                        )
+                                    }
+                                }
+                                pressed = change.pressed
+                            }
+                        } finally {
+                            dragging = false
+                        }
+                        if (!pastSlop) viewModel.clickPointer()
                     }
                 },
             contentAlignment = Alignment.Center
@@ -548,9 +594,9 @@ fun TouchpadSurface(state: RemoteUiState, viewModel: RemoteViewModel) {
                     modifier = Modifier.size(36.dp)
                 )
                 Spacer(Modifier.height(12.dp))
-                Text("Deslize para mover", fontWeight = FontWeight.SemiBold)
+                Text(tr("Deslize para mover"), fontWeight = FontWeight.SemiBold)
                 Text(
-                    "Toque para confirmar",
+                    tr("Toque para confirmar"),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 13.sp
                 )
@@ -559,7 +605,7 @@ fun TouchpadSurface(state: RemoteUiState, viewModel: RemoteViewModel) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             PressControl(
                 icon = Icons.AutoMirrored.Rounded.ArrowBack,
-                text = "Voltar",
+                text = tr("Voltar"),
                 enabled = state.connected,
                 haptics = state.hapticsEnabled,
                 showLabel = state.showLabels,
@@ -571,16 +617,25 @@ fun TouchpadSurface(state: RemoteUiState, viewModel: RemoteViewModel) {
                     .height(56.dp)
                     .pointerInput(state.connected) {
                         if (!state.connected) return@pointerInput
-                        detectDragGestures { change, amount ->
+                        detectDragGestures(
+                            onDragStart = { scrollRemainder = 0f },
+                            onDragEnd = { scrollRemainder = 0f },
+                            onDragCancel = { scrollRemainder = 0f }
+                        ) { change, amount ->
                             change.consume()
-                            viewModel.scrollPointer((amount.y * 0.35f).roundToInt())
+                            scrollRemainder += amount.y * 1.25f
+                            val delta = scrollRemainder.roundToInt()
+                            if (delta != 0) {
+                                viewModel.scrollPointer(delta)
+                                scrollRemainder -= delta
+                            }
                         }
                     },
                 shape = RoundedCornerShape(18.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text("↕  Rolagem", fontWeight = FontWeight.SemiBold)
+                    Text(tr("↕  Rolagem"), fontWeight = FontWeight.SemiBold)
                 }
             }
             PressControl(

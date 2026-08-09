@@ -147,7 +147,7 @@ class LgWebOsBackend(
 
     override fun connect(device: TvDevice, userInitiated: Boolean) = client.connect(device, userInitiated)
     override fun close() = client.close()
-    override fun forgetDevice(device: TvDevice) = client.forgetDevice(device.ip)
+    override fun forgetDevice(device: TvDevice) = client.forgetDevice(device)
     override fun send(action: RemoteAction) {
         val elapsed = measureNanoTime { client.send(action) } / 1_000_000.0
         listener.onCommandLatency(elapsed)
@@ -242,11 +242,12 @@ class SamsungTizenBackend(
         val preferred = securePreferences.getString("endpoint_${device.stableId}", null)
         val name = Base64.encodeToString("Libre Remote".toByteArray(), Base64.NO_WRAP)
         val encodedName = URLEncoder.encode(name, StandardCharsets.UTF_8.name())
+        val urlHost = NetworkAddressValidator.asUrlHost(device.ip)
         val secure = buildString {
-            append("wss://${device.ip}:8002/api/v2/channels/samsung.remote.control?name=$encodedName")
+            append("wss://$urlHost:8002/api/v2/channels/samsung.remote.control?name=$encodedName")
             if (!token.isNullOrBlank()) append("&token=${URLEncoder.encode(token, StandardCharsets.UTF_8.name())}")
         }
-        val plain = "ws://${device.ip}:8001/api/v2/channels/samsung.remote.control?name=$encodedName"
+        val plain = "ws://$urlHost:8001/api/v2/channels/samsung.remote.control?name=$encodedName"
         val endpoints = listOfNotNull(preferred, secure.takeUnless { it == preferred }, plain.takeUnless { it == preferred }).distinct()
         endpoints.forEachIndexed { index, endpoint ->
             scope.launch {
@@ -723,17 +724,36 @@ class TvBackendRegistry(
 
 object NetworkAddressValidator {
     fun isLocalHost(host: String): Boolean {
-        val normalized = host.removePrefix("[").removeSuffix("]").lowercase()
-        if (normalized == "localhost" || normalized.endsWith(".local")) return true
-        if (normalized.contains(':')) {
-            return normalized == "::1" || normalized.startsWith("fe80:") || normalized.startsWith("fc") || normalized.startsWith("fd")
+        val normalized = host.trim().removePrefix("[").removeSuffix("]").lowercase()
+        if (normalized.isBlank() || normalized.any { it.isWhitespace() || it == '/' || it == '\\' }) return false
+        if (normalized == "localhost") return true
+        if (normalized.endsWith(".local")) {
+            return normalized.length <= 253 && normalized
+                .split('.')
+                .all { label -> label.isNotBlank() && label.length <= 63 && label.all { it.isLetterOrDigit() || it == '-' } }
         }
-        val parts = normalized.split('.').mapNotNull(String::toIntOrNull)
-        if (parts.size != 4 || parts.any { it !in 0..255 }) return false
+        if (normalized.contains(':')) {
+            val literal = normalized.substringBefore('%')
+            val address = runCatching { java.net.InetAddress.getByName(literal) }.getOrNull() as? java.net.Inet6Address
+                ?: return false
+            val first = address.address.firstOrNull()?.toInt()?.and(0xff) ?: return false
+            return address.isLoopbackAddress || address.isLinkLocalAddress || (first and 0xfe) == 0xfc
+        }
+        val rawParts = normalized.split('.')
+        if (rawParts.size != 4) return false
+        val parts = rawParts.map { it.toIntOrNull() ?: return false }
+        if (parts.any { it !in 0..255 }) return false
         return parts[0] == 10 ||
             (parts[0] == 192 && parts[1] == 168) ||
             (parts[0] == 172 && parts[1] in 16..31) ||
             (parts[0] == 169 && parts[1] == 254) ||
             parts[0] == 127
+    }
+
+    fun asUrlHost(host: String): String {
+        val normalized = host.trim().removePrefix("[").removeSuffix("]")
+        if (!normalized.contains(':')) return normalized
+        val escapedZone = normalized.replace("%", "%25")
+        return "[$escapedZone]"
     }
 }

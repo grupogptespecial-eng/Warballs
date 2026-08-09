@@ -265,7 +265,7 @@ object TvDiscovery {
             manufacturer = description?.manufacturer,
             platform = platform,
             supportLevel = support,
-            stableId = "$platform:$ip",
+            stableId = stableIdFor(platform, ip, headers),
             descriptionUrl = location,
             avTransportUrl = avTransport,
             renderingControlUrl = rendering,
@@ -298,7 +298,10 @@ object TvDiscovery {
                 name = saved?.name?.takeIf { it.isNotBlank() && it !in setOf("LG webOS TV", "Smart TV") } ?: chosen.name,
                 room = saved?.room.orEmpty(),
                 mac = saved?.mac,
-                stableId = saved?.stableId ?: chosen.stableId,
+                stableId = when {
+                    chosen.stableId != "${chosen.platform.name}:${chosen.ip}" -> chosen.stableId
+                    else -> saved?.stableId ?: chosen.stableId
+                },
                 capabilities = if (chosen.capabilities.isNotEmpty()) chosen.capabilities else saved?.capabilities.orEmpty(),
                 lastSeenAt = System.currentTimeMillis()
             )
@@ -364,13 +367,29 @@ object TvDiscovery {
         }
     }.getOrDefault(false)
 
-    private fun normalizeHost(raw: String): String? {
-        val value = raw.trim()
-            .removePrefix("http://")
-            .removePrefix("https://")
-            .substringBefore('/')
-            .substringBefore(':')
-        return value.takeIf { it.isNotBlank() && NetworkAddressValidator.isLocalHost(it) }
+    internal fun normalizeHost(raw: String): String? {
+        val input = raw.trim()
+        if (input.isBlank()) return null
+        val value = when {
+            input.startsWith("http://", ignoreCase = true) || input.startsWith("https://", ignoreCase = true) ->
+                runCatching { URI(input).host }.getOrNull()
+            input.startsWith("[") -> {
+                val end = input.indexOf(']')
+                if (end <= 1) null else input.substring(1, end)
+            }
+            input.count { it == ':' } > 1 -> input.substringBefore('/')
+            else -> input.substringBefore('/').substringBefore(':')
+        }?.trim()?.removePrefix("[")?.removeSuffix("]")
+        return value?.takeIf { it.isNotBlank() && NetworkAddressValidator.isLocalHost(it) }
+    }
+
+    private fun stableIdFor(platform: TvPlatform, ip: String, headers: Map<String, String>): String {
+        val advertised = headers["usn"]
+            ?.substringBefore("::")
+            ?.trim()
+            ?.takeIf { it.startsWith("uuid:", ignoreCase = true) && it.length in 6..160 }
+            ?.lowercase(Locale.ROOT)
+        return if (advertised != null) "${platform.name}:$advertised" else "${platform.name}:$ip"
     }
 
     private fun isLocalUrl(value: String): Boolean = runCatching {

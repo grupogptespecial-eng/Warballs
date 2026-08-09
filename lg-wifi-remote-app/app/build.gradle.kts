@@ -12,8 +12,8 @@ android {
         applicationId = "io.github.grupogptespecialeng.libreremote"
         minSdk = 23
         targetSdk = 35
-        versionCode = 20
-        versionName = "2.0.0-rc1"
+        versionCode = 23
+        versionName = "2.0.0-rc4-personalization"
         vectorDrawables.useSupportLibrary = true
     }
 

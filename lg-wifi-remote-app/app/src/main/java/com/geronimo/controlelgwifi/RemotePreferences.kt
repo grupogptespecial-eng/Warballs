@@ -32,6 +32,26 @@ class RemotePreferences(context: Context) {
             experimentalBackendsEnabled = prefs.getBoolean("experimental_backends", true),
             themeMode = enumValueOrDefault(prefs.getString("theme", null), ThemeMode.System),
             accentTheme = enumValueOrDefault(prefs.getString("accent", null), AccentTheme.Ocean),
+            backgroundEffect = enumValueOrDefault(
+                prefs.getString("background_effect", null),
+                BackgroundEffect.Aurora
+            ),
+            animationPreset = enumValueOrDefault(
+                prefs.getString("animation_preset", null),
+                AnimationPreset.Calm
+            ),
+            buttonEffect = enumValueOrDefault(
+                prefs.getString("button_effect", null),
+                ButtonEffect.Soft
+            ),
+            appLanguage = enumValueOrDefault(
+                prefs.getString("app_language", null),
+                AppLanguage.System
+            ),
+            voiceLanguage = enumValueOrDefault(
+                prefs.getString("voice_language", null),
+                VoiceLanguage.Auto
+            ),
             selectedPresetId = selectedPreset,
             presets = presetMap,
             onboardingComplete = prefs.getBoolean("onboarding_complete", false)
@@ -40,7 +60,9 @@ class RemotePreferences(context: Context) {
 
     fun saveDevice(device: TvDevice): List<TvDevice> {
         val normalized = device.copy(lastSeenAt = System.currentTimeMillis())
-        val updated = (loadDevices().filterNot { it.stableId == normalized.stableId } + normalized)
+        val updated = (loadDevices().filterNot {
+            it.stableId == normalized.stableId || (it.platform == normalized.platform && it.ip == normalized.ip)
+        } + normalized)
             .sortedByDescending { it.lastSeenAt }
             .take(20)
         prefs.edit()
@@ -82,6 +104,11 @@ class RemotePreferences(context: Context) {
             .putBoolean("experimental_backends", state.experimentalBackendsEnabled)
             .putString("theme", state.themeMode.name)
             .putString("accent", state.accentTheme.name)
+            .putString("background_effect", state.backgroundEffect.name)
+            .putString("animation_preset", state.animationPreset.name)
+            .putString("button_effect", state.buttonEffect.name)
+            .putString("app_language", state.appLanguage.name)
+            .putString("voice_language", state.voiceLanguage.name)
             .putString("selected_preset", state.selectedPresetId.name)
             .putBoolean("onboarding_complete", state.onboardingComplete)
             .apply()

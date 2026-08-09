@@ -27,6 +27,11 @@ private fun AccentTheme.palette(): AccentPalette = when (this) {
     AccentTheme.Emerald -> AccentPalette(Color(0xFF59E0A1), Color(0xFF7BD8FF), Color(0xFFC0E36B))
     AccentTheme.Sunset -> AccentPalette(Color(0xFFFF9B73), Color(0xFFFFC857), Color(0xFFE890FF))
     AccentTheme.Monochrome -> AccentPalette(Color(0xFFE2E8F0), Color(0xFFB8C1CC), Color(0xFFF8FAFC))
+    AccentTheme.Aurora -> AccentPalette(Color(0xFF7CFFCB), Color(0xFF66A8FF), Color(0xFFC987FF))
+    AccentTheme.Rose -> AccentPalette(Color(0xFFFF7EB6), Color(0xFFFFB86C), Color(0xFFC49BFF))
+    AccentTheme.Cyber -> AccentPalette(Color(0xFF35F2FF), Color(0xFF8B5CFF), Color(0xFFFF4FD8))
+    AccentTheme.Gold -> AccentPalette(Color(0xFFFFD166), Color(0xFFFFA552), Color(0xFFFFE29A))
+    AccentTheme.Arctic -> AccentPalette(Color(0xFF9CE6FF), Color(0xFFBCE7D8), Color(0xFFD9C7FF))
 }
 
 private fun darkScheme(accent: AccentTheme, amoled: Boolean): ColorScheme {

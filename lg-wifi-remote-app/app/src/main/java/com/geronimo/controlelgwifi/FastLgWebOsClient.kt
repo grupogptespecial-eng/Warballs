@@ -67,19 +67,22 @@ class FastLgWebOsClient(
     @Volatile private var pointerSocket: WebSocket? = null
     @Volatile private var registered = false
     @Volatile private var pointerReady = false
+    @Volatile private var pendingMotion: String? = null
     @Volatile private var manuallyClosed = true
     @Volatile private var reconnectAttempt = 0
     @Volatile private var connectionGeneration = 0
     private val endpointChosen = AtomicBoolean(false)
     private val endpointFailures = AtomicInteger(0)
     private var reconnectJob: Job? = null
+    private var pointerRecoveryJob: Job? = null
+    private var pointerOpenWatchdog: Job? = null
     private var pointerOpening = AtomicBoolean(false)
     private var cachedCapabilities = TvCapability.lgDefaults.toMutableSet()
 
     init {
         scope.launch {
             for (motion in motionChannel) {
-                sendPointerNow("type:move\ndx:${motion.dx}\ndy:${motion.dy}\ndown:0\n\n")
+                sendPointerMotion(LgPointerProtocol.move(motion.dx, motion.dy))
                 delay(12)
             }
         }
@@ -103,11 +106,12 @@ class FastLgWebOsClient(
             reconnectAttempt
         )
 
-        val preferred = securePreferences.getString("endpoint_${device.ip}", null)
+        val preferred = readDeviceSecret("endpoint", device)
+        val urlHost = NetworkAddressValidator.asUrlHost(device.ip)
         val endpoints = listOfNotNull(
             preferred,
-            "ws://${device.ip}:3000".takeUnless { it == preferred },
-            "wss://${device.ip}:3001".takeUnless { it == preferred }
+            "ws://$urlHost:3000".takeUnless { it == preferred },
+            "wss://$urlHost:3001".takeUnless { it == preferred }
         ).distinct()
 
         endpoints.forEachIndexed { index, endpoint ->
@@ -141,7 +145,7 @@ class FastLgWebOsClient(
                     return
                 }
                 mainSocket = webSocket
-                device?.let { securePreferences.edit().putString("endpoint_${it.ip}", endpoint).apply() }
+                device?.let { writeDeviceSecret("endpoint", it, endpoint) }
                 listener.onConnectionState(ConnectionState.Pairing, "Confirme o pareamento que apareceu na TV")
                 sendRegistration(webSocket)
             }
@@ -187,14 +191,14 @@ class FastLgWebOsClient(
     }
 
     private fun verifyOrStoreCertificate(response: Response): Boolean {
-        val ip = device?.ip ?: return false
+        val current = device ?: return false
         val encoded = response.handshake?.peerCertificates?.firstOrNull()?.encoded ?: return true
         val digest = MessageDigest.getInstance("SHA-256")
             .digest(encoded)
             .joinToString("") { "%02x".format(it) }
-        val saved = securePreferences.getString("cert_$ip", null)
+        val saved = readDeviceSecret("cert", current)
         return if (saved == null) {
-            securePreferences.edit().putString("cert_$ip", digest).apply()
+            writeDeviceSecret("cert", current, digest)
             true
         } else {
             saved == digest
@@ -202,11 +206,11 @@ class FastLgWebOsClient(
     }
 
     private fun sendRegistration(socket: WebSocket) {
-        val ip = device?.ip ?: return
+        val current = device ?: return
         val payload = JSONObject()
             .put("pairingType", "PROMPT")
             .put("manifest", registrationManifest())
-        securePreferences.getString("client_key_$ip", null)?.let { payload.put("client-key", it) }
+        readDeviceSecret("client_key", current)?.let { payload.put("client-key", it) }
         socket.send(
             JSONObject()
                 .put("id", "register_0")
@@ -222,10 +226,10 @@ class FastLgWebOsClient(
         val type = message.optString("type")
 
         if (type == "registered" || payload.has("client-key")) {
-            val ip = device?.ip ?: return
+            val current = device ?: return
             payload.optString("client-key")
                 .takeIf(String::isNotBlank)
-                ?.let { securePreferences.edit().putString("client_key_$ip", it).apply() }
+                ?.let { writeDeviceSecret("client_key", current, it) }
             registered = true
             reconnectAttempt = 0
             listener.onConnectionState(ConnectionState.Connected, "Conectada a ${device?.displayName ?: "LG webOS TV"}")
@@ -300,8 +304,8 @@ class FastLgWebOsClient(
         if (dx != 0 || dy != 0) motionChannel.trySend(Motion(dx.coerceIn(-240, 240), dy.coerceIn(-240, 240)))
     }
 
-    fun click() = sendPointer("type:click\n\n", critical = true)
-    fun scroll(delta: Int) = sendPointer("type:scroll\ndx:0\ndy:${delta.coerceIn(-80, 80)}\n\n")
+    fun click() = sendPointer(LgPointerProtocol.click(), critical = true)
+    fun scroll(delta: Int) = sendPointer(LgPointerProtocol.scroll(delta))
     fun launchApp(appId: String) = request("ssap://system.launcher/launch", JSONObject().put("id", appId))
     fun switchInput(inputId: String) = request("ssap://tv/switchInput", JSONObject().put("inputId", inputId))
 
@@ -385,63 +389,122 @@ class FastLgWebOsClient(
         })
     }
 
-    private fun button(name: String) = sendPointer("type:button\nname:$name\n\n", critical = true)
+    private fun button(name: String) = sendPointer(LgPointerProtocol.button(name), critical = true)
 
     private fun sendPointer(message: String, critical: Boolean = false) {
-        if (pointerReady && pointerSocket?.send(message) == true) return
+        val socket = pointerSocket
+        if (pointerReady && socket?.send(message) == true) return
+
+        if (pointerReady || socket != null) {
+            pointerReady = false
+            if (socket === pointerSocket) pointerSocket = null
+            pointerOpening.set(false)
+            socket?.cancel()
+        }
         synchronized(pointerLock) {
             if (critical) {
                 while (pointerQueue.size >= 24 && pointerQueue.isNotEmpty()) pointerQueue.removeFirst()
                 pointerQueue.addLast(message)
-            } else {
-                if (pointerQueue.size < 24) pointerQueue.addLast(message)
+            } else if (pointerQueue.size < 24) {
+                pointerQueue.addLast(message)
             }
         }
         ensurePointerSocket()
     }
 
-    private fun sendPointerNow(message: String) {
-        if (pointerReady) pointerSocket?.send(message)
+    private fun sendPointerMotion(message: String) {
+        val socket = pointerSocket
+        if (pointerReady && socket?.send(message) == true) return
+
+        // Motion is high-frequency: keep only the latest unsent delta instead of
+        // replaying a long stale cursor trail when the pointer socket reconnects.
+        pendingMotion = message
+        if (pointerReady || socket != null) {
+            pointerReady = false
+            if (socket === pointerSocket) pointerSocket = null
+            pointerOpening.set(false)
+            socket?.cancel()
+        }
+        ensurePointerSocket()
     }
 
     private fun ensurePointerSocket() {
-        if (!registered || pointerReady || !pointerOpening.compareAndSet(false, true)) return
+        if (!registered || manuallyClosed || pointerReady || !pointerOpening.compareAndSet(false, true)) return
+        val openingGeneration = connectionGeneration
+
+        pointerOpenWatchdog?.cancel()
+        pointerOpenWatchdog = scope.launch {
+            delay(4_500)
+            if (
+                openingGeneration == connectionGeneration &&
+                registered && !pointerReady &&
+                pointerOpening.compareAndSet(true, false)
+            ) {
+                schedulePointerRecovery()
+            }
+        }
+
         request("ssap://com.webos.service.networkinput/getPointerInputSocket", timeoutMs = 4_000, callback = { payload ->
+            pointerOpenWatchdog?.cancel()
+            if (openingGeneration != connectionGeneration || !registered) {
+                pointerOpening.set(false)
+                return@request
+            }
             val path = payload.optString("socketPath")
             if (path.isBlank()) {
                 pointerOpening.set(false)
-                cachedCapabilities -= TvCapability.Pointer
-                listener.onCapabilities(cachedCapabilities)
+                schedulePointerRecovery()
                 return@request
             }
             val client = if (path.startsWith("wss://")) tlsClient else plainClient
             client.newWebSocket(Request.Builder().url(path).build(), object : WebSocketListener() {
                 override fun onOpen(webSocket: WebSocket, response: Response) {
+                    if (openingGeneration != connectionGeneration || !registered || manuallyClosed) {
+                        webSocket.close(1000, "Stale pointer socket")
+                        return
+                    }
                     pointerSocket = webSocket
                     pointerReady = true
                     pointerOpening.set(false)
+                    pointerOpenWatchdog?.cancel()
+                    pointerRecoveryJob?.cancel()
                     cachedCapabilities += TvCapability.Pointer
                     listener.onCapabilities(cachedCapabilities)
+
                     val queued = mutableListOf<String>()
                     synchronized(pointerLock) {
                         while (pointerQueue.isNotEmpty()) queued += pointerQueue.removeFirst()
                     }
                     queued.forEach(webSocket::send)
+                    pendingMotion?.also { motion ->
+                        pendingMotion = null
+                        webSocket.send(motion)
+                    }
                 }
 
                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                    if (webSocket === pointerSocket) pointerSocket = null
                     pointerReady = false
-                    pointerSocket = null
                     pointerOpening.set(false)
+                    schedulePointerRecovery()
                 }
 
                 override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                    if (webSocket === pointerSocket) pointerSocket = null
                     pointerReady = false
-                    pointerSocket = null
                     pointerOpening.set(false)
+                    schedulePointerRecovery()
                 }
             })
         })
+    }
+
+    private fun schedulePointerRecovery() {
+        if (!registered || manuallyClosed || pointerRecoveryJob?.isActive == true) return
+        pointerRecoveryJob = scope.launch {
+            delay(220)
+            ensurePointerSocket()
+        }
     }
 
     private fun request(
@@ -470,11 +533,28 @@ class FastLgWebOsClient(
         }
     }
 
-    fun forgetDevice(ip: String) {
+    fun forgetDevice(device: TvDevice) {
+        val editor = securePreferences.edit()
+        listOf("client_key", "endpoint", "cert").forEach { prefix ->
+            editor.remove("${prefix}_${device.stableId}")
+            editor.remove("${prefix}_${device.ip}")
+        }
+        editor.apply()
+    }
+
+    private fun readDeviceSecret(prefix: String, device: TvDevice): String? {
+        val stableKey = "${prefix}_${device.stableId}"
+        securePreferences.getString(stableKey, null)?.let { return it }
+        val legacyKey = "${prefix}_${device.ip}"
+        val legacy = securePreferences.getString(legacyKey, null) ?: return null
+        securePreferences.edit().putString(stableKey, legacy).remove(legacyKey).apply()
+        return legacy
+    }
+
+    private fun writeDeviceSecret(prefix: String, device: TvDevice, value: String) {
         securePreferences.edit()
-            .remove("client_key_$ip")
-            .remove("endpoint_$ip")
-            .remove("cert_$ip")
+            .putString("${prefix}_${device.stableId}", value)
+            .remove("${prefix}_${device.ip}")
             .apply()
     }
 
@@ -488,6 +568,9 @@ class FastLgWebOsClient(
         registered = false
         pointerReady = false
         pointerOpening.set(false)
+        pointerRecoveryJob?.cancel()
+        pointerOpenWatchdog?.cancel()
+        pendingMotion = null
         callbacks.values.forEach { it.timeout.cancel() }
         callbacks.clear()
         synchronized(pointerLock) { pointerQueue.clear() }

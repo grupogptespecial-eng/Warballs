@@ -72,4 +72,86 @@ class RemoteModelsTest {
         assertTrue(NetworkAddressValidator.isLocalHost("10.0.0.8"))
         assertFalse(NetworkAddressValidator.isLocalHost("8.8.8.8"))
     }
+    @Test
+    fun localNetworkValidationRejectsMalformedIpv4() {
+        assertFalse(NetworkAddressValidator.isLocalHost("192.168.bad.1.2"))
+        assertFalse(NetworkAddressValidator.isLocalHost("192.168.1"))
+        assertFalse(NetworkAddressValidator.isLocalHost("192.168.1.999"))
+    }
+
+    @Test
+    fun localNetworkValidationAcceptsPrivateIpv6() {
+        assertTrue(NetworkAddressValidator.isLocalHost("::1"))
+        assertTrue(NetworkAddressValidator.isLocalHost("fe80::1234"))
+        assertTrue(NetworkAddressValidator.isLocalHost("fd12:3456::1"))
+        assertFalse(NetworkAddressValidator.isLocalHost("2001:4860:4860::8888"))
+    }
+
+    @Test
+    fun ipv6HostsAreBracketedForWebSockets() {
+        assertEquals("192.168.1.20", NetworkAddressValidator.asUrlHost("192.168.1.20"))
+        assertEquals("[fd12:3456::1]", NetworkAddressValidator.asUrlHost("fd12:3456::1"))
+        assertEquals("[fe80::1%25wlan0]", NetworkAddressValidator.asUrlHost("fe80::1%wlan0"))
+    }
+
+    @Test
+    fun manualAddressNormalizationKeepsIpv6Intact() {
+        assertEquals("192.168.1.20", TvDiscovery.normalizeHost("http://192.168.1.20:3000/"))
+        assertEquals("fd12:3456::1", TvDiscovery.normalizeHost("[fd12:3456::1]:3000"))
+        assertEquals("fd12:3456::1", TvDiscovery.normalizeHost("fd12:3456::1"))
+        assertEquals(null, TvDiscovery.normalizeHost("8.8.8.8"))
+    }
+
+    @Test
+    fun advancedLegacyPresetKeepsClassicOneScrollControls() {
+        val preset = RemotePreset.advancedLegacy
+        assertEquals(RemotePresetId.AdvancedLegacy, preset.id)
+        assertTrue(RemoteModule.DPad in preset.modules)
+        assertTrue(RemoteModule.Volume in preset.modules)
+        assertTrue(RemoteModule.Channels in preset.modules)
+        assertTrue(RemoteModule.Media in preset.modules)
+        assertTrue(RemoteModule.TouchpadShortcut in preset.modules)
+        assertTrue(RemoteModule.Inputs in preset.modules)
+        assertTrue(RemoteModule.Apps in preset.modules)
+        assertTrue(RemoteModule.Keyboard in preset.modules)
+        assertTrue(RemoteModule.Numeric in preset.modules)
+    }
+
+    @Test
+    fun lgPointerProtocolFramesNavigationAndPointerCommands() {
+        assertEquals("type:button\nname:LEFT\n\n", LgPointerProtocol.button("left"))
+        assertEquals("type:click\n\n", LgPointerProtocol.click())
+        assertEquals("type:move\ndx:240\ndy:-240\ndown:0\n\n", LgPointerProtocol.move(999, -999))
+        assertEquals("type:scroll\ndx:0\ndy:80\n\n", LgPointerProtocol.scroll(999))
+    }
+
+    @Test
+    fun voiceCommandsWorkAcrossPortugueseEnglishAndSpanish() {
+        assertEquals(RemoteAction.Up, VoiceCommandParser.parse("cima"))
+        assertEquals(RemoteAction.Left, VoiceCommandParser.parse("left"))
+        assertEquals(RemoteAction.VolumeUp, VoiceCommandParser.parse("subir volumen"))
+        assertEquals(RemoteAction.Enter, VoiceCommandParser.parse("confirmar"))
+        assertEquals(null, VoiceCommandParser.parse("um texto livre para a televisão"))
+    }
+
+    @Test
+    fun personalizationDefaultsArePersistentFriendly() {
+        val state = RemoteUiState()
+        assertEquals(BackgroundEffect.Aurora, state.backgroundEffect)
+        assertEquals(AnimationPreset.Calm, state.animationPreset)
+        assertEquals(ButtonEffect.Soft, state.buttonEffect)
+        assertEquals(AppLanguage.System, state.appLanguage)
+        assertEquals(VoiceLanguage.Auto, state.voiceLanguage)
+    }
+
+    @Test
+    fun appLanguageResolutionAlwaysProducesSupportedUiLanguage() {
+        val resolved = AppLanguage.System.resolved()
+        assertTrue(resolved in setOf(
+            AppLanguage.PortugueseBrazil,
+            AppLanguage.English,
+            AppLanguage.Spanish
+        ))
+    }
+
 }

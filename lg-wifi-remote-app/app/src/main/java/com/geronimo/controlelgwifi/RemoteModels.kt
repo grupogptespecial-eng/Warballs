@@ -116,13 +116,49 @@ data class TvInput(
 )
 
 enum class ThemeMode { System, Light, Dark, Amoled }
-enum class AccentTheme { Ocean, Violet, Emerald, Sunset, Monochrome }
+
+enum class AccentTheme {
+    Ocean, Violet, Emerald, Sunset, Monochrome,
+    Aurora, Rose, Cyber, Gold, Arctic
+}
+
+enum class BackgroundEffect { None, Aurora, GradientFlow, AmbientOrbs }
+enum class AnimationPreset { Off, Calm, Fluid, Energetic }
+enum class ButtonEffect { Classic, Soft, Bounce, Glow }
+
+enum class AppLanguage(val tag: String?) {
+    System(null),
+    PortugueseBrazil("pt-BR"),
+    English("en-US"),
+    Spanish("es-ES");
+
+    fun resolved(): AppLanguage {
+        if (this != System) return this
+        return when (java.util.Locale.getDefault().language.lowercase()) {
+            "pt" -> PortugueseBrazil
+            "es" -> Spanish
+            else -> English
+        }
+    }
+}
+
+enum class VoiceLanguage(val tag: String?) {
+    Auto(null),
+    PortugueseBrazil("pt-BR"),
+    EnglishUS("en-US"),
+    Spanish("es-ES"),
+    French("fr-FR"),
+    German("de-DE"),
+    Italian("it-IT")
+}
+
 enum class ControlSurface { Remote, Touchpad }
 
 enum class RemotePresetId(val title: String) {
     Simple("Simples"),
     Normal("Normal"),
     Advanced("Avançado"),
+    AdvancedLegacy("Avançado AL"),
     Custom1("Personalizado 1"),
     Custom2("Personalizado 2"),
     Custom3("Personalizado 3");
@@ -184,10 +220,31 @@ data class RemotePreset(
             modules = RemoteModule.entries.toList(),
             compact = true
         )
+        val advancedLegacy = RemotePreset(
+            RemotePresetId.AdvancedLegacy,
+            name = "Avançado AL",
+            modules = listOf(
+                RemoteModule.Power,
+                RemoteModule.DPad,
+                RemoteModule.Volume,
+                RemoteModule.Channels,
+                RemoteModule.CoreActions,
+                RemoteModule.Media,
+                RemoteModule.TouchpadShortcut,
+                RemoteModule.Inputs,
+                RemoteModule.Apps,
+                RemoteModule.Keyboard,
+                RemoteModule.Numeric,
+                RemoteModule.Colors,
+                RemoteModule.InfoMenu
+            ),
+            compact = false
+        )
         fun defaultFor(id: RemotePresetId): RemotePreset = when (id) {
             RemotePresetId.Simple -> simple
             RemotePresetId.Normal -> normal
             RemotePresetId.Advanced -> advanced
+            RemotePresetId.AdvancedLegacy -> advancedLegacy
             else -> normal.copy(id = id, name = id.title)
         }
     }
@@ -226,6 +283,11 @@ data class RemoteUiState(
     val experimentalBackendsEnabled: Boolean = true,
     val themeMode: ThemeMode = ThemeMode.System,
     val accentTheme: AccentTheme = AccentTheme.Ocean,
+    val backgroundEffect: BackgroundEffect = BackgroundEffect.Aurora,
+    val animationPreset: AnimationPreset = AnimationPreset.Calm,
+    val buttonEffect: ButtonEffect = ButtonEffect.Soft,
+    val appLanguage: AppLanguage = AppLanguage.System,
+    val voiceLanguage: VoiceLanguage = VoiceLanguage.Auto,
     val controlSurface: ControlSurface = ControlSurface.Remote,
     val selectedPresetId: RemotePresetId = RemotePresetId.Normal,
     val presets: Map<RemotePresetId, RemotePreset> = RemotePresetId.entries.associateWith(RemotePreset::defaultFor),
