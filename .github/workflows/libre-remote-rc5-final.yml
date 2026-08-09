@@ -30,7 +30,7 @@ jobs:
           git apply --check --whitespace=error --directory=lg-wifi-remote-app lg-wifi-remote-app/controls-rc3.patch
           git apply --whitespace=error --directory=lg-wifi-remote-app lg-wifi-remote-app/controls-rc3.patch
 
-          cat lg-wifi-remote-app/rc5-overlay/part-*.b64 > /tmp/rc5-overlay.b64
+          find lg-wifi-remote-app/rc5-overlay -maxdepth 1 -type f -name 'part-*.b64' -print0 | sort -zV | xargs -0 cat > /tmp/rc5-overlay.b64
           test "$(wc -c < /tmp/rc5-overlay.b64)" = "78092"
           echo "0263838624ed030d315a525dc8dda4f14befe4f10a79013a0085bc4ca5eb3c61  /tmp/rc5-overlay.b64" | sha256sum -c -
           base64 -d /tmp/rc5-overlay.b64 > /tmp/rc5-overlay.tar.gz
