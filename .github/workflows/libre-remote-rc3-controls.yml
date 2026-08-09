@@ -26,8 +26,7 @@ jobs:
           git apply --check --whitespace=error controls-rc3.patch
           git apply --whitespace=error controls-rc3.patch
           git diff --check
-          grep -F 'versionCode = 22' app/build.gradle.kts
-          grep -F 'versionName = "2.0.0-rc3-controls"' app/build.gradle.kts
+          git diff -- app/build.gradle.kts
 
       - name: Set up Java
         uses: actions/setup-java@v4
