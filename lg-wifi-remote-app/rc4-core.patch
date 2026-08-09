@@ -1,0 +1,334 @@
+diff --git a/app/build.gradle.kts b/app/build.gradle.kts
+index 455eff9..5dc5322 100644
+--- a/app/build.gradle.kts
++++ b/app/build.gradle.kts
+@@ -12,8 +12,8 @@ android {
+         applicationId = "io.github.grupogptespecialeng.libreremote"
+         minSdk = 23
+         targetSdk = 35
+-        versionCode = 22
+-        versionName = "2.0.0-rc3-controls"
++        versionCode = 23
++        versionName = "2.0.0-rc4-personalization"
+         vectorDrawables.useSupportLibrary = true
+     }
+ 
+diff --git a/app/src/main/java/com/geronimo/controlelgwifi/RemoteModels.kt b/app/src/main/java/com/geronimo/controlelgwifi/RemoteModels.kt
+index eb9a043..f423139 100644
+--- a/app/src/main/java/com/geronimo/controlelgwifi/RemoteModels.kt
++++ b/app/src/main/java/com/geronimo/controlelgwifi/RemoteModels.kt
+@@ -116,7 +116,42 @@ data class TvInput(
+ )
+ 
+ enum class ThemeMode { System, Light, Dark, Amoled }
+-enum class AccentTheme { Ocean, Violet, Emerald, Sunset, Monochrome }
++
++enum class AccentTheme {
++    Ocean, Violet, Emerald, Sunset, Monochrome,
++    Aurora, Rose, Cyber, Gold, Arctic
++}
++
++enum class BackgroundEffect { None, Aurora, GradientFlow, AmbientOrbs }
++enum class AnimationPreset { Off, Calm, Fluid, Energetic }
++enum class ButtonEffect { Classic, Soft, Bounce, Glow }
++
++enum class AppLanguage(val tag: String?) {
++    System(null),
++    PortugueseBrazil("pt-BR"),
++    English("en-US"),
++    Spanish("es-ES");
++
++    fun resolved(): AppLanguage {
++        if (this != System) return this
++        return when (java.util.Locale.getDefault().language.lowercase()) {
++            "pt" -> PortugueseBrazil
++            "es" -> Spanish
++            else -> English
++        }
++    }
++}
++
++enum class VoiceLanguage(val tag: String?) {
++    Auto(null),
++    PortugueseBrazil("pt-BR"),
++    EnglishUS("en-US"),
++    Spanish("es-ES"),
++    French("fr-FR"),
++    German("de-DE"),
++    Italian("it-IT")
++}
++
+ enum class ControlSurface { Remote, Touchpad }
+ 
+ enum class RemotePresetId(val title: String) {
+@@ -248,6 +283,11 @@ data class RemoteUiState(
+     val experimentalBackendsEnabled: Boolean = true,
+     val themeMode: ThemeMode = ThemeMode.System,
+     val accentTheme: AccentTheme = AccentTheme.Ocean,
++    val backgroundEffect: BackgroundEffect = BackgroundEffect.Aurora,
++    val animationPreset: AnimationPreset = AnimationPreset.Calm,
++    val buttonEffect: ButtonEffect = ButtonEffect.Soft,
++    val appLanguage: AppLanguage = AppLanguage.System,
++    val voiceLanguage: VoiceLanguage = VoiceLanguage.Auto,
+     val controlSurface: ControlSurface = ControlSurface.Remote,
+     val selectedPresetId: RemotePresetId = RemotePresetId.Normal,
+     val presets: Map<RemotePresetId, RemotePreset> = RemotePresetId.entries.associateWith(RemotePreset::defaultFor),
+diff --git a/app/src/main/java/com/geronimo/controlelgwifi/RemotePreferences.kt b/app/src/main/java/com/geronimo/controlelgwifi/RemotePreferences.kt
+index 1eea673..570910b 100644
+--- a/app/src/main/java/com/geronimo/controlelgwifi/RemotePreferences.kt
++++ b/app/src/main/java/com/geronimo/controlelgwifi/RemotePreferences.kt
+@@ -32,6 +32,26 @@ class RemotePreferences(context: Context) {
+             experimentalBackendsEnabled = prefs.getBoolean("experimental_backends", true),
+             themeMode = enumValueOrDefault(prefs.getString("theme", null), ThemeMode.System),
+             accentTheme = enumValueOrDefault(prefs.getString("accent", null), AccentTheme.Ocean),
++            backgroundEffect = enumValueOrDefault(
++                prefs.getString("background_effect", null),
++                BackgroundEffect.Aurora
++            ),
++            animationPreset = enumValueOrDefault(
++                prefs.getString("animation_preset", null),
++                AnimationPreset.Calm
++            ),
++            buttonEffect = enumValueOrDefault(
++                prefs.getString("button_effect", null),
++                ButtonEffect.Soft
++            ),
++            appLanguage = enumValueOrDefault(
++                prefs.getString("app_language", null),
++                AppLanguage.System
++            ),
++            voiceLanguage = enumValueOrDefault(
++                prefs.getString("voice_language", null),
++                VoiceLanguage.Auto
++            ),
+             selectedPresetId = selectedPreset,
+             presets = presetMap,
+             onboardingComplete = prefs.getBoolean("onboarding_complete", false)
+@@ -84,6 +104,11 @@ class RemotePreferences(context: Context) {
+             .putBoolean("experimental_backends", state.experimentalBackendsEnabled)
+             .putString("theme", state.themeMode.name)
+             .putString("accent", state.accentTheme.name)
++            .putString("background_effect", state.backgroundEffect.name)
++            .putString("animation_preset", state.animationPreset.name)
++            .putString("button_effect", state.buttonEffect.name)
++            .putString("app_language", state.appLanguage.name)
++            .putString("voice_language", state.voiceLanguage.name)
+             .putString("selected_preset", state.selectedPresetId.name)
+             .putBoolean("onboarding_complete", state.onboardingComplete)
+             .apply()
+diff --git a/app/src/main/java/com/geronimo/controlelgwifi/RemoteViewModel.kt b/app/src/main/java/com/geronimo/controlelgwifi/RemoteViewModel.kt
+index a041e9d..914d9cd 100644
+--- a/app/src/main/java/com/geronimo/controlelgwifi/RemoteViewModel.kt
++++ b/app/src/main/java/com/geronimo/controlelgwifi/RemoteViewModel.kt
+@@ -16,6 +16,8 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
+     private val preferences = RemotePreferences(application)
+     private val registry = TvBackendRegistry(application, this)
+     private val repeatJobs = mutableMapOf<RemoteAction, Job>()
++    private var addressRecoveryJob: Job? = null
++    private var lastAddressRecoveryAt: Long = 0L
+ 
+     @Volatile private var activeBackend: TvBackend? = null
+     @Volatile private var activePlatform: TvPlatform? = null
+@@ -39,6 +41,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
+                 delay(80)
+                 connect(state.currentDevice, userInitiated = false)
+             }
++            scheduleAddressRecovery(delayMs = 1_500L)
+         }
+     }
+ 
+@@ -157,6 +160,35 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
+     fun reconnect() {
+         _uiState.value.currentDevice?.let { connect(it, userInitiated = true) }
+             ?: openConnect()
++        scheduleAddressRecovery(delayMs = 700L, force = true)
++    }
++
++    private fun scheduleAddressRecovery(delayMs: Long = 0L, force: Boolean = false) {
++        val now = System.currentTimeMillis()
++        if (!force && now - lastAddressRecoveryAt < 4_000L) return
++        if (addressRecoveryJob?.isActive == true) return
++        addressRecoveryJob = viewModelScope.launch(Dispatchers.IO) {
++            delay(delayMs)
++            val state = _uiState.value
++            val current = state.currentDevice ?: return@launch
++            if (!state.autoConnect || state.connected) return@launch
++            lastAddressRecoveryAt = System.currentTimeMillis()
++
++            val discovered = TvDiscovery.discover(getApplication(), state.savedDevices)
++            val refreshed = discovered.firstOrNull { it.stableId == current.stableId }
++                ?: discovered.firstOrNull { candidate ->
++                    val sameModel = !candidate.model.isNullOrBlank() &&
++                        !current.model.isNullOrBlank() &&
++                        candidate.model.equals(current.model, ignoreCase = true)
++                    candidate.platform == current.platform &&
++                        (sameModel || candidate.name.equals(current.name, ignoreCase = true))
++                }
++                ?: return@launch
++
++            if (refreshed.ip != current.ip || refreshed.stableId != current.stableId) {
++                connect(refreshed, userInitiated = false)
++            }
++        }
+     }
+ 
+     fun disconnect() {
+@@ -202,6 +234,36 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
+         _uiState.update { it.copy(currentDevice = updated, savedDevices = saved) }
+     }
+ 
++    fun handleVoiceTranscript(text: String) {
++        val normalized = text.trim().take(500)
++        if (normalized.isBlank()) return
++        val action = VoiceCommandParser.parse(normalized)
++        when {
++            action != null && _uiState.value.connected -> {
++                send(action)
++                _uiState.update { it.copy(statusText = "Voz: $normalized") }
++            }
++            !_uiState.value.connected -> {
++                _uiState.update { it.copy(statusText = "Conecte a TV antes de usar o microfone.") }
++            }
++            TvCapability.Keyboard in _uiState.value.capabilities -> {
++                activeBackend?.insertText(normalized)
++                _uiState.update { it.copy(statusText = "O texto falado foi enviado para a TV.") }
++            }
++            else -> {
++                _uiState.update {
++                    it.copy(statusText = "A TV atual não aceita entrada de texto; tente um comando de voz.")
++                }
++            }
++        }
++    }
++
++    fun voiceUnavailable() {
++        _uiState.update {
++            it.copy(statusText = "Nenhum app de reconhecimento de voz está disponível neste aparelho.")
++        }
++    }
++
+     fun send(action: RemoteAction) {
+         if (!_uiState.value.connected) return
+         val backend = activeBackend ?: return
+@@ -329,6 +391,11 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
+ 
+     fun setTheme(mode: ThemeMode) = updateSettings { it.copy(themeMode = mode) }
+     fun setAccent(accent: AccentTheme) = updateSettings { it.copy(accentTheme = accent) }
++    fun setBackgroundEffect(effect: BackgroundEffect) = updateSettings { it.copy(backgroundEffect = effect) }
++    fun setAnimationPreset(preset: AnimationPreset) = updateSettings { it.copy(animationPreset = preset) }
++    fun setButtonEffect(effect: ButtonEffect) = updateSettings { it.copy(buttonEffect = effect) }
++    fun setAppLanguage(language: AppLanguage) = updateSettings { it.copy(appLanguage = language) }
++    fun setVoiceLanguage(language: VoiceLanguage) = updateSettings { it.copy(voiceLanguage = language) }
+     fun setHaptics(enabled: Boolean) = updateSettings { it.copy(hapticsEnabled = enabled) }
+     fun setSound(enabled: Boolean) = updateSettings { it.copy(soundEnabled = enabled) }
+     fun setCompactMode(enabled: Boolean) = updateSettings { it.copy(compactMode = enabled) }
+@@ -375,7 +442,15 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
+                 lastError = message.takeIf { state == ConnectionState.Error }
+             )
+         }
++        if (
++            state in setOf(ConnectionState.Reconnecting, ConnectionState.Error) &&
++            reconnectAttempt >= 3 &&
++            _uiState.value.autoConnect
++        ) {
++            scheduleAddressRecovery(delayMs = 250L)
++        }
+         if (state == ConnectionState.Connected) {
++            addressRecoveryJob?.cancel()
+             val current = _uiState.value.currentDevice ?: return
+             val refreshed = current.copy(
+                 capabilities = _uiState.value.capabilities,
+@@ -428,6 +503,7 @@ class RemoteViewModel(application: Application) : AndroidViewModel(application),
+ 
+     override fun onCleared() {
+         stopAllRepeating()
++        addressRecoveryJob?.cancel()
+         registry.closeAll()
+         super.onCleared()
+     }
+diff --git a/app/src/main/java/com/geronimo/controlelgwifi/VoiceCommandParser.kt b/app/src/main/java/com/geronimo/controlelgwifi/VoiceCommandParser.kt
+new file mode 100644
+index 0000000..aab7032
+--- /dev/null
++++ b/app/src/main/java/com/geronimo/controlelgwifi/VoiceCommandParser.kt
+@@ -0,0 +1,42 @@
++package com.geronimo.controlelgwifi
++
++import java.text.Normalizer
++import java.util.Locale
++
++object VoiceCommandParser {
++    fun parse(raw: String): RemoteAction? {
++        val text = normalize(raw)
++        return when (text) {
++            "cima", "subir", "up", "arriba" -> RemoteAction.Up
++            "baixo", "descer", "down", "abajo" -> RemoteAction.Down
++            "esquerda", "left", "izquierda" -> RemoteAction.Left
++            "direita", "right", "derecha" -> RemoteAction.Right
++            "ok", "confirmar", "confirma", "enter", "accept", "aceptar", "acepta" -> RemoteAction.Enter
++            "voltar", "back", "atras", "volver" -> RemoteAction.Back
++            "inicio", "home", "casa" -> RemoteAction.Home
++            "menu", "menú" -> RemoteAction.Menu
++            "informacao", "informacoes", "info", "information", "informacion" -> RemoteAction.Info
++            "guia", "guide", "guía" -> RemoteAction.Guide
++            "aumentar volume", "volume mais", "volume up", "subir volumen", "aumenta el volumen" -> RemoteAction.VolumeUp
++            "diminuir volume", "volume menos", "volume down", "bajar volumen", "baja el volumen" -> RemoteAction.VolumeDown
++            "mudo", "silenciar", "mute", "silencio" -> RemoteAction.Mute
++            "canal mais", "proximo canal", "channel up", "siguiente canal", "canal siguiente" -> RemoteAction.ChannelUp
++            "canal menos", "canal anterior", "channel down", "previous channel" -> RemoteAction.ChannelDown
++            "reproduzir", "tocar", "play", "reproducir" -> RemoteAction.Play
++            "pausar", "pause", "pausa" -> RemoteAction.Pause
++            "parar", "stop", "detener" -> RemoteAction.Stop
++            "avancar", "adiantar", "fast forward", "avanzar" -> RemoteAction.FastForward
++            "retroceder", "rewind", "rebobinar" -> RemoteAction.Rewind
++            else -> null
++        }
++    }
++
++    internal fun normalize(raw: String): String {
++        return Normalizer.normalize(raw, Normalizer.Form.NFD)
++            .replace("\\p{Mn}+".toRegex(), "")
++            .lowercase(Locale.ROOT)
++            .replace("[^a-z0-9 ]".toRegex(), " ")
++            .replace("\\s+".toRegex(), " ")
++            .trim()
++    }
++}
++diff --git a/app/src/test/java/com/geronimo/controlelgwifi/RemoteModelsTest.kt b/app/src/test/java/com/geronimo/controlelgwifi/RemoteModelsTest.kt
++index 8244aeb..ddc0f74 100644
++--- a/app/src/test/java/com/geronimo/controlelgwifi/RemoteModelsTest.kt
+++++ b/app/src/test/java/com/geronimo/controlelgwifi/RemoteModelsTest.kt
++@@ -125,4 +125,33 @@ class RemoteModelsTest {
++         assertEquals("type:scroll\ndx:0\ndy:80\n\n", LgPointerProtocol.scroll(999))
++     }
++ 
+++    @Test
+++    fun voiceCommandsWorkAcrossPortugueseEnglishAndSpanish() {
+++        assertEquals(RemoteAction.Up, VoiceCommandParser.parse("cima"))
+++        assertEquals(RemoteAction.Left, VoiceCommandParser.parse("left"))
+++        assertEquals(RemoteAction.VolumeUp, VoiceCommandParser.parse("subir volumen"))
+++        assertEquals(RemoteAction.Enter, VoiceCommandParser.parse("confirmar"))
+++        assertEquals(null, VoiceCommandParser.parse("um texto livre para a televisão"))
+++    }
+++
+++    @Test
+++    fun personalizationDefaultsArePersistentFriendly() {
+++        val state = RemoteUiState()
+++        assertEquals(BackgroundEffect.Aurora, state.backgroundEffect)
+++        assertEquals(AnimationPreset.Calm, state.animationPreset)
+++        assertEquals(ButtonEffect.Soft, state.buttonEffect)
+++        assertEquals(AppLanguage.System, state.appLanguage)
+++        assertEquals(VoiceLanguage.Auto, state.voiceLanguage)
+++    }
+++
+++    @Test
+++    fun appLanguageResolutionAlwaysProducesSupportedUiLanguage() {
+++        val resolved = AppLanguage.System.resolved()
+++        assertTrue(resolved in setOf(
+++            AppLanguage.PortugueseBrazil,
+++            AppLanguage.English,
+++            AppLanguage.Spanish
+++        ))
+++    }
+++
++ }
