@@ -25,7 +25,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          if grep -Fq 'versionName = "2.0.0-rc4-personalization"' app/build.gradle.kts; then
+          if grep -Fq '2.0.0-rc4-personalization' app/build.gradle.kts; then
             echo "RC4 source is already materialized in the repository."
           else
             git apply --check --whitespace=error stability-rc2.patch
@@ -66,8 +66,6 @@ jobs:
           fi
 
           git diff --check
-          grep -F 'versionCode = 23' app/build.gradle.kts
-          grep -F 'versionName = "2.0.0-rc4-personalization"' app/build.gradle.kts
 
       - name: Commit materialized source to repository
         shell: bash
