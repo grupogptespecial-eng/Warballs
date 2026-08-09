@@ -1,39 +1,40 @@
-> Task :app:parseReleaseLocalResources
+> Task :app:processReleaseMainManifest
 > Task :app:processReleaseManifest
 > Task :app:processReleaseManifestForPackage
 > Task :app:processReleaseResources
-
-> Task :app:compileDebugKotlin FAILED
+> Task :app:compileDebugKotlin
 e: file:///home/runner/work/Warballs/Warballs/lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/RemoteControls.kt:525:25 Unresolved reference 'detectTapGestures'.
 e: file:///home/runner/work/Warballs/Warballs/lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/VisualEffects.kt:40:18 Type 'androidx.compose.runtime.State<kotlin.Float>' has no method 'getValue(Nothing?, KProperty0<*>)', so it cannot serve as a delegate.
 
 > Task :app:compileReleaseKotlin FAILED
 e: file:///home/runner/work/Warballs/Warballs/lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/RemoteControls.kt:525:25 Unresolved reference 'detectTapGestures'.
 e: file:///home/runner/work/Warballs/Warballs/lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/VisualEffects.kt:40:18 Type 'androidx.compose.runtime.State<kotlin.Float>' has no method 'getValue(Nothing?, KProperty0<*>)', so it cannot serve as a delegate.
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/gradle-1786317326560.json
+
+> Task :app:compileDebugKotlin FAILED
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/gradle-1786317822624.json
 
 FAILURE: Build completed with 2 failures.
 
 1: Task failed with an exception.
 -----------
 * What went wrong:
-Execution failed for task ':app:compileReleaseKotlin'.
+Execution failed for task ':app:compileDebugKotlin'.
 > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
    > Compilation error. See log for more details
 
 
-* Try:
 
+* Try:
 > Run with --info or --debug option to get more log output.
 
 > Run with --scan to get full insights.
-> Get more help at https://help.gradle.org.
 
+> Get more help at https://help.gradle.org.
 
 
 * Exception is:
 
-org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:compileReleaseKotlin'.
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:compileDebugKotlin'.
 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecuter.java:130)
 	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:293)
 
@@ -150,7 +151,7 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 2: Task failed with an exception.
 -----------
 * What went wrong:
-Execution failed for task ':app:compileDebugKotlin'.
+Execution failed for task ':app:compileReleaseKotlin'.
 > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
    > Compilation error. See log for more details
 
@@ -160,7 +161,7 @@ Execution failed for task ':app:compileDebugKotlin'.
 > Get more help at https://help.gradle.org.
 
 * Exception is:
-org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:compileDebugKotlin'.
+org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:compileReleaseKotlin'.
 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.lambda$executeIfValid$1(ExecuteActionsTaskExecuter.java:130)
 	at org.gradle.internal.Try$Failure.ifSuccessfulOrElse(Try.java:293)
 	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:128)
@@ -273,6 +274,6 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 
 ==============================================================================
 
-BUILD FAILED in 2m 4s
+BUILD FAILED in 2m 30s
 37 actionable tasks: 37 executed
 
