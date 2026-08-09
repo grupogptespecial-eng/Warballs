@@ -1,0 +1,25 @@
+nnels/samsung.remote.control?name=$encodedName"
+         val endpoints = listOfNotNull(preferred, secure.takeUnless { it == preferred }, plain.takeUnless { it == preferred }).distinct()
+         endpoints.forEachIndexed { index, endpoint ->
+             scope.launch {
+@@ -723,17 +724,36 @@
+ 
+ object NetworkAddressValidator {
+     fun isLocalHost(host: String): Boolean {
+-        val normalized = host.removePrefix("[").removeSuffix("]").lowercase()
+-        if (normalized == "localhost" || normalized.endsWith(".local")) return true
+-        if (normalized.contains(':')) {
+-            return normalized == "::1" || normalized.startsWith("fe80:") || normalized.startsWith("fc") || normalized.startsWith("fd")
++        val normalized = host.trim().removePrefix("[").removeSuffix("]").lowercase()
++        if (normalized.isBlank() || normalized.any { it.isWhitespace() || it == '/' || it == '\\' }) return false
++        if (normalized == "localhost") return true
++        if (normalized.endsWith(".local")) {
++            return normalized.length <= 253 && normalized
++                .split('.')
++                .all { label -> label.isNotBlank() && label.length <= 63 && label.all { it.isLetterOrDigit() || it == '-' } }
+         }
+-        val parts = normalized.split('.').mapNotNull(String::toIntOrNull)
+-        if (parts.size != 4 || parts.any { it !in 0..255 }) return false
++        if (normalized.contains(':')) {
++            val literal = normalized.substringBefore('%')
++           

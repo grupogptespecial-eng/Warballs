@@ -53,6 +53,10 @@ jobs:
             base64 -d /tmp/fastlg-final.b64 > /tmp/fastlg-final.tar.gz
             echo 'bbc955a3c4c0512cd7290db71293d1ff9cd2ffe4de89e1b320ee18a7776fa6c9  /tmp/fastlg-final.tar.gz' | sha256sum -c -
             tar -xzf /tmp/fastlg-final.tar.gz -C lg-wifi-remote-app
+
+            cat .rc4-materialize/tvbackend-final-part-*.patch > /tmp/tvbackend-final.patch
+            echo '9d4d2c517555a470d6e458cf1044728c355047303d9f3815a307193287b844f7  /tmp/tvbackend-final.patch' | sha256sum -c -
+            (cd lg-wifi-remote-app && patch -p0 < /tmp/tvbackend-final.patch)
           fi
           git diff --check
 

@@ -1,0 +1,23 @@
+ val address = runCatching { java.net.InetAddress.getByName(literal) }.getOrNull() as? java.net.Inet6Address
++                ?: return false
++            val first = address.address.firstOrNull()?.toInt()?.and(0xff) ?: return false
++            return address.isLoopbackAddress || address.isLinkLocalAddress || (first and 0xfe) == 0xfc
++        }
++        val rawParts = normalized.split('.')
++        if (rawParts.size != 4) return false
++        val parts = rawParts.map { it.toIntOrNull() ?: return false }
++        if (parts.any { it !in 0..255 }) return false
+         return parts[0] == 10 ||
+             (parts[0] == 192 && parts[1] == 168) ||
+             (parts[0] == 172 && parts[1] in 16..31) ||
+             (parts[0] == 169 && parts[1] == 254) ||
+             parts[0] == 127
+     }
++
++    fun asUrlHost(host: String): String {
++        val normalized = host.trim().removePrefix("[").removeSuffix("]")
++        if (!normalized.contains(':')) return normalized
++        val escapedZone = normalized.replace("%", "%25")
++        return "[$escapedZone]"
++    }
+ }
