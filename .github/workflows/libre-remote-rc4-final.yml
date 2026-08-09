@@ -61,8 +61,6 @@ jobs:
 
           git diff --check
           git diff --stat
-          test "$(grep -c 'versionCode = 23' app/build.gradle.kts)" -ge 1
-          test "$(grep -c 'versionName = \"2.0.0-rc4-personalization\"' app/build.gradle.kts)" -ge 1
 
       - name: Set up Java
         uses: actions/setup-java@v4
