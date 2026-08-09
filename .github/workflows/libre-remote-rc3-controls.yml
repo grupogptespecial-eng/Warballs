@@ -30,8 +30,8 @@ jobs:
             > /tmp/controls-rc3-enhanced.patch
           echo "RC3 patch SHA256: $(sha256sum /tmp/controls-rc3-enhanced.patch)"
           test "$(sha256sum /tmp/controls-rc3-enhanced.patch | awk '{print $1}')" = "d5d403fa1d1d9defed9478150addb32faa3d11af58eec0b848a23a8bf286313a"
-          git apply --check --whitespace=error stability-rc2.patch
-          git apply --whitespace=error stability-rc2.patch
+          git apply --check stability-rc2.patch
+          git apply stability-rc2.patch
           git apply --check --whitespace=error /tmp/controls-rc3-enhanced.patch
           git apply --whitespace=error /tmp/controls-rc3-enhanced.patch
           git diff --check
