@@ -1,0 +1,140 @@
+name: Build and Publish Libre Remote RC5 Final
+
+on:
+  push:
+    branches:
+      - release/libre-remote-2.0.0-rc5-final-transport
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  validate-build-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout transport branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reconstruct exact RC5 source
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # RC1 -> RC2 -> RC3, explicitly rooted in the nested Android project.
+          git apply --check --whitespace=error --directory=lg-wifi-remote-app lg-wifi-remote-app/stability-rc2.patch
+          git apply --whitespace=error --directory=lg-wifi-remote-app lg-wifi-remote-app/stability-rc2.patch
+          git apply --check --whitespace=error --directory=lg-wifi-remote-app lg-wifi-remote-app/controls-rc3.patch
+          git apply --whitespace=error --directory=lg-wifi-remote-app lg-wifi-remote-app/controls-rc3.patch
+
+          cat lg-wifi-remote-app/rc5-overlay/part-*.b64 > /tmp/rc5-overlay.b64
+          test "$(wc -c < /tmp/rc5-overlay.b64)" = "78092"
+          echo "0263838624ed030d315a525dc8dda4f14befe4f10a79013a0085bc4ca5eb3c61  /tmp/rc5-overlay.b64" | sha256sum -c -
+          base64 -d /tmp/rc5-overlay.b64 > /tmp/rc5-overlay.tar.gz
+          test "$(wc -c < /tmp/rc5-overlay.tar.gz)" = "58569"
+          echo "a1c41e924081ea4d862c79b6f41afab6cba19eba3e86ea07bcb7dc48174a57e0  /tmp/rc5-overlay.tar.gz" | sha256sum -c -
+          tar -tzf /tmp/rc5-overlay.tar.gz | grep -F 'lg-wifi-remote-app/app/build.gradle.kts'
+          tar -xzf /tmp/rc5-overlay.tar.gz -C .
+
+          git diff --check
+          grep -F 'versionCode = 24' lg-wifi-remote-app/app/build.gradle.kts
+          grep -F 'versionName = "2.0.0-rc5-final"' lg-wifi-remote-app/app/build.gradle.kts
+          test -f lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/OperationTimeouts.kt
+          test -f lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/AppLocalization.kt
+          test -f lg-wifi-remote-app/app/src/main/java/com/geronimo/controlelgwifi/VoiceCommandParser.kt
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 35
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+
+      - name: Set up Gradle 8.10.2
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Generate temporary sideload signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          PASSWORD="$(openssl rand -hex 18)"
+          ALIAS="libre-remote-sideload"
+          echo "::add-mask::$PASSWORD"
+          keytool -genkeypair -v \
+            -keystore "$GITHUB_WORKSPACE/libre-remote-sideload.jks" \
+            -storepass "$PASSWORD" \
+            -keypass "$PASSWORD" \
+            -alias "$ALIAS" \
+            -keyalg RSA -keysize 4096 -validity 10000 \
+            -dname "CN=Libre Remote Sideload, OU=RC5 Final, O=Libre Remote, L=Rio de Janeiro, ST=RJ, C=BR"
+          echo "LIBRE_KEYSTORE_PATH=$GITHUB_WORKSPACE/libre-remote-sideload.jks" >> "$GITHUB_ENV"
+          echo "LIBRE_KEYSTORE_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
+          echo "LIBRE_KEY_ALIAS=$ALIAS" >> "$GITHUB_ENV"
+          echo "LIBRE_KEY_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Unit tests, release lint and signed APK
+        working-directory: lg-wifi-remote-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon --stacktrace \
+            :app:testDebugUnitTest \
+            :app:lintRelease \
+            :app:assembleRelease 2>&1 | tee rc5-final-build.log
+
+      - name: Verify APK and package deliverables
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output/source
+          APK="lg-wifi-remote-app/app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          cp "$APK" output/Libre-Remote-2.0.0-rc5-final.apk
+          APKSIGNER="$(find "${ANDROID_SDK_ROOT:-$ANDROID_HOME}/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -x "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs output/Libre-Remote-2.0.0-rc5-final.apk > output/APK-SIGNATURE.txt
+          sha256sum output/Libre-Remote-2.0.0-rc5-final.apk > output/SHA256SUMS.txt
+          cp lg-wifi-remote-app/rc5-final-build.log output/
+          rsync -a \
+            --exclude build \
+            --exclude .gradle \
+            --exclude local.properties \
+            --exclude rc5-overlay \
+            --exclude stability-rc2.patch \
+            --exclude controls-rc3.patch \
+            lg-wifi-remote-app/ output/source/
+          (cd output && zip -qr Libre-Remote-2.0.0-rc5-final-source.zip source && rm -rf source)
+          ls -lh output
+
+      - name: Publish clean RC5 source branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf lg-wifi-remote-app/rc5-overlay
+          rm -f lg-wifi-remote-app/stability-rc2.patch lg-wifi-remote-app/controls-rc3.patch
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A lg-wifi-remote-app
+          git diff --cached --check
+          git commit -m "Publish Libre Remote 2.0.0 RC5 final source"
+          git push origin HEAD:release/libre-remote-2.0.0-rc5-final
+
+      - name: Upload RC5 final build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Libre-Remote-2.0.0-rc5-final
+          path: output/*
+          if-no-files-found: error
+          retention-days: 30
