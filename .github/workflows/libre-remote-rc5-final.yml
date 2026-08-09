@@ -1,0 +1,129 @@
+name: Build Libre Remote RC5 Final
+
+on:
+  push:
+    branches:
+      - release/libre-remote-2.0.0-rc5-final
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify exact RC5 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="lg-wifi-remote-app"
+          check_blob() {
+            local path="$1"
+            local expected="$2"
+            test -f "$ROOT/$path"
+            actual="$(git hash-object "$ROOT/$path")"
+            if [ "$actual" != "$expected" ]; then
+              echo "Blob mismatch: $path expected=$expected actual=$actual" >&2
+              exit 1
+            fi
+          }
+          check_blob "app/build.gradle.kts" "2d0515434a811d9d1d36757cf7f951032dd37a58"
+          check_blob "app/src/main/java/com/geronimo/controlelgwifi/AppLocalization.kt" "b4b643e2445eb4f6636d56a40ef55d3a7d70e6ea"
+          check_blob "app/src/main/java/com/geronimo/controlelgwifi/AppTheme.kt" "435141a529dc77ae840e00ca0a4e4316f6ae6378"
+          check_blob "app/src/main/java/com/geronimo/controlelgwifi/FastLgWebOsClient.kt" "93e20b5e87aee02e42668eff7be7f566c02fab4e"
+          check_blob "app/src/main/java/com/geronimo/controlelgwifi/LgPointerProtocol.kt" "ab52c7b07f26defd3b769d627a9c91599836d18b"
+          check_blob "app/src/main/java/com/geronimo/controlelgwifi/MainActivity.kt" "edc51cd48491181614b714fa3bd3fcd4c1331bf5"
+          check_blob "app/src/main/java/com/geronimo/controlelgwifi/OperationTimeouts.kt" "16d28d96d42cf7d6cd99ecc9461235da883c6ba8"
+          check_blob "app/src/main/java/com/geronimo/controlelgwifi/RemoteControls.kt" "15572789e910ebb0e32662fdc14e188e708c9128"
+          check_blob "app/src/main/java/com/geronimo/controlelgwifi/RemoteModels.kt" "f423139e38bb3a99f08ee5eeea222d4af7b9be1d"
+          check_blob "app/src/main/java/com/geronimo/controlelgwifi/RemotePreferences.kt" "570910bafb14d957dd61587913501a00a3a43c62"
+          check_blob "app/src/main/java/com/geronimo/controlelgwifi/RemoteSheets.kt" "80d3cfb1e63e2815b213242ef590c6b46d41bddf"
+          check_blob "app/src/main/java/com/geronimo/controlelgwifi/RemoteViewModel.kt" "567bc88fae1a8532e05bdaf225c9cae750f25484"
+          check_blob "app/src/main/java/com/geronimo/controlelgwifi/TvBackend.kt" "d381c881473861d8b82f7da3c498e3ee20ceeebb"
+          check_blob "app/src/main/java/com/geronimo/controlelgwifi/TvDiscovery.kt" "994530bd34b332bf392b1a3a73df5d6047ddf4ab"
+          check_blob "app/src/main/java/com/geronimo/controlelgwifi/VisualEffects.kt" "0c2bc4c0e7564b2786830d7fac1228c310505ca6"
+          check_blob "app/src/main/java/com/geronimo/controlelgwifi/VoiceCommandParser.kt" "aab703261e9dc2784175edb4a26c0c5c7a5e4548"
+          check_blob "app/src/test/java/com/geronimo/controlelgwifi/RemoteModelsTest.kt" "ff09152eabbae8d526e049974511c79cc7c98870"
+          grep -F 'versionCode = 24' "$ROOT/app/build.gradle.kts"
+          grep -F 'versionName = "2.0.0-rc5-final"' "$ROOT/app/build.gradle.kts"
+          git diff --check
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Generate temporary sideload signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          PASSWORD="$(openssl rand -hex 18)"
+          ALIAS="libre-remote-sideload"
+          echo "::add-mask::$PASSWORD"
+          keytool -genkeypair -v \
+            -keystore "$GITHUB_WORKSPACE/libre-remote-sideload.jks" \
+            -storepass "$PASSWORD" \
+            -keypass "$PASSWORD" \
+            -alias "$ALIAS" \
+            -keyalg RSA -keysize 4096 -validity 10000 \
+            -dname "CN=Libre Remote Sideload, OU=RC5 Final, O=Libre Remote, L=Rio de Janeiro, ST=RJ, C=BR"
+          echo "LIBRE_KEYSTORE_PATH=$GITHUB_WORKSPACE/libre-remote-sideload.jks" >> "$GITHUB_ENV"
+          echo "LIBRE_KEYSTORE_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
+          echo "LIBRE_KEY_ALIAS=$ALIAS" >> "$GITHUB_ENV"
+          echo "LIBRE_KEY_PASSWORD=$PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Unit tests, release lint and signed APK
+        working-directory: lg-wifi-remote-app
+        run: |
+          set -euo pipefail
+          timeout 30m gradle --no-daemon --stacktrace \
+            :app:testDebugUnitTest \
+            :app:lintRelease \
+            :app:assembleRelease 2>&1 | tee rc5-final-build.log
+
+      - name: Verify APK and package artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output/source
+          APK="lg-wifi-remote-app/app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          cp "$APK" output/Libre-Remote-2.0.0-rc5-final.apk
+          APKSIGNER="$(find "${ANDROID_SDK_ROOT:-$ANDROID_HOME}/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -x "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs output/Libre-Remote-2.0.0-rc5-final.apk > output/APK-SIGNATURE.txt
+          sha256sum output/Libre-Remote-2.0.0-rc5-final.apk > output/SHA256SUMS.txt
+          cp lg-wifi-remote-app/rc5-final-build.log output/
+          rsync -a \
+            --exclude build \
+            --exclude .gradle \
+            --exclude local.properties \
+            lg-wifi-remote-app/ output/source/
+          (cd output && zip -qr Libre-Remote-2.0.0-rc5-final-source.zip source && rm -rf source)
+
+      - name: Upload RC5 final build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Libre-Remote-2.0.0-rc5-final
+          path: output/*
+          if-no-files-found: error
+          retention-days: 30
