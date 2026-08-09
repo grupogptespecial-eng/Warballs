@@ -26,46 +26,21 @@ jobs:
           git apply --whitespace=error stability-rc2.patch
           git apply --check --whitespace=error controls-rc3.patch
           git apply --whitespace=error controls-rc3.patch
-          python3 - <<'PY'
-          from pathlib import Path
-          import hashlib
 
-          source = Path("rc4-overlay/part-02.b64").read_bytes()
-          expected = "236d5db836bfb34be0fda959111edcdc377d3fbe"
-
-          def blob_sha(data: bytes) -> str:
-              header = f"blob {len(data)}\0".encode()
-              return hashlib.sha1(header + data).hexdigest()
-
-          repaired = source
-          if blob_sha(repaired) != expected:
-              if len(source) != 7001:
-                  raise SystemExit(f"Unexpected RC4 part-02 size: {len(source)}")
-              repaired = None
-              for index in range(len(source)):
-                  candidate = source[:index] + source[index + 1:]
-                  if blob_sha(candidate) == expected:
-                      repaired = candidate
-                      print(f"Repaired one transport byte at offset {index}")
-                      break
-              if repaired is None:
-                  raise SystemExit("Could not reconstruct exact RC4 part-02 blob")
-          Path("/tmp/rc4-part-02.b64").write_bytes(repaired)
-          PY
-          cat \
-            rc4-overlay/part-00.b64 \
-            rc4-overlay/part-01.b64 \
-            /tmp/rc4-part-02.b64 \
-            rc4-overlay/part-03.b64 \
-            rc4-overlay/part-04.b64 \
-            rc4-overlay/part-05.b64 \
-            rc4-overlay/part-06.b64 \
-            rc4-overlay/part-07.b64 > /tmp/rc4-overlay.b64
-          base64 -d /tmp/rc4-overlay.b64 > /tmp/rc4-overlay.tar.gz
-          echo "9605dc634c304dd17834ce22cde4e1b61406f4df6157bf929cd22f025dc157f5  /tmp/rc4-overlay.tar.gz" | sha256sum -c -
-          tar -xzf /tmp/rc4-overlay.tar.gz -C .
+          cat rc4-xz-v2/part-*.b64 > /tmp/rc4.patch.xz.b64
+          test "$(wc -c < /tmp/rc4.patch.xz.b64)" = "23736"
+          echo "1dbdff4df4d6de1e2c78757f53d9be5f5c7463cf2010ca71561af1a8028ac405  /tmp/rc4.patch.xz.b64" | sha256sum -c -
+          base64 -d /tmp/rc4.patch.xz.b64 > /tmp/rc4.patch.xz
+          echo "63ff82f8b2914124830540941ea8343efd7276f2b731fff3c8394fad67d00d9a  /tmp/rc4.patch.xz" | sha256sum -c -
+          xz -dc /tmp/rc4.patch.xz > /tmp/rc4.patch
+          test "$(wc -c < /tmp/rc4.patch)" = "102320"
+          echo "9e8c3f748fc55d8fc28e7d44a709cbefa276aed489019cd934584f4883c6737a  /tmp/rc4.patch" | sha256sum -c -
+          git apply --check --whitespace=error /tmp/rc4.patch
+          git apply --whitespace=error /tmp/rc4.patch
           git diff --check
           git diff --stat
+          grep -F 'versionCode = 23' app/build.gradle.kts
+          grep -F 'versionName = "2.0.0-rc4-personalization"' app/build.gradle.kts
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -135,6 +110,7 @@ jobs:
             --exclude controls-rc3.patch \
             --exclude rc4-core.patch \
             --exclude rc4-overlay \
+            --exclude rc4-xz-v2 \
             lg-wifi-remote-app/ output/source/
           (cd output && zip -qr Libre-Remote-2.0.0-rc4-personalization-source.zip source && rm -rf source)
           ls -lh output
