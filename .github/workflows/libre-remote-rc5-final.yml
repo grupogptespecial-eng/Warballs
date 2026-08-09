@@ -32,7 +32,7 @@ jobs:
 
           find lg-wifi-remote-app/rc5-overlay -maxdepth 1 -type f -name 'part-*.b64' -print0 | sort -zV | xargs -0 cat > /tmp/rc5-overlay.b64
           test "$(wc -c < /tmp/rc5-overlay.b64)" = "78092"
-          echo "0263838624ed030d315a525dc8dda4f14befe4f10a79013a0085bc4ca5eb3c61  /tmp/rc5-overlay.b64" | sha256sum -c -
+          echo "a8a4754cbf5fba37ee1ce8b58ab5c5d8e7fbae05fc9cf12d8731f3d3b7f93c25  /tmp/rc5-overlay.b64" | sha256sum -c -
           base64 -d /tmp/rc5-overlay.b64 > /tmp/rc5-overlay.tar.gz
           test "$(wc -c < /tmp/rc5-overlay.tar.gz)" = "58569"
           echo "a1c41e924081ea4d862c79b6f41afab6cba19eba3e86ea07bcb7dc48174a57e0  /tmp/rc5-overlay.tar.gz" | sha256sum -c -
