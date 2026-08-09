@@ -68,16 +68,19 @@ jobs:
           git diff --check
 
       - name: Commit materialized source to repository
+        working-directory: lg-wifi-remote-app
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet -- lg-wifi-remote-app/app; then
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git status --short app
+          git add -A app
+          git diff --cached --check
+          if git diff --cached --quiet; then
             echo "No source changes to commit."
             exit 0
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add lg-wifi-remote-app/app
           git commit -m "Materialize Libre Remote 2.0.0 RC4 source"
           git push origin HEAD:stability/libre-remote-2.0.0-rc4-personalization-20260809
 
