@@ -1,0 +1,33 @@
+--- app/src/main/java/com/geronimo/controlelgwifi/TvDiscovery.kt
++++ app/src/main/java/com/geronimo/controlelgwifi/TvDiscovery.kt
+@@ -265,7 +265,7 @@
+             manufacturer = description?.manufacturer,
+             platform = platform,
+             supportLevel = support,
+-            stableId = "$platform:$ip",
++            stableId = stableIdFor(platform, ip, headers),
+             descriptionUrl = location,
+             avTransportUrl = avTransport,
+             renderingControlUrl = rendering,
+@@ -298,7 +298,10 @@
+                 name = saved?.name?.takeIf { it.isNotBlank() && it !in setOf("LG webOS TV", "Smart TV") } ?: chosen.name,
+                 room = saved?.room.orEmpty(),
+                 mac = saved?.mac,
+-                stableId = saved?.stableId ?: chosen.stableId,
++                stableId = when {
++                    chosen.stableId != "${chosen.platform.name}:${chosen.ip}" -> chosen.stableId
++                    else -> saved?.stableId ?: chosen.stableId
++                },
+                 capabilities = if (chosen.capabilities.isNotEmpty()) chosen.capabilities else saved?.capabilities.orEmpty(),
+                 lastSeenAt = System.currentTimeMillis()
+             )
+@@ -364,13 +367,29 @@
+         }
+     }.getOrDefault(false)
+ 
+-    private fun normalizeHost(raw: String): String? {
+-        val value = raw.trim()
+-            .removePrefix("http://")
+-            .removePrefix("https://")
+-            .substringBefore('/')
+-            .substringBefor

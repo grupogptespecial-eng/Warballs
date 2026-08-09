@@ -57,6 +57,10 @@ jobs:
             cat .rc4-materialize/tvbackend-final-part-*.patch > /tmp/tvbackend-final.patch
             echo '9d4d2c517555a470d6e458cf1044728c355047303d9f3815a307193287b844f7  /tmp/tvbackend-final.patch' | sha256sum -c -
             (cd lg-wifi-remote-app && patch -p0 < /tmp/tvbackend-final.patch)
+
+            cat .rc4-materialize/tvdiscovery-final-part-*.patch > /tmp/tvdiscovery-final.patch
+            echo '66d90305cfc93b171785da7fa86bbc267e404907c5393107b86f518563f612c5  /tmp/tvdiscovery-final.patch' | sha256sum -c -
+            (cd lg-wifi-remote-app && patch -p0 < /tmp/tvdiscovery-final.patch)
           fi
           git diff --check
 
