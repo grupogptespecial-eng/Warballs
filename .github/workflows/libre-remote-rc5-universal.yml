@@ -16,10 +16,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat .rc5-universal/part-*.b64 > /tmp/rc5.b64
-          base64 -d /tmp/rc5.b64 > /tmp/rc5.tar.gz
-          echo 'b16e7abf44e1445a901b7441850b8cfb321c65770b82a1981cbe06e0f75d0622  /tmp/rc5.tar.gz' | sha256sum -c -
-          tar -tzf /tmp/rc5.tar.gz >/dev/null
+          cat .rc5-universal/part-*.b64 > rc5.b64
+          base64 -d rc5.b64 > rc5.tar.gz
+          echo 'b16e7abf44e1445a901b7441850b8cfb321c65770b82a1981cbe06e0f75d0622  rc5.tar.gz' | sha256sum -c -
+          rm -rf /tmp/rc5-check && mkdir /tmp/rc5-check
+          tar -xzf rc5.tar.gz -C /tmp/rc5-check
+          (cd /tmp/rc5-check && patch --dry-run -p1 < "$GITHUB_WORKSPACE/.rc5-universal/fix-01.patch")
 
   android-common:
     needs: source-integrity
@@ -33,10 +35,11 @@ jobs:
           set -euo pipefail
           rm -rf libre-remote-universal
           mkdir libre-remote-universal
-          cat .rc5-universal/part-*.b64 | base64 -d > /tmp/rc5.tar.gz
-          echo 'b16e7abf44e1445a901b7441850b8cfb321c65770b82a1981cbe06e0f75d0622  /tmp/rc5.tar.gz' | sha256sum -c -
-          tar -xzf /tmp/rc5.tar.gz -C libre-remote-universal
-      - uses: actions/setup-java@v4
+          cat .rc5-universal/part-*.b64 | base64 -d > rc5.tar.gz
+          echo 'b16e7abf44e1445a901b7441850b8cfb321c65770b82a1981cbe06e0f75d0622  rc5.tar.gz' | sha256sum -c -
+          tar -xzf rc5.tar.gz -C libre-remote-universal
+          (cd libre-remote-universal && patch -p1 < ../.rc5-universal/fix-01.patch)
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -75,9 +78,10 @@ jobs:
           set -euo pipefail
           rm -rf libre-remote-universal
           mkdir libre-remote-universal
-          cat .rc5-universal/part-*.b64 | base64 -d > "$RUNNER_TEMP/rc5.tar.gz"
-          tar -xzf "$RUNNER_TEMP/rc5.tar.gz" -C libre-remote-universal
-      - uses: actions/setup-java@v4
+          cat .rc5-universal/part-*.b64 | base64 -d > rc5.tar.gz
+          tar -xzf rc5.tar.gz -C libre-remote-universal
+          (cd libre-remote-universal && patch -p1 < ../.rc5-universal/fix-01.patch)
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -104,9 +108,10 @@ jobs:
           set -euo pipefail
           rm -rf libre-remote-universal
           mkdir libre-remote-universal
-          cat .rc5-universal/part-*.b64 | base64 -d > /tmp/rc5.tar.gz
-          tar -xzf /tmp/rc5.tar.gz -C libre-remote-universal
-      - uses: actions/setup-java@v4
+          cat .rc5-universal/part-*.b64 | base64 -d > rc5.tar.gz
+          tar -xzf rc5.tar.gz -C libre-remote-universal
+          (cd libre-remote-universal && patch -p1 < ../.rc5-universal/fix-01.patch)
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
