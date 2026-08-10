@@ -1,0 +1,129 @@
+name: Libre Remote RC5 Universal
+
+on:
+  push:
+    branches:
+      - feature/libre-remote-rc5-universal
+  workflow_dispatch:
+
+jobs:
+  source-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reconstruct exact RC5 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .rc5-universal/part-*.b64 > /tmp/rc5.b64
+          base64 -d /tmp/rc5.b64 > /tmp/rc5.tar.gz
+          echo 'b16e7abf44e1445a901b7441850b8cfb321c65770b82a1981cbe06e0f75d0622  /tmp/rc5.tar.gz' | sha256sum -c -
+          tar -tzf /tmp/rc5.tar.gz >/dev/null
+
+  android-common:
+    needs: source-integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize RC5
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf libre-remote-universal
+          mkdir libre-remote-universal
+          cat .rc5-universal/part-*.b64 | base64 -d > /tmp/rc5.tar.gz
+          echo 'b16e7abf44e1445a901b7441850b8cfb321c65770b82a1981cbe06e0f75d0622  /tmp/rc5.tar.gz' | sha256sum -c -
+          tar -xzf /tmp/rc5.tar.gz -C libre-remote-universal
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0' 'platform-tools'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Common tests and Android debug build
+        working-directory: libre-remote-universal
+        run: gradle --no-daemon --stacktrace :composeApp:desktopTest :composeApp:assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Libre-Remote-RC5-Android
+          path: libre-remote-universal/composeApp/build/outputs/apk/debug/*.apk
+
+  desktop:
+    needs: source-integrity
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: Linux
+          - os: windows-latest
+            name: Windows
+          - os: macos-14
+            name: macOS
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize RC5
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf libre-remote-universal
+          mkdir libre-remote-universal
+          cat .rc5-universal/part-*.b64 | base64 -d > "$RUNNER_TEMP/rc5.tar.gz"
+          tar -xzf "$RUNNER_TEMP/rc5.tar.gz" -C libre-remote-universal
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Compile and package desktop
+        working-directory: libre-remote-universal
+        run: gradle --no-daemon --stacktrace :composeApp:desktopTest :composeApp:createDistributable
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Libre-Remote-RC5-${{ matrix.name }}
+          path: libre-remote-universal/composeApp/build/compose/binaries/main/app/**
+
+  ios:
+    needs: source-integrity
+    runs-on: macos-14
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize RC5
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf libre-remote-universal
+          mkdir libre-remote-universal
+          cat .rc5-universal/part-*.b64 | base64 -d > /tmp/rc5.tar.gz
+          tar -xzf /tmp/rc5.tar.gz -C libre-remote-universal
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Compile iOS shared framework
+        working-directory: libre-remote-universal
+        run: gradle --no-daemon --stacktrace :composeApp:iosSimulatorArm64Test :composeApp:linkDebugFrameworkIosSimulatorArm64
+      - name: Validate SwiftUI wrapper
+        shell: bash
+        run: |
+          brew install xcodegen
+          cd libre-remote-universal/iosApp
+          xcodegen generate
+          xcodebuild -project LibreRemoteIOS.xcodeproj -scheme LibreRemoteIOS -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Libre-Remote-RC5-iOS-Framework
+          path: libre-remote-universal/composeApp/build/bin/iosSimulatorArm64/debugFramework/LibreRemote.framework/**
