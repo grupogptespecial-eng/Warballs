@@ -1,0 +1,11 @@
+--- a/iosApp/ContentView.swift
++++ b/iosApp/ContentView.swift
+@@ -9,7 +9,7 @@
+ 
+ struct ComposeView: UIViewControllerRepresentable {
+     func makeUIViewController(context: Context) -> UIViewController {
+-        MainViewController()
++        IosMainKt.MainViewController()
+     }
+     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
+ }
