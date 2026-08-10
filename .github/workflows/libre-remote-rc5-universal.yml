@@ -1,41 +1,35 @@
-name: Libre Remote RC5 Universal
+name: Libre Remote RC5.2 Manual Build
 
 on:
-  push:
-    branches:
-      - feature/libre-remote-rc5-universal
   workflow_dispatch:
+    inputs:
+      target:
+        description: Platform to build
+        required: true
+        default: android
+        type: choice
+        options:
+          - android
+          - windows
+          - linux
+          - macos
+          - ios
+          - all
+
+permissions:
+  contents: read
+
+concurrency:
+  group: libre-remote-rc5-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   source-integrity:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
-      - name: Verify exact RC5.1 source and patches
-        shell: bash
-        run: |
-          set -euo pipefail
-          cat .rc5-universal/part-*.b64 | base64 -d > rc5.tar.gz
-          echo 'b16e7abf44e1445a901b7441850b8cfb321c65770b82a1981cbe06e0f75d0622  rc5.tar.gz' | sha256sum -c -
-          rm -rf rc5-check && mkdir rc5-check
-          tar -xzf rc5.tar.gz -C rc5-check
-          (cd rc5-check && patch --batch -p1 < ../.rc5-universal/fix-01.patch)
-          cat .rc5-universal/fix-03.part-*.b64 | base64 -d > fix03.patch.gz
-          echo '796c41e0aa2a01935c6cad253d6618c2aa59493367d4ff534e321b0e8dcf0130  fix03.patch.gz' | sha256sum -c -
-          gzip -dc fix03.patch.gz > fix03.patch
-          echo '25c396feb217a1870d0bfec3db60c829739177bb53430180e6ea06392c37051c  fix03.patch' | sha256sum -c -
-          (cd rc5-check && patch --batch -p1 < ../fix03.patch)
-          (cd rc5-check && patch --batch -p1 < ../.rc5-universal/fix-04-ios-wrapper.patch)
-          (cd rc5-check && patch --batch --dry-run -p1 < ../.rc5-universal/fix-05-ios-symbol.patch)
-
-  android-common:
-    needs: source-integrity
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    steps:
-      - uses: actions/checkout@v4
-      - name: Materialize exact RC5.1
+      - name: Verify and materialize RC5.2 source
         shell: bash
         run: |
           set -euo pipefail
@@ -51,6 +45,31 @@ jobs:
           (cd libre-remote-universal && patch --batch -p1 < ../fix03.patch)
           (cd libre-remote-universal && patch --batch -p1 < ../.rc5-universal/fix-04-ios-wrapper.patch)
           (cd libre-remote-universal && patch --batch -p1 < ../.rc5-universal/fix-05-ios-symbol.patch)
+          (cd libre-remote-universal && patch --batch -p1 < ../.rc5-universal/fix-06-rc5.2-input-visual.patch)
+          test -f libre-remote-universal/composeApp/src/commonMain/kotlin/io/github/grupogptespecialeng/libreremote/RemoteCommandPlan.kt
+          grep -q 'versionName = "2.1.1-rc5.2-input-visual"' libre-remote-universal/composeApp/build.gradle.kts
+
+  android:
+    if: ${{ inputs.target == 'android' || inputs.target == 'all' }}
+    needs: source-integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize RC5.2
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf libre-remote-universal && mkdir libre-remote-universal
+          cat .rc5-universal/part-*.b64 | base64 -d > rc5.tar.gz
+          tar -xzf rc5.tar.gz -C libre-remote-universal
+          (cd libre-remote-universal && patch --batch -p1 < ../.rc5-universal/fix-01.patch)
+          cat .rc5-universal/fix-03.part-*.b64 | base64 -d > fix03.patch.gz
+          gzip -dc fix03.patch.gz > fix03.patch
+          (cd libre-remote-universal && patch --batch -p1 < ../fix03.patch)
+          (cd libre-remote-universal && patch --batch -p1 < ../.rc5-universal/fix-04-ios-wrapper.patch)
+          (cd libre-remote-universal && patch --batch -p1 < ../.rc5-universal/fix-05-ios-symbol.patch)
+          (cd libre-remote-universal && patch --batch -p1 < ../.rc5-universal/fix-06-rc5.2-input-visual.patch)
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -60,31 +79,23 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
-      - name: Regression tests and Android build
+      - name: Test and build Android
         working-directory: libre-remote-universal
         run: gradle --no-daemon --stacktrace :composeApp:desktopTest :composeApp:assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: Libre-Remote-RC5.1-Android
+          name: Libre-Remote-RC5.2-Android
           path: libre-remote-universal/composeApp/build/outputs/apk/debug/*.apk
+          retention-days: 2
 
-  desktop:
+  windows:
+    if: ${{ inputs.target == 'windows' || inputs.target == 'all' }}
     needs: source-integrity
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            name: Linux
-          - os: windows-latest
-            name: Windows
-          - os: macos-14
-            name: macOS
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
+    runs-on: windows-latest
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
-      - name: Materialize exact RC5.1
+      - name: Materialize RC5.2
         shell: bash
         run: |
           set -euo pipefail
@@ -94,14 +105,10 @@ jobs:
           (cd libre-remote-universal && patch --batch -p1 < ../.rc5-universal/fix-01.patch)
           cat .rc5-universal/fix-03.part-*.b64 | base64 -d > fix03.patch.gz
           gzip -dc fix03.patch.gz > fix03.patch
-          if command -v sha256sum >/dev/null 2>&1; then
-            echo '25c396feb217a1870d0bfec3db60c829739177bb53430180e6ea06392c37051c  fix03.patch' | sha256sum -c -
-          else
-            echo '25c396feb217a1870d0bfec3db60c829739177bb53430180e6ea06392c37051c  fix03.patch' | shasum -a 256 -c -
-          fi
           (cd libre-remote-universal && patch --batch -p1 < ../fix03.patch)
           (cd libre-remote-universal && patch --batch -p1 < ../.rc5-universal/fix-04-ios-wrapper.patch)
           (cd libre-remote-universal && patch --batch -p1 < ../.rc5-universal/fix-05-ios-symbol.patch)
+          (cd libre-remote-universal && patch --batch -p1 < ../.rc5-universal/fix-06-rc5.2-input-visual.patch)
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -109,21 +116,97 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
-      - name: Compile and package desktop
+      - name: Test and package Windows
         working-directory: libre-remote-universal
         run: gradle --no-daemon --stacktrace :composeApp:desktopTest :composeApp:createDistributable
       - uses: actions/upload-artifact@v4
         with:
-          name: Libre-Remote-RC5.1-${{ matrix.name }}
+          name: Libre-Remote-RC5.2-Windows
           path: libre-remote-universal/composeApp/build/compose/binaries/main/app/**
+          retention-days: 2
+
+  linux:
+    if: ${{ inputs.target == 'linux' || inputs.target == 'all' }}
+    needs: source-integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize RC5.2
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf libre-remote-universal && mkdir libre-remote-universal
+          cat .rc5-universal/part-*.b64 | base64 -d > rc5.tar.gz
+          tar -xzf rc5.tar.gz -C libre-remote-universal
+          (cd libre-remote-universal && patch --batch -p1 < ../.rc5-universal/fix-01.patch)
+          cat .rc5-universal/fix-03.part-*.b64 | base64 -d > fix03.patch.gz
+          gzip -dc fix03.patch.gz > fix03.patch
+          (cd libre-remote-universal && patch --batch -p1 < ../fix03.patch)
+          (cd libre-remote-universal && patch --batch -p1 < ../.rc5-universal/fix-04-ios-wrapper.patch)
+          (cd libre-remote-universal && patch --batch -p1 < ../.rc5-universal/fix-05-ios-symbol.patch)
+          (cd libre-remote-universal && patch --batch -p1 < ../.rc5-universal/fix-06-rc5.2-input-visual.patch)
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Test and package Linux
+        working-directory: libre-remote-universal
+        run: gradle --no-daemon --stacktrace :composeApp:desktopTest :composeApp:createDistributable
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Libre-Remote-RC5.2-Linux
+          path: libre-remote-universal/composeApp/build/compose/binaries/main/app/**
+          retention-days: 2
+
+  macos:
+    if: ${{ inputs.target == 'macos' || inputs.target == 'all' }}
+    needs: source-integrity
+    runs-on: macos-14
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize RC5.2
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf libre-remote-universal && mkdir libre-remote-universal
+          cat .rc5-universal/part-*.b64 | base64 -d > rc5.tar.gz
+          tar -xzf rc5.tar.gz -C libre-remote-universal
+          (cd libre-remote-universal && patch --batch -p1 < ../.rc5-universal/fix-01.patch)
+          cat .rc5-universal/fix-03.part-*.b64 | base64 -d > fix03.patch.gz
+          gzip -dc fix03.patch.gz > fix03.patch
+          (cd libre-remote-universal && patch --batch -p1 < ../fix03.patch)
+          (cd libre-remote-universal && patch --batch -p1 < ../.rc5-universal/fix-04-ios-wrapper.patch)
+          (cd libre-remote-universal && patch --batch -p1 < ../.rc5-universal/fix-05-ios-symbol.patch)
+          (cd libre-remote-universal && patch --batch -p1 < ../.rc5-universal/fix-06-rc5.2-input-visual.patch)
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Test and package macOS
+        working-directory: libre-remote-universal
+        run: gradle --no-daemon --stacktrace :composeApp:desktopTest :composeApp:createDistributable
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Libre-Remote-RC5.2-macOS
+          path: libre-remote-universal/composeApp/build/compose/binaries/main/app/**
+          retention-days: 2
 
   ios:
+    if: ${{ inputs.target == 'ios' || inputs.target == 'all' }}
     needs: source-integrity
     runs-on: macos-15
     timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
-      - name: Materialize exact RC5.1
+      - name: Materialize RC5.2
         shell: bash
         run: |
           set -euo pipefail
@@ -133,10 +216,10 @@ jobs:
           (cd libre-remote-universal && patch --batch -p1 < ../.rc5-universal/fix-01.patch)
           cat .rc5-universal/fix-03.part-*.b64 | base64 -d > fix03.patch.gz
           gzip -dc fix03.patch.gz > fix03.patch
-          echo '25c396feb217a1870d0bfec3db60c829739177bb53430180e6ea06392c37051c  fix03.patch' | shasum -a 256 -c -
           (cd libre-remote-universal && patch --batch -p1 < ../fix03.patch)
           (cd libre-remote-universal && patch --batch -p1 < ../.rc5-universal/fix-04-ios-wrapper.patch)
           (cd libre-remote-universal && patch --batch -p1 < ../.rc5-universal/fix-05-ios-symbol.patch)
+          (cd libre-remote-universal && patch --batch -p1 < ../.rc5-universal/fix-06-rc5.2-input-visual.patch)
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -144,12 +227,10 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
-      - name: Show Apple toolchain
-        run: xcodebuild -version
-      - name: Compile iPhone and simulator frameworks
+      - name: Compile iPhone frameworks
         working-directory: libre-remote-universal
         run: gradle --no-daemon --stacktrace :composeApp:linkDebugFrameworkIosSimulatorArm64 :composeApp:linkDebugFrameworkIosArm64
-      - name: Build universal XCFramework
+      - name: Build XCFramework
         shell: bash
         run: |
           set -euo pipefail
@@ -160,28 +241,8 @@ jobs:
             -framework composeApp/build/bin/iosSimulatorArm64/debugFramework/LibreRemote.framework \
             -framework composeApp/build/bin/iosArm64/debugFramework/LibreRemote.framework \
             -output composeApp/build/XCFrameworks/LibreRemote.xcframework
-      - name: Preserve XCFramework artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Libre-Remote-RC5.1-iOS-XCFramework
-          path: libre-remote-universal/composeApp/build/XCFrameworks/LibreRemote.xcframework/**
-      - name: Validate SwiftUI wrapper on simulator and device
-        shell: bash
-        run: |
-          set -euo pipefail
-          brew install xcodegen
-          cd libre-remote-universal/iosApp
-          xcodegen generate
-          xcodebuild -project LibreRemoteIOS.xcodeproj -scheme LibreRemoteIOS \
-            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-            -configuration Debug CODE_SIGNING_ALLOWED=NO ARCHS=arm64 ONLY_ACTIVE_ARCH=YES build
-          xcodebuild -project LibreRemoteIOS.xcodeproj -scheme LibreRemoteIOS \
-            -sdk iphoneos -destination 'generic/platform=iOS' \
-            -configuration Debug CODE_SIGNING_ALLOWED=NO ARCHS=arm64 ONLY_ACTIVE_ARCH=YES build
       - uses: actions/upload-artifact@v4
         with:
-          name: Libre-Remote-RC5.1-iOS-Project
-          path: |
-            libre-remote-universal/iosApp/ContentView.swift
-            libre-remote-universal/iosApp/LibreRemoteApp.swift
-            libre-remote-universal/iosApp/project.yml
+          name: Libre-Remote-RC5.2-iOS-XCFramework
+          path: libre-remote-universal/composeApp/build/XCFrameworks/LibreRemote.xcframework/**
+          retention-days: 2
