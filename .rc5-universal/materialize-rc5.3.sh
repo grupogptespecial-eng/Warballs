@@ -54,10 +54,17 @@ sha256_check 399194e7b8d82ceee248a7b59a8758326e22549bf01e0ff5160c400eb95dfef3 fi
   patch --batch -p1 < "$ROOT/fix07.patch"
 )
 
+sha256_check 15160b41177cbae09038207eb77f46a7d2391c8b136cfdcbfb61527d9ac60d14 .rc5-universal/fix-08-rc5.3-ios-auto-fallback.patch
+(
+  cd "$DEST"
+  patch --batch -p1 < "$ROOT/.rc5-universal/fix-08-rc5.3-ios-auto-fallback.patch"
+)
+
 test -f "$DEST/composeApp/src/commonMain/kotlin/io/github/grupogptespecialeng/libreremote/RemoteCommandPlan.kt"
 test -f "$DEST/composeApp/src/commonMain/kotlin/io/github/grupogptespecialeng/libreremote/Voice.kt"
 test -f "$DEST/composeApp/src/commonMain/kotlin/io/github/grupogptespecialeng/libreremote/LocalTvNetwork.kt"
 test -f "$DEST/composeApp/src/commonMain/kotlin/io/github/grupogptespecialeng/libreremote/SettingsAudit.kt"
 grep -q 'versionName = "2.1.2-rc5.3-voice-settings"' "$DEST/composeApp/build.gradle.kts"
+grep -q 'let canFallbackExternally = externalFallback' "$DEST/iosApp/VoiceBridge.swift"
 
 echo "RC5.3 source materialized and verified in $DEST"
