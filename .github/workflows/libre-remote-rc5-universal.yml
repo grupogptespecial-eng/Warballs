@@ -1,4 +1,4 @@
-name: Libre Remote RC5.2 Manual Build
+name: Libre Remote RC5.3 Manual Build
 
 on:
   workflow_dispatch:
@@ -23,9 +23,9 @@ jobs:
     timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
-      - name: Materialize and verify exact RC5.2
+      - name: Materialize and verify exact RC5.3
         shell: bash
-        run: bash .rc5-universal/materialize-rc5.2.sh
+        run: bash .rc5-universal/materialize-rc5.3.sh
 
   android:
     if: ${{ inputs.target == 'android' || inputs.target == 'all' }}
@@ -34,7 +34,7 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
-      - run: bash .rc5-universal/materialize-rc5.2.sh
+      - run: bash .rc5-universal/materialize-rc5.3.sh
         shell: bash
       - uses: actions/setup-java@v5
         with: {distribution: temurin, java-version: '17'}
@@ -47,7 +47,7 @@ jobs:
         run: gradle --no-daemon --stacktrace :composeApp:desktopTest :composeApp:assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: Libre-Remote-RC5.2-Android
+          name: Libre-Remote-RC5.3-Android
           path: libre-remote-universal/composeApp/build/outputs/apk/debug/*.apk
           retention-days: 2
 
@@ -58,7 +58,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
-      - run: bash .rc5-universal/materialize-rc5.2.sh
+      - run: bash .rc5-universal/materialize-rc5.3.sh
         shell: bash
       - uses: actions/setup-java@v5
         with: {distribution: temurin, java-version: '17'}
@@ -69,7 +69,7 @@ jobs:
         run: gradle --no-daemon --stacktrace :composeApp:desktopTest :composeApp:createDistributable
       - uses: actions/upload-artifact@v4
         with:
-          name: Libre-Remote-RC5.2-Windows
+          name: Libre-Remote-RC5.3-Windows
           path: libre-remote-universal/composeApp/build/compose/binaries/main/app/**
           retention-days: 2
 
@@ -80,7 +80,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
-      - run: bash .rc5-universal/materialize-rc5.2.sh
+      - run: bash .rc5-universal/materialize-rc5.3.sh
         shell: bash
       - uses: actions/setup-java@v5
         with: {distribution: temurin, java-version: '17'}
@@ -91,7 +91,7 @@ jobs:
         run: gradle --no-daemon --stacktrace :composeApp:desktopTest :composeApp:createDistributable
       - uses: actions/upload-artifact@v4
         with:
-          name: Libre-Remote-RC5.2-Linux
+          name: Libre-Remote-RC5.3-Linux
           path: libre-remote-universal/composeApp/build/compose/binaries/main/app/**
           retention-days: 2
 
@@ -102,7 +102,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
-      - run: bash .rc5-universal/materialize-rc5.2.sh
+      - run: bash .rc5-universal/materialize-rc5.3.sh
         shell: bash
       - uses: actions/setup-java@v5
         with: {distribution: temurin, java-version: '17'}
@@ -113,7 +113,7 @@ jobs:
         run: gradle --no-daemon --stacktrace :composeApp:desktopTest :composeApp:createDistributable
       - uses: actions/upload-artifact@v4
         with:
-          name: Libre-Remote-RC5.2-macOS
+          name: Libre-Remote-RC5.3-macOS
           path: libre-remote-universal/composeApp/build/compose/binaries/main/app/**
           retention-days: 2
 
@@ -124,7 +124,7 @@ jobs:
     timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
-      - run: bash .rc5-universal/materialize-rc5.2.sh
+      - run: bash .rc5-universal/materialize-rc5.3.sh
         shell: bash
       - uses: actions/setup-java@v5
         with: {distribution: temurin, java-version: '17'}
@@ -146,6 +146,6 @@ jobs:
             -output composeApp/build/XCFrameworks/LibreRemote.xcframework
       - uses: actions/upload-artifact@v4
         with:
-          name: Libre-Remote-RC5.2-iOS-XCFramework
+          name: Libre-Remote-RC5.3-iOS-XCFramework
           path: libre-remote-universal/composeApp/build/XCFrameworks/LibreRemote.xcframework/**
           retention-days: 2
