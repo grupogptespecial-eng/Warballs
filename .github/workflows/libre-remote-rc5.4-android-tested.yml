@@ -1,0 +1,199 @@
+name: Libre Remote RC5.4 Android Tested
+
+on:
+  push:
+    branches:
+      - release/libre-remote-2.1.3-rc5.4-android-tested
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: libre-remote-rc5.4-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize exact RC5.4
+        shell: bash
+        run: bash .rc5-universal/materialize-rc5.4.sh
+      - name: Verify RC5.4 feature invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC=libre-remote-universal
+          test "$(grep -o 'RemoteAction\.[A-Za-z]*' "$SRC/composeApp/src/commonMain/kotlin/io/github/grupogptespecialeng/libreremote/RemoteCommandPlan.kt" | sort -u | wc -l)" -ge 20
+          grep -q 'RemoteLayoutPreset' "$SRC/composeApp/src/commonMain/kotlin/io/github/grupogptespecialeng/libreremote/Models.kt"
+          grep -q 'remoteLayoutPresetProfile' "$SRC/composeApp/src/commonMain/kotlin/io/github/grupogptespecialeng/libreremote/App.kt"
+          grep -q 'runCatching { remote.send(action) }' "$SRC/composeApp/src/commonMain/kotlin/io/github/grupogptespecialeng/libreremote/App.kt"
+          grep -q 'runCatching { remote.click() }' "$SRC/composeApp/src/commonMain/kotlin/io/github/grupogptespecialeng/libreremote/App.kt"
+          grep -q 'runCatching { remote.insertText(typed) }' "$SRC/composeApp/src/commonMain/kotlin/io/github/grupogptespecialeng/libreremote/App.kt"
+          grep -q 'easing = LinearEasing' "$SRC/composeApp/src/commonMain/kotlin/io/github/grupogptespecialeng/libreremote/App.kt"
+
+  android-build:
+    needs: source-integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .rc5-universal/materialize-rc5.4.sh
+        shell: bash
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK packages
+        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0' 'platform-tools'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Unit tests and Android build
+        working-directory: libre-remote-universal
+        run: gradle --no-daemon --stacktrace :composeApp:desktopTest :composeApp:assembleDebug
+      - name: Verify APK exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="$(find libre-remote-universal/composeApp/build/outputs/apk/debug -name '*.apk' -type f | head -1)"
+          test -n "$APK"
+          ls -lh "$APK"
+          sha256sum "$APK" | tee RC5.4-Android-SHA256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Libre-Remote-2.1.3-RC5.4-Android
+          path: |
+            libre-remote-universal/composeApp/build/outputs/apk/debug/*.apk
+            RC5.4-Android-SHA256.txt
+          retention-days: 7
+
+  emulator-smoke:
+    needs: android-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Libre-Remote-2.1.3-RC5.4-Android
+          path: android-artifact
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm || true
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            set -euo pipefail
+            APK="$(find android-artifact -name '*.apk' -type f | head -1)"
+            PKG='io.github.grupogptespecialeng.libreremote.universal'
+            ACT='io.github.grupogptespecialeng.libreremote.MainActivity'
+            mkdir -p android-qa
+            adb install -r "$APK"
+            adb logcat -c
+            adb shell am start -W -n "$PKG/$ACT" | tee android-qa/launch.txt
+            sleep 4
+            test -n "$(adb shell pidof "$PKG" | tr -d '\r')"
+            adb shell dumpsys package "$PKG" > android-qa/package.txt
+            grep -q 'versionName=2.1.3-rc5.4-customization' android-qa/package.txt
+            grep -Eq 'versionCode=29([[:space:]]|$)' android-qa/package.txt
+
+            dump_ui() {
+              local name="$1"
+              adb exec-out uiautomator dump /dev/tty > "android-qa/${name}.xml"
+              adb exec-out screencap -p > "android-qa/${name}.png"
+            }
+
+            tap_text() {
+              local text="$1"
+              adb exec-out uiautomator dump /dev/tty > /tmp/ui.xml
+              python3 - "$text" <<'PY'
+            import re, subprocess, sys, xml.etree.ElementTree as ET
+            wanted = sys.argv[1]
+            root = ET.parse('/tmp/ui.xml').getroot()
+            for node in root.iter('node'):
+                text = node.attrib.get('text','')
+                desc = node.attrib.get('content-desc','')
+                if wanted == text or wanted == desc or wanted in text or wanted in desc:
+                    m = re.match(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', node.attrib.get('bounds',''))
+                    if not m:
+                        continue
+                    x1,y1,x2,y2 = map(int,m.groups())
+                    subprocess.check_call(['adb','shell','input','tap',str((x1+x2)//2),str((y1+y2)//2)])
+                    sys.exit(0)
+            print(f'UI target not found: {wanted}', file=sys.stderr)
+            sys.exit(1)
+            PY
+              sleep 1
+            }
+
+            assert_text() {
+              local text="$1"
+              adb exec-out uiautomator dump /dev/tty > /tmp/ui.xml
+              grep -Fq "$text" /tmp/ui.xml
+            }
+
+            # Remote: visible, core buttons clickable while disconnected, app must stay alive.
+            dump_ui remote
+            assert_text 'Navegação'
+            for label in 'OK' 'VOL +' 'Home'; do tap_text "$label"; done
+            test -n "$(adb shell pidof "$PKG" | tr -d '\r')"
+
+            # Touchpad: open screen and exercise click/scroll/send paths with no TV connection.
+            tap_text 'Touchpad'
+            assert_text 'Arraste para mover'
+            dump_ui touchpad
+            tap_text 'Scroll ↑'
+            tap_text 'Clique'
+            tap_text 'Scroll ↓'
+            tap_text 'Enviar'
+            test -n "$(adb shell pidof "$PKG" | tr -d '\r')"
+
+            # Visual/customization: verify RC5.4 controls are rendered and interact with selectors/toggles.
+            tap_text 'Visual'
+            assert_text 'Personalização avançada'
+            dump_ui visual
+            assert_text 'Layout do controle'
+            assert_text 'Mostrar títulos das seções'
+            assert_text 'Botões compactos'
+            tap_text 'Botões compactos'
+            test -n "$(adb shell pidof "$PKG" | tr -d '\r')"
+
+            # Settings: verify every top-level menu group can be opened.
+            tap_text 'Config.'
+            assert_text 'Configurações'
+            dump_ui settings
+            for group in 'Idioma' 'Conexão' 'Wake-on-LAN' 'Avançado'; do
+              tap_text "$group"
+              test -n "$(adb shell pidof "$PKG" | tr -d '\r')"
+            done
+
+            adb logcat -d > android-qa/logcat.txt
+            adb logcat -b crash -d > android-qa/crash.txt
+            if grep -E 'FATAL EXCEPTION|AndroidRuntime.*FATAL' android-qa/logcat.txt; then
+              echo 'Fatal exception detected' >&2
+              exit 1
+            fi
+            if grep -F "$PKG" android-qa/crash.txt; then
+              echo 'Crash buffer contains app package' >&2
+              exit 1
+            fi
+            echo 'ANDROID_EMULATOR_SMOKE_PASS' | tee android-qa/result.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Libre-Remote-RC5.4-Android-QA-Evidence
+          path: android-qa/**
+          retention-days: 7
