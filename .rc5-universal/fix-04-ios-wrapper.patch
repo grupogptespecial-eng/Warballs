@@ -1,5 +1,6 @@
---- a/iosApp/ContentView.swift
-+++ b/iosApp/ContentView.swift
+diff -ruN a/iosApp/ContentView.swift b/iosApp/ContentView.swift
+--- a/iosApp/ContentView.swift	2026-08-10 01:15:11.483681765 +0000
++++ b/iosApp/ContentView.swift	2026-08-10 01:15:12.123871746 +0000
 @@ -9,7 +9,7 @@
  
  struct ComposeView: UIViewControllerRepresentable {
@@ -9,9 +10,10 @@
      }
      func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
  }
---- a/iosApp/project.yml
-+++ b/iosApp/project.yml
-@@ -24,8 +24,6 @@
+diff -ruN a/iosApp/project.yml b/iosApp/project.yml
+--- a/iosApp/project.yml	2026-08-10 01:15:11.484469592 +0000
++++ b/iosApp/project.yml	2026-08-10 01:15:12.123990081 +0000
+@@ -22,7 +22,6 @@
          PRODUCT_NAME: Libre Remote
          SWIFT_VERSION: 5.0
          CODE_SIGNING_ALLOWED: NO
