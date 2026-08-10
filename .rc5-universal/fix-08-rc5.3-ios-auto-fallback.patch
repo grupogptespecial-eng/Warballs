@@ -1,0 +1,18 @@
+--- a/iosApp/VoiceBridge.swift
++++ b/iosApp/VoiceBridge.swift
+@@ -63,10 +63,11 @@
+         default: // Auto
+             let recognizer = SFSpeechRecognizer(locale: Locale(identifier: language))
+             let useOffline = preferOffline && (recognizer?.supportsOnDeviceRecognition ?? false)
+-            recognizeNative(id: id, language: language, onDevice: useOffline) { [weak self] error in
+-                guard let self, externalFallback, !endpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+-                self.recognizeExternal(id: id, provider: externalFallbackProvider, language: language, endpoint: endpoint, model: model, apiKey: apiKey, seconds: seconds)
+-            }
++            let canFallbackExternally = externalFallback && !endpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
++            let fallback: ((String) -> Void)? = canFallbackExternally ? { [weak self] _ in
++                self?.recognizeExternal(id: id, provider: externalFallbackProvider, language: language, endpoint: endpoint, model: model, apiKey: apiKey, seconds: seconds)
++            } : nil
++            recognizeNative(id: id, language: language, onDevice: useOffline, fallback: fallback)
+         }
+     }
+ 
