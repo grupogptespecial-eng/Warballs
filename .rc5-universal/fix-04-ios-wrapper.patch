@@ -9,3 +9,14 @@
      }
      func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
  }
+--- a/iosApp/project.yml
++++ b/iosApp/project.yml
+@@ -24,8 +24,6 @@
+         PRODUCT_NAME: Libre Remote
+         SWIFT_VERSION: 5.0
+         CODE_SIGNING_ALLOWED: NO
+-        FRAMEWORK_SEARCH_PATHS: "$(SRCROOT)/../composeApp/build/bin/iosSimulatorArm64/debugFramework"
+     dependencies:
+-      - framework: ../composeApp/build/bin/iosSimulatorArm64/debugFramework/LibreRemote.framework
++      - framework: ../composeApp/build/XCFrameworks/LibreRemote.xcframework
+         embed: false
