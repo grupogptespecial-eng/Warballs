@@ -1,5 +1,7 @@
 # Libre Remote RC5.4 — Multiplatform Support Contract
 
+> **Canonical engineering requirements:** `specs/001-rc5-4-multiplatform-hardening/spec.md`. This document is a public/evidence-facing view of platform support; it must not introduce requirements that contradict the active spec.
+
 This document separates **target availability**, **successful compilation**, **runtime validation**, **hardware validation**, and **distribution readiness**. A platform must not be advertised as fully supported merely because Kotlin/Compose can compile a target for it.
 
 ## Support levels
@@ -76,7 +78,7 @@ The packaged application itself must be launched in CI after packaging. A succes
 
 ## Secure-storage contract
 
-Secrets are not ordinary preferences.
+Secrets are not ordinary preferences. Canonical semantics are in `specs/001-rc5-4-multiplatform-hardening/contracts/secure-store.md`.
 
 Production targets are:
 
@@ -102,7 +104,7 @@ Every host platform must eventually run the same deterministic contract suite ag
 9. IPv4 and IPv6 where supported;
 10. persistence and upgrade of profiles/credentials.
 
-A capability must be exposed only when both the TV backend and the host platform can implement it truthfully.
+A capability must be exposed only when both the TV backend and the host platform can implement it truthfully. Canonical semantics are in `specs/001-rc5-4-multiplatform-hardening/contracts/platform-capabilities.md`.
 
 ## Release blockers that cannot be solved by source-only CI
 

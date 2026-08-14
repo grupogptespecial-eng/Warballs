@@ -1,5 +1,7 @@
 # Libre Remote 2.1.3 RC5.4 — Release Manifest
 
+> **Canonical engineering requirements:** `specs/001-rc5-4-multiplatform-hardening/spec.md`. This manifest is release evidence/supporting documentation; when it conflicts with the active spec, the spec wins.
+
 Canonical release candidate: `2.1.3-rc5.4-customization`
 
 - versionCode: `29`
@@ -13,6 +15,10 @@ Canonical release candidate: `2.1.3-rc5.4-customization`
 - Android build tools: `35.0.0`
 - current source origin: RC5.4 materializer plus multiplatform hardening pass
 - target branch for hardening: `fix/libre-remote-rc5.4-hardening`
+- active spec: `specs/001-rc5-4-multiplatform-hardening/spec.md`
+- implementation plan: `specs/001-rc5-4-multiplatform-hardening/plan.md`
+- executable tasks: `specs/001-rc5-4-multiplatform-hardening/tasks.md`
+- traceability: `specs/001-rc5-4-multiplatform-hardening/traceability.md`
 - platform contract: `LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md`
 - physical matrix: `LIBRE_REMOTE_HARDWARE_MATRIX.md`
 
@@ -27,6 +33,7 @@ Canonical release candidate: `2.1.3-rc5.4-customization`
 7. No signing key, keystore, Apple certificate or Windows/macOS production certificate is committed.
 8. Physical-TV validation remains mandatory before `StableFull` claims are widened.
 9. A platform is advertised only at the support level actually demonstrated by CI and physical validation.
+10. `scripts/validate_libre_remote_specs.py` passes, proving the active spec/task/traceability graph is internally consistent.
 
 ## Android gates
 
@@ -100,4 +107,4 @@ No signing material may be committed. Release signing material must be provided 
 
 ## Known infrastructure blocker
 
-GitHub Actions runners are currently blocked by account billing/spending configuration. The latest universal workflow is accepted and expands into source-integrity, Windows, Linux, macOS and iOS jobs, but the source job receives no runner and executes zero steps; downstream platform jobs are skipped. Green Android, upgrade and universal workflows are therefore required after the account issue is resolved. Source changes alone must not be interpreted as completed runtime validation.
+GitHub Actions runners are currently blocked by account billing/spending configuration. The latest universal workflow is accepted and expands into source-integrity, Windows, Linux, macOS and iOS jobs, but the source job receives no runner and executes zero steps; downstream platform jobs are skipped. Green Android, upgrade, spec-integrity and universal workflows are therefore required after the account issue is resolved. Source changes alone must not be interpreted as completed runtime validation.

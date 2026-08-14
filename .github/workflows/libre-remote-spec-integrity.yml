@@ -1,0 +1,30 @@
+name: Libre Remote Spec Integrity
+
+on:
+  pull_request:
+    branches: [release/libre-remote-2.1.3-rc5.4-android-tested]
+    paths:
+      - 'specs/**'
+      - 'scripts/validate_libre_remote_specs.py'
+      - 'LIBRE_REMOTE_RELEASE_MANIFEST.md'
+      - 'LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md'
+      - 'LIBRE_REMOTE_HARDWARE_MATRIX.md'
+      - '.github/workflows/libre-remote-spec-integrity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-spec-graph:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate canonical specification graph
+        run: python3 scripts/validate_libre_remote_specs.py
+      - name: Ensure no release blocker is silently marked PASS without evidence
+        run: |
+          set -euo pipefail
+          test -f specs/001-rc5-4-multiplatform-hardening/traceability.md
+          ! grep -E '\| LR-FR-(080|081|090|091) .*\| PASS' specs/001-rc5-4-multiplatform-hardening/traceability.md
