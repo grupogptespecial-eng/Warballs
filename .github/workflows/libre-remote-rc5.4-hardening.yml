@@ -54,15 +54,9 @@ jobs:
           set -euo pipefail
           gradle --no-daemon :composeApp:tasks --all > ../gradle-tasks.txt
           gradle --no-daemon --stacktrace :composeApp:desktopTest :composeApp:assembleDebug
-          if grep -q 'assembleRelease' ../gradle-tasks.txt; then
-            gradle --no-daemon --stacktrace :composeApp:assembleRelease
-          fi
-          if grep -q 'testDebugUnitTest' ../gradle-tasks.txt; then
-            gradle --no-daemon --stacktrace :composeApp:testDebugUnitTest
-          fi
-          if grep -Eq '(^|[[:space:]])lint([[:space:]]|$)' ../gradle-tasks.txt; then
-            gradle --no-daemon --stacktrace :composeApp:lint
-          fi
+          if grep -q 'assembleRelease' ../gradle-tasks.txt; then gradle --no-daemon --stacktrace :composeApp:assembleRelease; fi
+          if grep -q 'testDebugUnitTest' ../gradle-tasks.txt; then gradle --no-daemon --stacktrace :composeApp:testDebugUnitTest; fi
+          if grep -Eq '(^|[[:space:]])lint([[:space:]]|$)' ../gradle-tasks.txt; then gradle --no-daemon --stacktrace :composeApp:lint; fi
       - name: Package debug APK
         run: |
           set -euo pipefail
@@ -127,7 +121,17 @@ jobs:
             adb shell dumpsys package "$APP_ID" > "$OUT/package.txt"
             grep -q 'versionName=2.1.3-rc5.4-customization' "$OUT/package.txt"
 
-            # Font-scale/accessibility stress and process-death relaunch.
+            audit_ui() {
+              local xml="$1"
+              local report="$2"
+              local size density width height
+              size="$(adb shell wm size | tr -d '\r' | tail -1 | sed 's/.*: //')"
+              density="$(adb shell wm density | tr -d '\r' | tail -1 | sed 's/.*: //')"
+              width="${size%x*}"
+              height="${size#*x}"
+              python3 scripts/audit_android_ui.py "$xml" --width "$width" --height "$height" --density "$density" --report "$report"
+            }
+
             for scale in 1.0 1.5 2.0; do
               adb shell settings put system font_scale "$scale"
               adb shell am force-stop "$APP_ID"
@@ -136,10 +140,10 @@ jobs:
               test -n "$(adb shell pidof "$APP_ID" | tr -d '\r')"
               adb exec-out uiautomator dump /dev/tty > "$OUT/font-${scale}.xml"
               adb exec-out screencap -p > "$OUT/font-${scale}.png"
+              audit_ui "$OUT/font-${scale}.xml" "$OUT/font-${scale}-audit.txt"
             done
             adb shell settings put system font_scale 1.0
 
-            # Orientation/layout stress.
             adb shell settings put system accelerometer_rotation 0 || true
             adb shell settings put system user_rotation 1 || true
             adb shell am force-stop "$APP_ID"
@@ -148,13 +152,14 @@ jobs:
             test -n "$(adb shell pidof "$APP_ID" | tr -d '\r')"
             adb exec-out uiautomator dump /dev/tty > "$OUT/landscape.xml"
             adb exec-out screencap -p > "$OUT/landscape.png"
+            audit_ui "$OUT/landscape.xml" "$OUT/landscape-audit.txt"
             adb shell settings put system user_rotation 0 || true
             adb shell settings put system accelerometer_rotation 1 || true
 
-            # Runtime health evidence.
-            adb shell am force-stop "$APP_ID"
-            adb shell am start -W -n "$APP_ID/$APP_ACTIVITY" > "$OUT/relaunch.txt"
-            sleep 2
+            # Randomized interaction soak catches lifecycle, state and rendering crashes.
+            adb shell monkey -p "$APP_ID" --pct-syskeys 0 --throttle 30 200 > "$OUT/monkey.txt" 2>&1
+            test -n "$(adb shell pidof "$APP_ID" | tr -d '\r')"
+
             adb shell dumpsys meminfo "$APP_ID" > "$OUT/meminfo.txt"
             adb shell dumpsys gfxinfo "$APP_ID" > "$OUT/gfxinfo.txt" || true
             adb shell dumpsys activity lastanr > "$OUT/lastanr.txt" || true
