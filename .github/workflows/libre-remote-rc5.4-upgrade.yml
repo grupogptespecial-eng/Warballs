@@ -32,7 +32,10 @@ jobs:
           set -euo pipefail
           bash .rc5-universal/materialize-rc5.3.sh libre-remote-rc5.3
           bash .rc5-universal/materialize-rc5.4.sh libre-remote-rc5.4
+          python3 scripts/harden_libre_remote_rc5_4.py libre-remote-rc5.3
           python3 scripts/harden_libre_remote_rc5_4.py libre-remote-rc5.4
+          grep -q 'applicationId = "io.github.grupogptespecialeng.libreremote"' libre-remote-rc5.3/composeApp/build.gradle.kts
+          grep -q 'applicationId = "io.github.grupogptespecialeng.libreremote"' libre-remote-rc5.4/composeApp/build.gradle.kts
           (cd libre-remote-rc5.3 && gradle --no-daemon --stacktrace :composeApp:assembleDebug)
           (cd libre-remote-rc5.4 && gradle --no-daemon --stacktrace :composeApp:assembleDebug)
       - name: Enable KVM
