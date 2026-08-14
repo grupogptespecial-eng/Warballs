@@ -11,7 +11,10 @@ ROOT = Path(sys.argv[1] if len(sys.argv) > 1 else "libre-remote-universal")
 CANONICAL_APP_ID = "io.github.grupogptespecialeng.libreremote"
 IOS_BUNDLE_ID = CANONICAL_APP_ID
 IOS_FRAMEWORK_BUNDLE_ID = f"{CANONICAL_APP_ID}.framework"
+MACOS_BUNDLE_ID = CANONICAL_APP_ID
+WINDOWS_UPGRADE_UUID = "9d0feb6a-8a93-558e-9297-4d2f0c6dc420"
 DESKTOP_PACKAGE_VERSION = "2.1.3"
+LOCAL_NETWORK_REASON = "Libre Remote uses your local network to discover and control TVs on the same network."
 
 
 def fail(message: str) -> None:
@@ -42,6 +45,30 @@ def upsert_yaml_setting(text: str, key: str, value: str, anchor: str = "PRODUCT_
         fail(f"could not insert iOS project setting {key}: anchor {anchor} not found")
     insertion = f'{anchor_match.group("i")}{key}: {value}\n'
     return text[: anchor_match.start()] + insertion + text[anchor_match.start() :]
+
+
+def ensure_desktop_os_block(text: str, block_name: str) -> tuple[str, re.Match[str]]:
+    match = re.search(rf"^(?P<i>\s*){re.escape(block_name)}\s*\{{\s*$", text, re.MULTILINE)
+    if match:
+        return text, match
+
+    native = re.search(r"^(?P<i>\s*)nativeDistributions\s*\{\s*$", text, re.MULTILINE)
+    if not native:
+        fail(f"could not create desktop {block_name} block")
+    indent = native.group("i") + "    "
+    insertion = f"\n{indent}{block_name} {{\n{indent}}}"
+    pos = native.end()
+    text = text[:pos] + insertion + text[pos:]
+    match = re.search(rf"^(?P<i>\s*){re.escape(block_name)}\s*\{{\s*$", text, re.MULTILINE)
+    if not match:
+        fail(f"could not find desktop {block_name} block after insertion")
+    return text, match
+
+
+def insert_after_block_open(text: str, match: re.Match[str], body: str) -> str:
+    indent = match.group("i") + "    "
+    formatted = "\n".join(indent + line if line else "" for line in body.splitlines())
+    return text[: match.end()] + "\n" + formatted + text[match.end() :]
 
 
 # ---------------------------------------------------------------------------
@@ -118,8 +145,6 @@ if 'modules("jdk.accessibility")' not in after:
     pos = native_match.end()
     after = after[:pos] + f'\n{indent}modules("jdk.accessibility")' + after[pos:]
 
-# Native packagers are stricter than application versionName conventions. Keep
-# the installer version stable and numeric while versionName retains the RC label.
 package_version_re = re.compile(r'^(?P<i>\s*)packageVersion\s*=\s*"[^"]*"\s*$', re.MULTILINE)
 package_version_match = package_version_re.search(after)
 if package_version_match:
@@ -132,6 +157,40 @@ else:
     indent = native_match.group("i") + "    "
     pos = native_match.end()
     after = after[:pos] + f'\n{indent}packageVersion = "{DESKTOP_PACKAGE_VERSION}"' + after[pos:]
+
+# macOS 15+ has local-network privacy. Give the packaged JVM application a
+# stable bundle identity and a user-facing reason in its generated Info.plist.
+after, macos_block = ensure_desktop_os_block(after, "macOS")
+bundle_re = re.compile(r'^(?P<i>\s*)bundleID\s*=\s*"[^"]*"\s*$', re.MULTILINE)
+bundle_match = bundle_re.search(after)
+if bundle_match:
+    replacement = f'{bundle_match.group("i")}bundleID = "{MACOS_BUNDLE_ID}"'
+    after = after[: bundle_match.start()] + replacement + after[bundle_match.end() :]
+else:
+    after = insert_after_block_open(after, macos_block, f'bundleID = "{MACOS_BUNDLE_ID}"')
+
+if "NSLocalNetworkUsageDescription" not in after:
+    # Re-find after possible bundle insertion changed offsets.
+    _, macos_block = ensure_desktop_os_block(after, "macOS")
+    plist_body = (
+        'infoPlist {\n'
+        '    extraKeysRawXml = """\n'
+        '        <key>NSLocalNetworkUsageDescription</key>\n'
+        f'        <string>{LOCAL_NETWORK_REASON}</string>\n'
+        '    """.trimIndent()\n'
+        '}'
+    )
+    after = insert_after_block_open(after, macos_block, plist_body)
+
+# A stable Windows upgrade UUID is required for future installer continuity.
+after, windows_block = ensure_desktop_os_block(after, "windows")
+upgrade_re = re.compile(r'^(?P<i>\s*)upgradeUuid\s*=\s*"[^"]*"\s*$', re.MULTILINE)
+upgrade_match = upgrade_re.search(after)
+if upgrade_match:
+    replacement = f'{upgrade_match.group("i")}upgradeUuid = "{WINDOWS_UPGRADE_UUID}"'
+    after = after[: upgrade_match.start()] + replacement + after[upgrade_match.end() :]
+else:
+    after = insert_after_block_open(after, windows_block, f'upgradeUuid = "{WINDOWS_UPGRADE_UUID}"')
 
 write_if_changed(gradle, before, after)
 
@@ -194,7 +253,7 @@ if not isinstance(ats, dict):
 ats["NSAllowsLocalNetworking"] = True
 info_values.update(
     {
-        "NSLocalNetworkUsageDescription": "Libre Remote uses your local network to discover and control TVs on the same network.",
+        "NSLocalNetworkUsageDescription": LOCAL_NETWORK_REASON,
         "NSMicrophoneUsageDescription": "Libre Remote uses the microphone only when you choose voice control.",
         "NSSpeechRecognitionUsageDescription": "Libre Remote uses speech recognition only when you choose voice control.",
         "NSAppTransportSecurity": ats,
@@ -260,9 +319,12 @@ marker.write_text(
     f"- Android applicationId: `{CANONICAL_APP_ID}`\n"
     f"- iOS application bundle ID: `{IOS_BUNDLE_ID}`\n"
     f"- Kotlin/Native framework bundle ID: `{IOS_FRAMEWORK_BUNDLE_ID}`\n"
+    f"- macOS application bundle ID: `{MACOS_BUNDLE_ID}`\n"
+    f"- Windows installer upgrade UUID: `{WINDOWS_UPGRADE_UUID}`\n"
     f"- desktop package version: `{DESKTOP_PACKAGE_VERSION}`\n"
     "- iOS declares Local Network, microphone and speech-recognition purpose strings\n"
     "- iOS carries the multicast entitlement required by SSDP/UDP discovery; Apple entitlement approval is still an external release prerequisite\n"
+    "- macOS package Info.plist declares Local Network usage; multicast entitlement is not required on macOS\n"
     "- Apple release signing is not disabled in project.yml; CI disables signing only on explicit build commands\n"
     "- desktop native distributions expose DMG/PKG, MSI/EXE and DEB/RPM formats\n"
     "- Windows reduced runtime includes `jdk.accessibility` for Java Access Bridge\n"
