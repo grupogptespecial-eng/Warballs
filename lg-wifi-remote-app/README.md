@@ -1,66 +1,47 @@
 # Libre Remote
 
-Controle remoto Android gratuito, sem anúncios e open source para televisões e receptores na rede local.
+Controle remoto Android gratuito, sem anúncios e open source para TVs e receptores na rede local.
 
-A versão **1.1.0 RC1 Universal** usa uma interface única e seleciona automaticamente um backend conforme o sistema detectado. Funções incompatíveis são escondidas em vez de aparecerem como botões quebrados.
+A release candidate ativa é **Libre Remote 2.1.3 RC5.4** (`2.1.3-rc5.4-customization`, `versionCode 29`). A arquitetura universal usa uma interface orientada por capacidades e seleciona o backend compatível com a TV detectada.
 
-## Compatibilidade desta build
+## Compatibilidade atual
 
-| Plataforma | Estado | Recursos |
+| Plataforma | Estado | Recursos principais |
 |---|---|---|
-| LG webOS | Estável dentro da matriz já implementada | navegação, volume, canais, touchpad, teclado, apps, entradas, mídia e desligamento |
-| Samsung Tizen local | Experimental | pareamento na TV, navegação, volume, canais, mídia, números, cores, guia e desligamento |
-| DLNA / UPnP AV | Controle de mídia | play, pause, stop e volume/mudo quando AVTransport e RenderingControl são anunciados |
-| Roku | Detectável, mas bloqueado | o app público não ativa o controle enquanto houver restrição do fabricante |
-| Google Cast, SmartThings, Fire TV | Arquitetura preparada | não ativados nesta build; exigem SDK, credenciais ou fluxo oficial adicional |
-| Android/Google TV completo, VIDAA e Philips próprios | Experimental/não ativado | aguardam API autorizada, auditoria e testes físicos |
-| TVs sem rede | Não suportadas sem hardware | futuro Libre Bridge Wi-Fi para infravermelho/HDMI-CEC |
+| LG webOS | principal / mais completo | navegação, volume, canais, touchpad, teclado, apps, entradas, mídia e desligamento |
+| Samsung Tizen local | experimental | pareamento local, navegação, volume, canais, mídia, números, cores, guia e desligamento |
+| DLNA / UPnP AV | mídia | play, pause, stop e volume/mudo quando os serviços são anunciados |
+| Google Cast / SmartThings / Fire TV | não ativos | exigem integração oficial adicional |
+| Philips / VIDAA | experimental/não ativos | aguardam auditoria e hardware real |
+| Roku | bloqueado no app público | política do fabricante |
+| TVs sem protocolo de rede | não suportadas diretamente | futuro Libre Bridge por IR/CEC |
 
-## Como funciona
+## Segurança e identidade Android
 
-1. O aplicativo tenta reconectar à última TV salva.
-2. A busca multiprotocolo usa SSDP e descrições UPnP na rede local.
-3. Respostas duplicadas da mesma TV são combinadas e o backend mais completo recebe prioridade.
-4. O seletor mostra o sistema e o nível de suporte antes da conexão.
-5. O layout usa capacidades reais: uma TV DLNA, por exemplo, mostra mídia e volume, mas não mostra D-pad.
+- applicationId canônico: `io.github.grupogptespecialeng.libreremote`;
+- WSS LG `:3001` deve ser preferido sobre WS `:3000`;
+- endpoint `ws://` salvo anteriormente não pode superar silenciosamente WSS;
+- tokens/chaves de pareamento permanecem locais e criptografados;
+- nenhum keystore de assinatura é mantido no Git;
+- sem anúncios, analytics ou telemetria do desenvolvedor.
 
-## Desempenho
+## Validação RC5.4
 
-- conexão WebSocket persistente para LG e Samsung;
-- tentativa paralela de endpoints locais;
-- reconexão progressiva a partir de 250 ms;
-- envio no toque, sem esperar o clique terminar;
-- repetição de volume/canais a cada ~86 ms depois do atraso inicial;
-- fila limitada de comandos Samsung;
-- movimentos LG conflados para descartar eventos antigos;
-- cliente HTTP reutilizado para DLNA;
-- medição local do tempo de despacho do último comando, sem telemetria.
+O branch de hardening adiciona gates para:
 
-## Privacidade e segurança
+- integridade/materialização;
+- testes e build Android;
+- múltiplas APIs Android e múltiplos perfis de dispositivo;
+- font scale 1.0/1.5/2.0;
+- relaunch/process death;
+- memória, gfx/jank, ANR, crash e estatísticas de bateria;
+- upgrade RC5.3 -> RC5.4 preservando o diretório de dados do app;
+- migração do transporte `.b64 + patches` para uma árvore de source canônica.
 
-- sem anúncios;
-- sem telemetria;
-- sem servidor do projeto;
-- protocolos locais limitados a endereços privados;
-- tokens Samsung e chaves LG em preferências criptografadas;
-- verificação TOFU da impressão digital de certificados locais quando WSS é usado;
-- integrações experimentais claramente identificadas.
+Emulador não substitui validação de protocolo em TVs reais. Antes de ampliar o rótulo estável, deve existir uma matriz pública/registrada por modelo, firmware, rede, descoberta, pareamento, reconnect, mudança de IP e recursos efetivamente testados.
 
-## Primeira conexão
+## Estado do CI
 
-1. Mantenha celular e TV na mesma rede.
-2. Toque em **Conectar TV**.
-3. Selecione o aparelho encontrado.
-4. Em LG ou Samsung, aceite o pareamento mostrado na televisão.
+Os workflows de hardening estão versionados, mas o GitHub está recusando runners por billing/spending limit antes de qualquer step executar. Portanto, até o bloqueio da conta ser resolvido e os workflows ficarem verdes, a RC5.4 deve ser tratada como **source-prepared, não CI-validated**.
 
-O IP manual fica disponível como recuperação. Ele identifica automaticamente LG pelas portas 3000/3001 e Samsung pelas portas 8001/8002.
-
-## Estado do projeto
-
-Esta é uma release candidate experimental. LG continua sendo o backend mais completo. Samsung e DLNA precisam de testes em aparelhos reais de várias gerações antes de serem anunciados como suporte amplo.
-
-O projeto não é afiliado a LG Electronics, Samsung Electronics, Google, Roku, Amazon, Philips ou Hisense.
-
-## Licença
-
-GPL-3.0-or-later. Consulte `LICENSE.md`, `PRIVACY.md`, `SECURITY.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `THIRD_PARTY_NOTICES.md` e `UNIVERSAL-TV-ROADMAP.md`.
+Consulte `LIBRE_REMOTE_RELEASE_MANIFEST.md`, `VALIDATION.md`, `RELEASE_STATUS.md`, `SECURITY.md`, `COMPATIBILITY.md` e `UNIVERSAL-TV-ROADMAP.md`.
