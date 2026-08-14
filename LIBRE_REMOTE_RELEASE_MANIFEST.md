@@ -6,11 +6,15 @@ Canonical release candidate: `2.1.3-rc5.4-customization`
 - Android applicationId: `io.github.grupogptespecialeng.libreremote`
 - iOS application bundle ID: `io.github.grupogptespecialeng.libreremote`
 - Kotlin/Native framework bundle ID: `io.github.grupogptespecialeng.libreremote.framework`
+- macOS application bundle ID: `io.github.grupogptespecialeng.libreremote`
+- desktop installer packageVersion: `2.1.3`
+- Windows installer upgradeUuid: `9d0feb6a-8a93-558e-9297-4d2f0c6dc420`
 - Java: `17`
 - Android build tools: `35.0.0`
 - current source origin: RC5.4 materializer plus multiplatform hardening pass
 - target branch for hardening: `fix/libre-remote-rc5.4-hardening`
 - platform contract: `LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md`
+- physical matrix: `LIBRE_REMOTE_HARDWARE_MATRIX.md`
 
 ## Required common release gates
 
@@ -19,9 +23,10 @@ Canonical release candidate: `2.1.3-rc5.4-customization`
 3. WSS on LG `:3001` is preferred over cleartext WS `:3000`; a legacy saved `ws://` endpoint may not outrank WSS.
 4. Android applicationId remains the existing Libre Remote identity so an RC can upgrade the installed app rather than create a second app.
 5. Kotlin/Native frameworks use an explicit bundle identifier rather than an inferred one.
-6. No signing key, keystore, Apple certificate or Windows/macOS production certificate is committed.
-7. Physical-TV validation remains mandatory before `StableFull` claims are widened.
-8. A platform is advertised only at the support level actually demonstrated by CI and physical validation.
+6. Desktop installers use the stable numeric package version `2.1.3`; the RC suffix remains an application/release label, not an installer-version dependency.
+7. No signing key, keystore, Apple certificate or Windows/macOS production certificate is committed.
+8. Physical-TV validation remains mandatory before `StableFull` claims are widened.
+9. A platform is advertised only at the support level actually demonstrated by CI and physical validation.
 
 ## Android gates
 
@@ -47,28 +52,31 @@ Canonical release candidate: `2.1.3-rc5.4-customization`
 ## Windows gates
 
 1. `desktopTest` and `createDistributable` pass on Windows.
-2. MSI and EXE packages are generated.
-3. The final packaged executable launches before the CI job is considered L2.
-4. SHA-256 hashes are emitted for produced installers.
-5. The reduced runtime includes `jdk.accessibility` for Java Access Bridge support.
-6. Production release requires Authenticode/Store signing and a clean Windows VM install/update/uninstall test.
+2. Both MSI and EXE installer artifacts are generated; absence of either is a CI failure.
+3. The stable installer lineage UUID is `9d0feb6a-8a93-558e-9297-4d2f0c6dc420` and must not change between releases.
+4. The final packaged executable launches before the CI job is considered L2.
+5. SHA-256 hashes are emitted for the actual installer artifacts.
+6. The reduced runtime includes `jdk.accessibility` for Java Access Bridge support.
+7. Production release requires Authenticode/Store signing and a clean Windows VM install/update/uninstall test.
 
 ## Linux gates
 
 1. `desktopTest` and `createDistributable` pass on Linux.
-2. DEB and RPM packages are generated.
+2. Both DEB and RPM package artifacts are generated; absence of either is a CI failure.
 3. The final packaged executable launches in a headless X session.
-4. SHA-256 hashes are emitted for packages.
+4. SHA-256 hashes are emitted for the actual DEB/RPM artifacts.
 5. Ubuntu/Debian/Fedora clean-machine validation is required before widening support claims.
 6. Current Compose Desktop screen-reader limitations on Linux must remain disclosed.
 
 ## macOS gates
 
 1. `desktopTest` and `createDistributable` pass on macOS.
-2. DMG and PKG packages are generated.
-3. The final `.app` bundle launches.
-4. CI records the runner architecture so arm64 validation is not misrepresented as Intel validation.
-5. Production release requires Developer ID signing, notarization and Gatekeeper validation on a clean Mac.
+2. Both DMG and PKG package artifacts are generated; absence of either is a CI failure.
+3. The generated application bundle uses `io.github.grupogptespecialeng.libreremote` as its stable bundle identity.
+4. The generated macOS `Info.plist` declares why Libre Remote accesses the local network.
+5. The final `.app` bundle launches.
+6. CI records the runner architecture so arm64 validation is not misrepresented as Intel validation.
+7. Production release requires stable Apple-issued signing, Developer ID/notarization, Local Network allow/deny testing and Gatekeeper validation on a clean Mac.
 
 ## Secure-storage gate
 
@@ -76,9 +84,13 @@ Secrets must not be treated as ordinary preferences. Production targets are Andr
 
 The hardening transform emits `SECURITY-GATES.md`. While the historical source is still materialized from patches, a detected desktop preferences/secret overlap is reported as a release blocker. After native stores are committed into the canonical tree, enable the strict gate with `LIBRE_REMOTE_STRICT_SECURE_STORE=1`.
 
+## Protocol-validation gate
+
+Build and package success do not prove TV protocol parity. Before L3, deterministic fake LG webOS, Samsung Tizen and DLNA/UPnP servers must exercise discovery, pairing, reconnect, unsupported operations, address changes, malformed/oversized responses and persistence/upgrade behavior across supported hosts.
+
 ## Physical validation matrix
 
-Record at minimum: host OS/device, host architecture, TV model, manufacture year, firmware/webOS/Tizen version, Wi-Fi/Ethernet, discovery, pairing accepted/denied, reconnect, IP change, WSS/WS, navigation, volume, channels, pointer, keyboard, apps, inputs, media and Wake-on-LAN.
+Use `LIBRE_REMOTE_HARDWARE_MATRIX.md`. Record at minimum: host OS/device, host architecture, TV model, manufacture year, firmware/webOS/Tizen version, Wi-Fi/Ethernet, discovery, pairing accepted/denied, reconnect, IP change, WSS/WS, navigation, volume, channels, pointer, keyboard, apps, inputs, media and Wake-on-LAN.
 
 Status values: `PASS`, `FAIL`, `N/A`, `NOT TESTED`.
 
@@ -88,4 +100,4 @@ No signing material may be committed. Release signing material must be provided 
 
 ## Known infrastructure blocker
 
-As of the RC5.4 investigation, GitHub Actions runners were blocked by account billing/spending configuration. Green Android and universal workflows are therefore required after that account issue is resolved; source changes alone must not be interpreted as completed runtime validation.
+GitHub Actions runners are currently blocked by account billing/spending configuration. The latest universal workflow is accepted and expands into source-integrity, Windows, Linux, macOS and iOS jobs, but the source job receives no runner and executes zero steps; downstream platform jobs are skipped. Green Android, upgrade and universal workflows are therefore required after the account issue is resolved. Source changes alone must not be interpreted as completed runtime validation.
