@@ -21,11 +21,13 @@ No release note or store listing may claim a level above the evidence recorded b
 | iPhone / iPad | arm64 device; arm64 simulator | Kotlin frameworks, XCFramework, SwiftUI wrapper compile, simulator install/launch, privacy metadata | unsigned CI app/XCFramework | Apple Developer signing, multicast entitlement approval, TestFlight, physical local-network test |
 | Windows | x86-64 current runner | desktop tests, app-image build, EXE/MSI package, final executable launch | EXE + MSI | Authenticode/Store signing, clean Windows VM, Defender/Private Network discovery test |
 | Linux | x86-64 current runner | desktop tests, app-image build, DEB/RPM package, headless launch | DEB + RPM | Ubuntu/Debian/Fedora clean-machine tests; Secret Service availability; accessibility limitation disclosure |
-| macOS | runner architecture recorded in artifact | desktop tests, app-image build, DMG/PKG package, final app launch | DMG + PKG | Developer ID signing, notarization, Gatekeeper clean-machine test; Intel build only if separately produced |
+| macOS | runner architecture recorded in artifact | desktop tests, app-image build, DMG/PKG package, final app launch, generated LAN-privacy metadata | DMG + PKG | Developer ID signing, notarization, local-network permission, Gatekeeper clean-machine test; Intel build only if separately produced |
 
 Architectures not produced by CI are **not implicitly supported**. In particular, Windows ARM64, Linux ARM64 and macOS Intel require their own build/runtime evidence before being added to the support claim.
 
 ## Apple requirements
+
+### iOS / iPadOS
 
 The hardened source must contain:
 
@@ -40,6 +42,16 @@ The hardened source must contain:
 
 CI intentionally compiles unsigned Apple artifacts. Real iOS distribution still requires an Apple provisioning profile authorized for multicast networking. Simulator success is not evidence that SSDP/multicast works on a physical iPhone or iPad.
 
+### macOS
+
+macOS 15+ local-network privacy is a separate host requirement. The packaged desktop `.app` must have:
+
+- a stable `CFBundleIdentifier` / Compose `bundleID`;
+- `NSLocalNetworkUsageDescription` in the generated `Info.plist`;
+- stable production code signing before public distribution so the OS can track permission identity reliably.
+
+The iOS multicast entitlement is **not required on macOS**. Physical/clean-machine validation must still exercise the Local Network permission prompt and denied/allowed flows.
+
 ## Desktop packaging requirements
 
 `createDistributable` is a runtime smoke artifact, not the public installer contract. RC5.4 also exposes the native package formats:
@@ -47,6 +59,10 @@ CI intentionally compiles unsigned Apple artifacts. Real iOS distribution still 
 - macOS: `DMG`, `PKG`;
 - Windows: `MSI`, `EXE`;
 - Linux: `DEB`, `RPM`.
+
+The installer-facing package version is normalized to `2.1.3` while the app release label remains `2.1.3-rc5.4-customization`. Each desktop job must prove that every expected package type was actually produced; a green compile without the expected installer files is a failure.
+
+Windows additionally uses the stable upgrade UUID `9d0feb6a-8a93-558e-9297-4d2f0c6dc420` so future installer releases can participate in the same upgrade lineage. This UUID must not be regenerated per release.
 
 The packaged application itself must be launched in CI after packaging. A successful Gradle compile alone does not satisfy L2.
 
@@ -96,6 +112,7 @@ The following remain mandatory even after all workflows are green:
 - Apple multicast entitlement approval and real signing credentials;
 - Windows/macOS production signing credentials;
 - physical iPhone/iPad local-network discovery test;
+- macOS local-network permission testing on a signed app;
 - real-TV matrix across supported manufacturers/firmware generations;
 - clean-machine installer/update/uninstaller validation;
 - native desktop secure storage before L5.
