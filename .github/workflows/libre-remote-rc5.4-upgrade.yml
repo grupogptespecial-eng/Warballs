@@ -57,13 +57,25 @@ jobs:
             OLD="$(find libre-remote-rc5.3/composeApp/build/outputs/apk/debug -name '*.apk' -type f | head -1)"
             NEW="$(find libre-remote-rc5.4/composeApp/build/outputs/apk/debug -name '*.apk' -type f | head -1)"
             test -n "$OLD" && test -n "$NEW"
+
             adb install "$OLD" | tee upgrade-qa/install-old.txt
             adb shell dumpsys package "$APP_ID" > upgrade-qa/before.txt
             adb shell am start -W -n "$APP_ID/$APP_ACTIVITY" > upgrade-qa/launch-old.txt
+            sleep 2
+
+            # Debug builds are debuggable, so a sentinel in app-private storage proves
+            # package identity/data continuity across the in-place upgrade.
+            adb shell run-as "$APP_ID" sh -c 'mkdir -p files && printf RC5_3_PERSISTENCE_PROBE > files/upgrade-probe.txt'
+            adb shell run-as "$APP_ID" cat files/upgrade-probe.txt > upgrade-qa/probe-before.txt
+            grep -q 'RC5_3_PERSISTENCE_PROBE' upgrade-qa/probe-before.txt
+
             adb shell am force-stop "$APP_ID"
             adb install -r "$NEW" | tee upgrade-qa/install-upgrade.txt
             adb shell dumpsys package "$APP_ID" > upgrade-qa/after.txt
             grep -q 'versionName=2.1.3-rc5.4-customization' upgrade-qa/after.txt
+            adb shell run-as "$APP_ID" cat files/upgrade-probe.txt > upgrade-qa/probe-after.txt
+            grep -q 'RC5_3_PERSISTENCE_PROBE' upgrade-qa/probe-after.txt
+
             adb shell am start -W -n "$APP_ID/$APP_ACTIVITY" > upgrade-qa/launch-new.txt
             sleep 2
             test -n "$(adb shell pidof "$APP_ID" | tr -d '\r')"
