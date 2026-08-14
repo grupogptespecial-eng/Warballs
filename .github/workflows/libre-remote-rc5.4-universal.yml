@@ -1,0 +1,297 @@
+name: Libre Remote RC5.4 Universal Validation
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [release/libre-remote-2.1.3-rc5.4-android-tested]
+    paths:
+      - '.rc5-universal/**'
+      - 'scripts/harden_libre_remote_rc5_4.py'
+      - '.github/workflows/libre-remote-rc5.4-universal.yml'
+      - 'libre-remote-universal/**'
+      - 'LIBRE_REMOTE_RELEASE_MANIFEST.md'
+      - 'LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: libre-remote-rc5.4-universal-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  APP_ID: io.github.grupogptespecialeng.libreremote
+  IOS_BUNDLE_ID: io.github.grupogptespecialeng.libreremote
+  IOS_FRAMEWORK_BUNDLE_ID: io.github.grupogptespecialeng.libreremote.framework
+
+jobs:
+  source-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize and harden exact RC5.4
+        run: |
+          set -euo pipefail
+          bash .rc5-universal/materialize-rc5.4.sh
+          python3 scripts/harden_libre_remote_rc5_4.py libre-remote-universal
+          test -f libre-remote-universal/HARDENING.md
+          test -f libre-remote-universal/SECURITY-GATES.md
+          grep -q 'applicationId = "io.github.grupogptespecialeng.libreremote"' libre-remote-universal/composeApp/build.gradle.kts
+          grep -q 'TargetFormat.Pkg' libre-remote-universal/composeApp/build.gradle.kts
+          grep -q 'TargetFormat.Exe' libre-remote-universal/composeApp/build.gradle.kts
+          grep -q 'TargetFormat.Rpm' libre-remote-universal/composeApp/build.gradle.kts
+          grep -q 'modules("jdk.accessibility")' libre-remote-universal/composeApp/build.gradle.kts
+          grep -q 'PRODUCT_BUNDLE_IDENTIFIER: io.github.grupogptespecialeng.libreremote' libre-remote-universal/iosApp/project.yml
+          grep -q 'CODE_SIGN_ENTITLEMENTS: LibreRemote.entitlements' libre-remote-universal/iosApp/project.yml
+          ! grep -q 'CODE_SIGNING_ALLOWED: NO' libre-remote-universal/iosApp/project.yml
+      - name: Verify hardening idempotence
+        run: |
+          set -euo pipefail
+          before="$(find libre-remote-universal -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum)"
+          python3 scripts/harden_libre_remote_rc5_4.py libre-remote-universal
+          after="$(find libre-remote-universal -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum)"
+          test "$before" = "$after"
+
+  windows:
+    needs: source-integrity
+    runs-on: windows-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize and harden RC5.4
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash .rc5-universal/materialize-rc5.4.sh
+          python scripts/harden_libre_remote_rc5_4.py libre-remote-universal
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Test and package Windows
+        working-directory: libre-remote-universal
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon --stacktrace :composeApp:desktopTest :composeApp:createDistributable :composeApp:packageMsi :composeApp:packageExe
+      - name: Smoke final Windows executable
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path 'libre-remote-universal/composeApp/build/compose/binaries/main/app' -Filter '*.exe' -Recurse | Select-Object -First 1
+          if (-not $exe) { throw 'Libre Remote executable not found' }
+          $p = Start-Process -FilePath $exe.FullName -PassThru
+          Start-Sleep -Seconds 8
+          if ($p.HasExited -and $p.ExitCode -ne 0) { throw "Libre Remote exited with code $($p.ExitCode)" }
+          if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+      - name: Hash Windows packages
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Get-ChildItem -Path 'libre-remote-universal/composeApp/build/compose/binaries/main' -Include '*.msi','*.exe' -Recurse |
+            Get-FileHash -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLower())  $($_.Path)" } |
+            Set-Content -Path dist/SHA256SUMS-Windows.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Libre-Remote-2.1.3-RC5.4-Windows-x64
+          path: |
+            libre-remote-universal/composeApp/build/compose/binaries/main/**
+            dist/SHA256SUMS-Windows.txt
+          retention-days: 14
+
+  linux:
+    needs: source-integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize and harden RC5.4
+        run: |
+          set -euo pipefail
+          bash .rc5-universal/materialize-rc5.4.sh
+          python3 scripts/harden_libre_remote_rc5_4.py libre-remote-universal
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Install headless UI dependencies
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+      - name: Test and package Linux
+        working-directory: libre-remote-universal
+        run: |
+          set -euo pipefail
+          gradle --no-daemon --stacktrace :composeApp:desktopTest :composeApp:createDistributable :composeApp:packageDeb :composeApp:packageRpm
+      - name: Smoke final Linux executable
+        run: |
+          set -euo pipefail
+          BIN="$(find libre-remote-universal/composeApp/build/compose/binaries/main/app -maxdepth 4 -type f -perm -111 ! -path '*/lib/*' | head -1)"
+          test -n "$BIN"
+          set +e
+          timeout 12s xvfb-run -a "$BIN" > linux-smoke.log 2>&1
+          rc=$?
+          set -e
+          if [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ]; then cat linux-smoke.log; exit "$rc"; fi
+      - name: Hash Linux packages
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          find libre-remote-universal/composeApp/build/compose/binaries/main -type f \( -name '*.deb' -o -name '*.rpm' \) -print0 | sort -z | xargs -0 sha256sum > dist/SHA256SUMS-Linux.txt
+          test -s dist/SHA256SUMS-Linux.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Libre-Remote-2.1.3-RC5.4-Linux-x64
+          path: |
+            libre-remote-universal/composeApp/build/compose/binaries/main/**
+            dist/SHA256SUMS-Linux.txt
+            linux-smoke.log
+          retention-days: 14
+
+  macos:
+    needs: source-integrity
+    runs-on: macos-15
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize and harden RC5.4
+        run: |
+          set -euo pipefail
+          bash .rc5-universal/materialize-rc5.4.sh
+          python3 scripts/harden_libre_remote_rc5_4.py libre-remote-universal
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Test and package macOS
+        working-directory: libre-remote-universal
+        run: |
+          set -euo pipefail
+          gradle --no-daemon --stacktrace :composeApp:desktopTest :composeApp:createDistributable :composeApp:packageDmg :composeApp:packagePkg
+      - name: Smoke final macOS app bundle
+        run: |
+          set -euo pipefail
+          APP="$(find libre-remote-universal/composeApp/build/compose/binaries/main/app -maxdepth 3 -name '*.app' -type d | head -1)"
+          test -n "$APP"
+          open -n "$APP"
+          sleep 8
+          pgrep -f 'Libre Remote' > macos-process.txt || { echo 'Libre Remote process not found after launch'; exit 1; }
+          pkill -f 'Libre Remote' || true
+      - name: Hash macOS packages
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          find libre-remote-universal/composeApp/build/compose/binaries/main -type f \( -name '*.dmg' -o -name '*.pkg' \) -print0 | sort -z | xargs -0 shasum -a 256 > dist/SHA256SUMS-macOS.txt
+          test -s dist/SHA256SUMS-macOS.txt
+          uname -m > dist/ARCHITECTURE.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Libre-Remote-2.1.3-RC5.4-macOS
+          path: |
+            libre-remote-universal/composeApp/build/compose/binaries/main/**
+            dist/**
+            macos-process.txt
+          retention-days: 14
+
+  ios:
+    needs: source-integrity
+    runs-on: macos-15
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize and harden RC5.4
+        run: |
+          set -euo pipefail
+          bash .rc5-universal/materialize-rc5.4.sh
+          python3 scripts/harden_libre_remote_rc5_4.py libre-remote-universal
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Validate Apple privacy and entitlement metadata
+        run: |
+          set -euo pipefail
+          INFO=libre-remote-universal/iosApp/Info.plist
+          ENT=libre-remote-universal/iosApp/LibreRemote.entitlements
+          test "$(plutil -extract NSLocalNetworkUsageDescription raw -o - "$INFO")" != ""
+          test "$(plutil -extract NSMicrophoneUsageDescription raw -o - "$INFO")" != ""
+          test "$(plutil -extract NSSpeechRecognitionUsageDescription raw -o - "$INFO")" != ""
+          test "$(plutil -extract NSAppTransportSecurity.NSAllowsLocalNetworking raw -o - "$INFO")" = "true"
+          test "$(plutil -extract com.apple.developer.networking.multicast raw -o - "$ENT")" = "true"
+          grep -q 'PRODUCT_BUNDLE_IDENTIFIER: io.github.grupogptespecialeng.libreremote' libre-remote-universal/iosApp/project.yml
+          grep -q 'CODE_SIGN_ENTITLEMENTS: LibreRemote.entitlements' libre-remote-universal/iosApp/project.yml
+          ! grep -q 'CODE_SIGNING_ALLOWED: NO' libre-remote-universal/iosApp/project.yml
+      - name: Compile iPhone and simulator frameworks
+        working-directory: libre-remote-universal
+        run: |
+          set -euo pipefail
+          gradle --no-daemon --stacktrace :composeApp:linkDebugFrameworkIosSimulatorArm64 :composeApp:linkDebugFrameworkIosArm64
+          test "$(plutil -extract CFBundleIdentifier raw -o - composeApp/build/bin/iosSimulatorArm64/debugFramework/LibreRemote.framework/Info.plist)" = "$IOS_FRAMEWORK_BUNDLE_ID"
+          test "$(plutil -extract CFBundleIdentifier raw -o - composeApp/build/bin/iosArm64/debugFramework/LibreRemote.framework/Info.plist)" = "$IOS_FRAMEWORK_BUNDLE_ID"
+      - name: Build XCFramework
+        run: |
+          set -euo pipefail
+          cd libre-remote-universal
+          rm -rf composeApp/build/XCFrameworks/LibreRemote.xcframework
+          mkdir -p composeApp/build/XCFrameworks
+          xcodebuild -create-xcframework \
+            -framework composeApp/build/bin/iosSimulatorArm64/debugFramework/LibreRemote.framework \
+            -framework composeApp/build/bin/iosArm64/debugFramework/LibreRemote.framework \
+            -output composeApp/build/XCFrameworks/LibreRemote.xcframework
+      - name: Generate and compile SwiftUI wrapper
+        run: |
+          set -euo pipefail
+          brew install xcodegen
+          cd libre-remote-universal/iosApp
+          xcodegen generate
+          rm -rf build/DerivedData
+          xcodebuild -project LibreRemoteIOS.xcodeproj -scheme LibreRemoteIOS \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO ARCHS=arm64 ONLY_ACTIVE_ARCH=YES build | tee build/ios-simulator-build.log
+          xcodebuild -project LibreRemoteIOS.xcodeproj -scheme LibreRemoteIOS \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -configuration Debug -derivedDataPath build/DerivedDataDevice \
+            CODE_SIGNING_ALLOWED=NO ARCHS=arm64 ONLY_ACTIVE_ARCH=YES build | tee build/ios-device-build.log
+      - name: Install and launch on iOS Simulator
+        run: |
+          set -euo pipefail
+          cd libre-remote-universal/iosApp
+          UDID="$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["udid"] for xs in d.values() for x in xs if x.get("isAvailable") and "iPhone" in x.get("name", "")))')"
+          test -n "$UDID"
+          xcrun simctl boot "$UDID" 2>/dev/null || true
+          xcrun simctl bootstatus "$UDID" -b
+          APP="$(find build/DerivedData/Build/Products/Debug-iphonesimulator -maxdepth 1 -name '*.app' -type d | head -1)"
+          test -n "$APP"
+          xcrun simctl install "$UDID" "$APP"
+          xcrun simctl launch "$UDID" "$IOS_BUNDLE_ID" | tee build/ios-simulator-launch.log
+          sleep 5
+          xcrun simctl io "$UDID" screenshot build/ios-simulator.png
+          xcrun simctl get_app_container "$UDID" "$IOS_BUNDLE_ID" app > build/ios-app-container.txt
+          xcrun simctl shutdown "$UDID" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Libre-Remote-2.1.3-RC5.4-iOS
+          path: |
+            libre-remote-universal/composeApp/build/XCFrameworks/LibreRemote.xcframework/**
+            libre-remote-universal/iosApp/build/*.log
+            libre-remote-universal/iosApp/build/*.png
+            libre-remote-universal/iosApp/build/ios-app-container.txt
+            libre-remote-universal/HARDENING.md
+            libre-remote-universal/SECURITY-GATES.md
+          retention-days: 14
