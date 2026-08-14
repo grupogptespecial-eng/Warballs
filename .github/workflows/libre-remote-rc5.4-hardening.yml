@@ -1,0 +1,134 @@
+name: Libre Remote RC5.4 Hardening
+
+on:
+  push:
+    branches: [fix/libre-remote-rc5.4-hardening]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  APP_ID: io.github.grupogptespecialeng.libreremote
+  APP_ACTIVITY: io.github.grupogptespecialeng.libreremote.MainActivity
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize RC5.4
+        run: bash .rc5-universal/materialize-rc5.4.sh
+      - name: Apply hardening
+        run: python3 scripts/harden_libre_remote_rc5_4.py libre-remote-universal
+      - name: Verify hardening invariants
+        run: |
+          set -euo pipefail
+          SRC=libre-remote-universal
+          grep -q 'versionCode = 29' "$SRC/composeApp/build.gradle.kts"
+          grep -q 'versionName = "2.1.3-rc5.4-customization"' "$SRC/composeApp/build.gradle.kts"
+          grep -q 'applicationId = "io.github.grupogptespecialeng.libreremote"' "$SRC/composeApp/build.gradle.kts"
+          grep -q 'savedEndpoint?.takeIf { it.startsWith("wss://") }' "$SRC/composeApp/src/commonMain/kotlin/io/github/grupogptespecialeng/libreremote/LgWebOsRemote.kt"
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0' 'platform-tools'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Build and test
+        working-directory: libre-remote-universal
+        run: |
+          set -euo pipefail
+          gradle --no-daemon :composeApp:tasks --all > ../gradle-tasks.txt
+          gradle --no-daemon --stacktrace :composeApp:desktopTest :composeApp:assembleDebug
+          grep -q 'assembleRelease' ../gradle-tasks.txt && gradle --no-daemon --stacktrace :composeApp:assembleRelease || true
+          grep -q 'testDebugUnitTest' ../gradle-tasks.txt && gradle --no-daemon --stacktrace :composeApp:testDebugUnitTest || true
+          grep -q '^lint' ../gradle-tasks.txt && gradle --no-daemon --stacktrace :composeApp:lint || true
+      - name: Package debug APK
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          APK="$(find libre-remote-universal/composeApp/build/outputs/apk/debug -name '*.apk' -type f | head -1)"
+          test -n "$APK"
+          cp "$APK" dist/Libre-Remote-2.1.3-RC5.4-debug.apk
+          sha256sum dist/*.apk > dist/SHA256SUMS.txt
+          printf 'versionName=2.1.3-rc5.4-customization\nversionCode=29\napplicationId=%s\ncommit=%s\n' "$APP_ID" "$GITHUB_SHA" > dist/BUILD-MANIFEST.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Libre-Remote-2.1.3-RC5.4-Hardened-Android
+          path: |
+            dist/**
+            gradle-tasks.txt
+            libre-remote-universal/composeApp/build/reports/**
+          retention-days: 14
+
+  emulator:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [29, 33, 35]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Libre-Remote-2.1.3-RC5.4-Hardened-Android
+          path: android-artifact
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm || true
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          arch: x86_64
+          profile: pixel_6
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            set -euo pipefail
+            OUT="android-qa/api-${{ matrix.api }}"
+            mkdir -p "$OUT"
+            APK="$(find android-artifact -name '*.apk' -type f | head -1)"
+            adb install -r "$APK"
+            adb logcat -c
+            adb shell am start -W -n "$APP_ID/$APP_ACTIVITY" | tee "$OUT/launch.txt"
+            sleep 3
+            test -n "$(adb shell pidof "$APP_ID" | tr -d '\r')"
+            adb shell dumpsys package "$APP_ID" > "$OUT/package.txt"
+            grep -q 'versionName=2.1.3-rc5.4-customization' "$OUT/package.txt"
+            for scale in 1.0 1.5 2.0; do
+              adb shell settings put system font_scale "$scale"
+              adb shell am force-stop "$APP_ID"
+              adb shell am start -W -n "$APP_ID/$APP_ACTIVITY" > "$OUT/font-${scale}-launch.txt"
+              sleep 2
+              test -n "$(adb shell pidof "$APP_ID" | tr -d '\r')"
+              adb exec-out uiautomator dump /dev/tty > "$OUT/font-${scale}.xml"
+              adb exec-out screencap -p > "$OUT/font-${scale}.png"
+            done
+            adb shell settings put system font_scale 1.0
+            adb shell am force-stop "$APP_ID"
+            adb shell am start -W -n "$APP_ID/$APP_ACTIVITY" > "$OUT/relaunch.txt"
+            sleep 2
+            adb shell dumpsys meminfo "$APP_ID" > "$OUT/meminfo.txt"
+            adb shell dumpsys gfxinfo "$APP_ID" > "$OUT/gfxinfo.txt" || true
+            adb shell dumpsys activity lastanr > "$OUT/lastanr.txt" || true
+            adb shell dumpsys batterystats "$APP_ID" > "$OUT/batterystats.txt" || true
+            adb logcat -d > "$OUT/logcat.txt"
+            adb logcat -b crash -d > "$OUT/crash.txt"
+            ! grep -E 'FATAL EXCEPTION|AndroidRuntime.*FATAL|ANR in .*libreremote' "$OUT/logcat.txt"
+            ! grep -F "$APP_ID" "$OUT/crash.txt"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Libre-Remote-RC5.4-QA-api-${{ matrix.api }}
+          path: android-qa/**
+          retention-days: 14
