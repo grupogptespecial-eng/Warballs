@@ -38,6 +38,7 @@ jobs:
           test -f libre-remote-universal/HARDENING.md
           test -f libre-remote-universal/SECURITY-GATES.md
           grep -q 'applicationId = "io.github.grupogptespecialeng.libreremote"' libre-remote-universal/composeApp/build.gradle.kts
+          grep -q 'packageVersion = "2.1.3"' libre-remote-universal/composeApp/build.gradle.kts
           grep -q 'TargetFormat.Pkg' libre-remote-universal/composeApp/build.gradle.kts
           grep -q 'TargetFormat.Exe' libre-remote-universal/composeApp/build.gradle.kts
           grep -q 'TargetFormat.Rpm' libre-remote-universal/composeApp/build.gradle.kts
@@ -78,6 +79,13 @@ jobs:
         run: |
           set -euo pipefail
           gradle --no-daemon --stacktrace :composeApp:desktopTest :composeApp:createDistributable :composeApp:packageMsi :composeApp:packageExe
+      - name: Assert Windows installers
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem -Path 'libre-remote-universal/composeApp/build/compose/binaries/main/msi' -Filter '*.msi' -File -Recurse -ErrorAction SilentlyContinue
+          $installerExe = Get-ChildItem -Path 'libre-remote-universal/composeApp/build/compose/binaries/main/exe' -Filter '*.exe' -File -Recurse -ErrorAction SilentlyContinue
+          if (-not $msi) { throw 'MSI package was not produced' }
+          if (-not $installerExe) { throw 'EXE installer was not produced' }
       - name: Smoke final Windows executable
         shell: pwsh
         run: |
@@ -87,12 +95,16 @@ jobs:
           Start-Sleep -Seconds 8
           if ($p.HasExited -and $p.ExitCode -ne 0) { throw "Libre Remote exited with code $($p.ExitCode)" }
           if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
-      - name: Hash Windows packages
+      - name: Hash Windows installers
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          Get-ChildItem -Path 'libre-remote-universal/composeApp/build/compose/binaries/main' -Include '*.msi','*.exe' -Recurse |
-            Get-FileHash -Algorithm SHA256 |
+          $packages = @(
+            Get-ChildItem -Path 'libre-remote-universal/composeApp/build/compose/binaries/main/msi' -Filter '*.msi' -File -Recurse
+            Get-ChildItem -Path 'libre-remote-universal/composeApp/build/compose/binaries/main/exe' -Filter '*.exe' -File -Recurse
+          )
+          if ($packages.Count -lt 2) { throw 'Expected both MSI and EXE installer artifacts' }
+          $packages | Get-FileHash -Algorithm SHA256 |
             ForEach-Object { "$($_.Hash.ToLower())  $($_.Path)" } |
             Set-Content -Path dist/SHA256SUMS-Windows.txt
       - uses: actions/upload-artifact@v4
@@ -129,6 +141,11 @@ jobs:
         run: |
           set -euo pipefail
           gradle --no-daemon --stacktrace :composeApp:desktopTest :composeApp:createDistributable :composeApp:packageDeb :composeApp:packageRpm
+      - name: Assert Linux packages
+        run: |
+          set -euo pipefail
+          find libre-remote-universal/composeApp/build/compose/binaries/main/deb -type f -name '*.deb' -print -quit | grep -q .
+          find libre-remote-universal/composeApp/build/compose/binaries/main/rpm -type f -name '*.rpm' -print -quit | grep -q .
       - name: Smoke final Linux executable
         run: |
           set -euo pipefail
@@ -143,8 +160,10 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          find libre-remote-universal/composeApp/build/compose/binaries/main -type f \( -name '*.deb' -o -name '*.rpm' \) -print0 | sort -z | xargs -0 sha256sum > dist/SHA256SUMS-Linux.txt
-          test -s dist/SHA256SUMS-Linux.txt
+          find libre-remote-universal/composeApp/build/compose/binaries/main/deb -type f -name '*.deb' -print0 | sort -z | xargs -0 sha256sum > dist/SHA256SUMS-Linux.txt
+          find libre-remote-universal/composeApp/build/compose/binaries/main/rpm -type f -name '*.rpm' -print0 | sort -z | xargs -0 sha256sum >> dist/SHA256SUMS-Linux.txt
+          grep -q '\.deb' dist/SHA256SUMS-Linux.txt
+          grep -q '\.rpm' dist/SHA256SUMS-Linux.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -178,6 +197,11 @@ jobs:
         run: |
           set -euo pipefail
           gradle --no-daemon --stacktrace :composeApp:desktopTest :composeApp:createDistributable :composeApp:packageDmg :composeApp:packagePkg
+      - name: Assert macOS packages
+        run: |
+          set -euo pipefail
+          find libre-remote-universal/composeApp/build/compose/binaries/main/dmg -type f -name '*.dmg' -print -quit | grep -q .
+          find libre-remote-universal/composeApp/build/compose/binaries/main/pkg -type f -name '*.pkg' -print -quit | grep -q .
       - name: Smoke final macOS app bundle
         run: |
           set -euo pipefail
@@ -191,8 +215,10 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          find libre-remote-universal/composeApp/build/compose/binaries/main -type f \( -name '*.dmg' -o -name '*.pkg' \) -print0 | sort -z | xargs -0 shasum -a 256 > dist/SHA256SUMS-macOS.txt
-          test -s dist/SHA256SUMS-macOS.txt
+          find libre-remote-universal/composeApp/build/compose/binaries/main/dmg -type f -name '*.dmg' -print0 | sort -z | xargs -0 shasum -a 256 > dist/SHA256SUMS-macOS.txt
+          find libre-remote-universal/composeApp/build/compose/binaries/main/pkg -type f -name '*.pkg' -print0 | sort -z | xargs -0 shasum -a 256 >> dist/SHA256SUMS-macOS.txt
+          grep -q '\.dmg' dist/SHA256SUMS-macOS.txt
+          grep -q '\.pkg' dist/SHA256SUMS-macOS.txt
           uname -m > dist/ARCHITECTURE.txt
       - uses: actions/upload-artifact@v4
         if: always()
@@ -258,7 +284,7 @@ jobs:
           brew install xcodegen
           cd libre-remote-universal/iosApp
           xcodegen generate
-          rm -rf build/DerivedData
+          rm -rf build/DerivedData build/DerivedDataDevice
           xcodebuild -project LibreRemoteIOS.xcodeproj -scheme LibreRemoteIOS \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
             -configuration Debug -derivedDataPath build/DerivedData \
