@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(sys.argv[1] if len(sys.argv) > 1 else "libre-remote-universal")
+CANONICAL_APP_ID = "io.github.grupogptespecialeng.libreremote"
 
 
 def fail(message: str) -> None:
@@ -24,41 +25,41 @@ def write_if_changed(path: Path, before: str, after: str) -> None:
         print(f"updated {path}")
 
 
-# 1. Preserve Android application identity across RC upgrades.
+# Preserve the pre-universal Libre Remote Android identity. The universal RC is an
+# upgrade of the same application, not a second installable product.
 gradle = ROOT / "composeApp" / "build.gradle.kts"
-text = read(gradle)
-expected_id = 'io.github.grupogptespecialeng.libreremote'
-text2, count = re.subn(
+before = read(gradle)
+after, count = re.subn(
     r'applicationId\s*=\s*"io\.github\.grupogptespecialeng\.libreremote(?:\.universal)?"',
-    f'applicationId = "{expected_id}"',
-    text,
+    f'applicationId = "{CANONICAL_APP_ID}"',
+    before,
     count=1,
 )
 if count != 1:
     fail("could not normalize Android applicationId")
-write_if_changed(gradle, text, text2)
+write_if_changed(gradle, before, after)
 
-# 2. LG: never let a previously saved cleartext endpoint outrank WSS.
+# LG endpoint hardening. A previously saved cleartext endpoint is treated as a
+# fallback hint only; WSS must get the first opportunity on every connection.
 lg = ROOT / "composeApp" / "src" / "commonMain" / "kotlin" / "io" / "github" / "grupogptespecialeng" / "libreremote" / "LgWebOsRemote.kt"
-text = read(lg)
+before = read(lg)
+after = before
 
-# Restrict a saved preferred endpoint to WSS. If a legacy ws:// endpoint was saved,
-# the connection will probe secure WSS first and use WS only as a fresh fallback.
 preferred_re = re.compile(r'^(?P<i>\s*)val preferred = (?P<rhs>[^\n]+)$', re.MULTILINE)
-match = preferred_re.search(text)
+match = preferred_re.search(after)
 if not match:
-    fail("LG preferred endpoint declaration not found")
-rhs = match.group("rhs")
-if "startsWith(\"wss://\")" not in rhs:
+    # Idempotent case: the transform may already have introduced savedEndpoint.
+    if 'savedEndpoint?.takeIf { it.startsWith("wss://") }' not in after:
+        fail("LG preferred endpoint declaration not found")
+else:
+    rhs = match.group("rhs")
     replacement = (
         f'{match.group("i")}val savedEndpoint = {rhs}\n'
         f'{match.group("i")}val preferred = savedEndpoint?.takeIf {{ it.startsWith("wss://") }}'
     )
-    text = text[: match.start()] + replacement + text[match.end() :]
+    after = after[: match.start()] + replacement + after[match.end() :]
 
-# Secure endpoint must be attempted before cleartext fallback. Swap complete list lines
-# rather than changing protocols/ports.
-lines = text.splitlines(keepends=True)
+lines = after.splitlines(keepends=True)
 ws_index = next((i for i, line in enumerate(lines) if "ws://" in line and ":3000" in line and "wss://" not in line), None)
 wss_index = next((i for i, line in enumerate(lines) if "wss://" in line and ":3001" in line), None)
 if ws_index is None or wss_index is None:
@@ -69,28 +70,27 @@ if ws_index < wss_index:
     ws_line = lines.pop(ws_index)
     wss_index -= 1
     lines.insert(wss_index + 1, ws_line)
-    text = "".join(lines)
+    after = "".join(lines)
 
-# Verify security invariants after the transformation.
-ws_pos = text.find("ws://", text.find("val preferred"))
-wss_pos = text.find("wss://", text.find("val preferred"))
-if wss_pos < 0 or ws_pos < 0 or wss_pos > ws_pos:
-    fail("WSS is not preferred over WS after hardening")
-if 'savedEndpoint?.takeIf { it.startsWith("wss://") }' not in text:
+secure_filter = 'savedEndpoint?.takeIf { it.startsWith("wss://") }'
+if secure_filter not in after:
     fail("legacy cleartext preferred endpoint can still outrank WSS")
-write_if_changed(lg, read(lg), text)
+search_from = after.find(secure_filter) + len(secure_filter)
+ws_pos = after.find("ws://", search_from)
+wss_pos = after.find("wss://", search_from)
+if wss_pos < 0 or ws_pos < 0 or wss_pos > ws_pos:
+    fail("WSS is not listed before WS fallback")
+write_if_changed(lg, before, after)
 
-# 3. Add a machine-readable marker consumed by CI/release tooling.
 marker = ROOT / "HARDENING.md"
 marker.write_text(
-    """# Libre Remote RC5.4 hardening\n\n"
+    "# Libre Remote RC hardening\n\n"
     "This source tree has been normalized by `scripts/harden_libre_remote_rc5_4.py`.\n\n"
     "Required invariants:\n"
-    "- Android applicationId: `io.github.grupogptespecialeng.libreremote`\n"
+    f"- Android applicationId: `{CANONICAL_APP_ID}`\n"
     "- LG WSS (`:3001`) is attempted before cleartext WS (`:3000`)\n"
-    "- a legacy saved `ws://` endpoint is not treated as the preferred endpoint\n"
-    "- release validation is performed from the materialized source tree\n"
-    """,
+    "- a legacy saved `ws://` endpoint is not treated as preferred over WSS\n"
+    "- release validation runs from the normalized source tree\n",
     encoding="utf-8",
 )
-print("Libre Remote RC5.4 hardening invariants applied")
+print("Libre Remote RC hardening invariants applied")
