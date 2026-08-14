@@ -11,6 +11,7 @@ ROOT = Path(sys.argv[1] if len(sys.argv) > 1 else "libre-remote-universal")
 CANONICAL_APP_ID = "io.github.grupogptespecialeng.libreremote"
 IOS_BUNDLE_ID = CANONICAL_APP_ID
 IOS_FRAMEWORK_BUNDLE_ID = f"{CANONICAL_APP_ID}.framework"
+DESKTOP_PACKAGE_VERSION = "2.1.3"
 
 
 def fail(message: str) -> None:
@@ -43,26 +44,9 @@ def upsert_yaml_setting(text: str, key: str, value: str, anchor: str = "PRODUCT_
     return text[: anchor_match.start()] + insertion + text[anchor_match.start() :]
 
 
-def write_plist(path: Path, values: dict[str, object]) -> None:
-    before = path.read_bytes() if path.exists() else b""
-    current: dict[str, object] = {}
-    if before:
-        try:
-            current = plistlib.loads(before)
-        except Exception as exc:  # pragma: no cover - CI reports malformed Apple metadata
-            fail(f"invalid plist {path}: {exc}")
-    current.update(values)
-    after = plistlib.dumps(current, fmt=plistlib.FMT_XML, sort_keys=False)
-    if before != after:
-        path.write_bytes(after)
-        print(f"updated {path}")
-
-
 # ---------------------------------------------------------------------------
 # Android identity continuity
 # ---------------------------------------------------------------------------
-# Preserve the pre-universal Libre Remote Android identity. The universal RC is
-# an upgrade of the same application, not a second installable product.
 gradle = ROOT / "composeApp" / "build.gradle.kts"
 before = read(gradle)
 after, count = re.subn(
@@ -77,8 +61,6 @@ if count != 1:
 # ---------------------------------------------------------------------------
 # Kotlin/Native framework identity
 # ---------------------------------------------------------------------------
-# Kotlin/Native otherwise emits a warning and derives a bundle identifier from
-# the framework name. Give every Apple framework an explicit stable ID.
 if f'binaryOption("bundleId", "{IOS_FRAMEWORK_BUNDLE_ID}")' not in after:
     lines = after.splitlines(keepends=True)
     transformed: list[str] = []
@@ -96,9 +78,6 @@ if f'binaryOption("bundleId", "{IOS_FRAMEWORK_BUNDLE_ID}")' not in after:
 # ---------------------------------------------------------------------------
 # Desktop native distribution hardening
 # ---------------------------------------------------------------------------
-# createDistributable is useful for smoke tests but is not an installer. Make
-# the project expose native package formats on each host and include Java Access
-# Bridge support in the reduced runtime used by Windows distributions.
 if "nativeDistributions {" not in after:
     fail("Compose Desktop nativeDistributions block not found")
 
@@ -139,13 +118,26 @@ if 'modules("jdk.accessibility")' not in after:
     pos = native_match.end()
     after = after[:pos] + f'\n{indent}modules("jdk.accessibility")' + after[pos:]
 
+# Native packagers are stricter than application versionName conventions. Keep
+# the installer version stable and numeric while versionName retains the RC label.
+package_version_re = re.compile(r'^(?P<i>\s*)packageVersion\s*=\s*"[^"]*"\s*$', re.MULTILINE)
+package_version_match = package_version_re.search(after)
+if package_version_match:
+    replacement = f'{package_version_match.group("i")}packageVersion = "{DESKTOP_PACKAGE_VERSION}"'
+    after = after[: package_version_match.start()] + replacement + after[package_version_match.end() :]
+else:
+    native_match = re.search(r"^(?P<i>\s*)nativeDistributions\s*\{\s*$", after, re.MULTILINE)
+    if not native_match:
+        fail("could not configure desktop packageVersion")
+    indent = native_match.group("i") + "    "
+    pos = native_match.end()
+    after = after[:pos] + f'\n{indent}packageVersion = "{DESKTOP_PACKAGE_VERSION}"' + after[pos:]
+
 write_if_changed(gradle, before, after)
 
 # ---------------------------------------------------------------------------
 # LG transport hardening
 # ---------------------------------------------------------------------------
-# A previously saved cleartext endpoint is treated as a fallback hint only;
-# WSS must get the first opportunity on every connection.
 lg = ROOT / "composeApp" / "src" / "commonMain" / "kotlin" / "io" / "github" / "grupogptespecialeng" / "libreremote" / "LgWebOsRemote.kt"
 before = read(lg)
 after = before
@@ -153,7 +145,6 @@ after = before
 preferred_re = re.compile(r'^(?P<i>\s*)val preferred = (?P<rhs>[^\n]+)$', re.MULTILINE)
 match = preferred_re.search(after)
 if not match:
-    # Idempotent case: the transform may already have introduced savedEndpoint.
     if 'savedEndpoint?.takeIf { it.startsWith("wss://") }' not in after:
         fail("LG preferred endpoint declaration not found")
 else:
@@ -237,11 +228,6 @@ write_if_changed(project_yml, before_project, after_project)
 # ---------------------------------------------------------------------------
 # Desktop secret-storage release gate
 # ---------------------------------------------------------------------------
-# The current historical desktop implementation used java.util.prefs. Do not
-# silently call that equivalent to Android Keystore / Apple Keychain. We record
-# an explicit release blocker while the source is still transported as patches;
-# once canonicalization exposes the complete tree this gate can be upgraded to
-# a platform-native SecureStore implementation and a strict test.
 kt_files = list((ROOT / "composeApp" / "src").rglob("*.kt"))
 prefs_hits = [p for p in kt_files if "java.util.prefs.Preferences" in p.read_text(encoding="utf-8", errors="ignore")]
 secret_hits = [
@@ -274,6 +260,7 @@ marker.write_text(
     f"- Android applicationId: `{CANONICAL_APP_ID}`\n"
     f"- iOS application bundle ID: `{IOS_BUNDLE_ID}`\n"
     f"- Kotlin/Native framework bundle ID: `{IOS_FRAMEWORK_BUNDLE_ID}`\n"
+    f"- desktop package version: `{DESKTOP_PACKAGE_VERSION}`\n"
     "- iOS declares Local Network, microphone and speech-recognition purpose strings\n"
     "- iOS carries the multicast entitlement required by SSDP/UDP discovery; Apple entitlement approval is still an external release prerequisite\n"
     "- Apple release signing is not disabled in project.yml; CI disables signing only on explicit build commands\n"
