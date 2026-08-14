@@ -1,0 +1,49 @@
+name: Canonicalize Libre Remote RC5.4 Source
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  canonicalize:
+    if: github.ref_name == 'fix/libre-remote-rc5.4-hardening'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Materialize and harden source
+        run: |
+          set -euo pipefail
+          rm -rf libre-remote-universal
+          bash .rc5-universal/materialize-rc5.4.sh libre-remote-universal
+          python3 scripts/harden_libre_remote_rc5_4.py libre-remote-universal
+          test -f libre-remote-universal/composeApp/build.gradle.kts
+          test -f libre-remote-universal/HARDENING.md
+      - name: Remove transport-only legacy material
+        run: |
+          set -euo pipefail
+          git rm -r .rc5-universal
+          for path in .universal-overlay .universal-overlay-v2 .universal-patch .universal-patch-v2 .universal-payload; do
+            if [ -e "$path" ]; then git rm -r "$path"; fi
+          done
+          rm -f libre-remote-sideload.jks
+      - name: Verify canonical tree is self-contained
+        run: |
+          set -euo pipefail
+          test -f libre-remote-universal/settings.gradle.kts
+          test -f libre-remote-universal/composeApp/build.gradle.kts
+          ! find . -path './.git' -prune -o -name '*.b64' -print | grep -q .
+          ! find . -path './.git' -prune -o -name '*.jks' -print | grep -q .
+      - name: Commit canonical source
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add libre-remote-universal scripts .gitignore LIBRE_REMOTE_RELEASE_MANIFEST.md
+          git diff --cached --stat
+          git commit -m 'build: materialize Libre Remote RC5.4 canonical source'
+          git push origin HEAD:fix/libre-remote-rc5.4-hardening
