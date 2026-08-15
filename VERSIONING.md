@@ -28,4 +28,4 @@ Use `1.0.0` as the public product/repository tag while retaining monotonic nativ
 
 The hardening branch does **not** perform the semantic reset. It prepares Stable/1.0 gates and keeps the current RC identity until runtime, upgrade and distribution evidence is available. This prevents a version label from creating a broken upgrade path.
 
-The final version bump should be a small dedicated release commit after the target gate passes, accompanied by release notes and a version-field audit for Android, Apple, Windows and macOS.
+The final version bump is a dedicated release commit only after the selected promotion gate is traceable PASS. That commit must include a version-field audit for Android, Apple, Windows and macOS, update `CHANGELOG.md`/store metadata, and record the resulting `version_freeze` evidence against the exact source commit in `release/evidence.json`.
