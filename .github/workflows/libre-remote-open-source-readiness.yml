@@ -18,12 +18,15 @@ on:
       - 'VERSIONING.md'
       - 'public-repo/**'
       - 'release/**'
+      - 'specs/002-public-stable-1-0/**'
       - 'scripts/audit_public_release.py'
       - 'scripts/audit_git_history.py'
       - 'scripts/audit_third_party_licenses.py'
+      - 'scripts/generate_cyclonedx_sbom.py'
       - 'scripts/export_libre_remote_public.py'
       - 'scripts/check_release_evidence.py'
       - 'scripts/convert_workflows_to_canonical_source.py'
+      - 'scripts/validate_libre_remote_public_spec.py'
       - '.github/workflows/libre-remote-open-source-readiness.yml'
       - 'libre-remote-universal/**'
       - '.rc5-universal/**'
@@ -52,9 +55,16 @@ jobs:
             scripts/audit_public_release.py \
             scripts/audit_git_history.py \
             scripts/audit_third_party_licenses.py \
+            scripts/generate_cyclonedx_sbom.py \
             scripts/export_libre_remote_public.py \
             scripts/check_release_evidence.py \
-            scripts/convert_workflows_to_canonical_source.py
+            scripts/convert_workflows_to_canonical_source.py \
+            scripts/validate_libre_remote_specs.py \
+            scripts/validate_libre_remote_public_spec.py
+      - name: Validate both canonical specifications
+        run: |
+          python3 scripts/validate_libre_remote_specs.py
+          python3 scripts/validate_libre_remote_public_spec.py
       - name: Prepare canonical-equivalent RC5.4 source
         run: |
           set -euo pipefail
@@ -86,6 +96,14 @@ jobs:
             --dependencies gradle-dependencies.txt \
             --root libre-remote-universal \
             --output THIRD_PARTY_NOTICES.generated.md || true
+      - name: Generate candidate SBOM
+        run: |
+          python3 scripts/generate_cyclonedx_sbom.py \
+            --dependencies gradle-dependencies.txt \
+            --output sbom.cdx.json \
+            --project-version '2.1.3-rc5.4-customization' \
+            --source-commit '${{ github.sha }}'
+          sha256sum sbom.cdx.json > sbom.cdx.json.sha256
       - name: Document why the current private Git history must not be published
         run: python3 scripts/audit_git_history.py --repo . --report private-history-audit.json || true
       - name: Export clean public repository snapshot
@@ -96,6 +114,10 @@ jobs:
             --output dist/Libre-Remote \
             --source-commit '${{ github.sha }}' \
             --allow-pending-third-party
+      - name: Validate exported public specs
+        run: |
+          python3 dist/Libre-Remote/scripts/validate_libre_remote_specs.py
+          python3 dist/Libre-Remote/scripts/validate_libre_remote_public_spec.py
       - name: Verify no legacy transport in export
         run: |
           set -euo pipefail
@@ -105,6 +127,7 @@ jobs:
           fi
           test ! -d dist/Libre-Remote/.rc5-universal
           test ! -d dist/Libre-Remote/.universal-payload
+          test ! -d dist/Libre-Remote/release-fixtures
       - name: Archive source snapshot
         run: |
           cd dist
@@ -122,4 +145,6 @@ jobs:
             runtime-security-audit.json
             gradle-dependencies.txt
             THIRD_PARTY_NOTICES.generated.md
+            sbom.cdx.json
+            sbom.cdx.json.sha256
           retention-days: 14
