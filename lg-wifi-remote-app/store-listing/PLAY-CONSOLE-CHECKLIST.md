@@ -1,52 +1,51 @@
-# Checklist final do Google Play Console
+# Checklist final do Google Play Console — Libre Remote 2.1.3 RC5.4
 
-Versão preparada: Libre Remote 1.0.0 RC1, applicationId `io.github.grupogptespecialeng.libreremote`.
-Build de validação: testes unitários, lint, APK assinado e Android App Bundle.
-O código-fonte entregue deve compilar sem correções externas.
+Versão candidata: `2.1.3-rc5.4-customization` (`versionCode 29`).
+ApplicationId canônico: `io.github.grupogptespecialeng.libreremote`.
 
-## Identidade
+## Identidade e assinatura
 
-- [ ] Criar/confirmar a conta do desenvolvedor.
-- [ ] Confirmar o nome público do desenvolvedor.
-- [ ] Informar e-mail de suporte público.
-- [x] Confirmar o applicationId: `io.github.grupogptespecialeng.libreremote`.
-- [ ] Guardar `PRIVATE-Libre-Remote-upload-key.zip` em dois locais seguros.
+- [x] applicationId definido e coberto por gate de continuidade.
+- [x] keystore de sideload removido do Git e padrões de chave adicionados ao `.gitignore`.
+- [ ] Gerar a chave permanente de upload fora do repositório e manter backup seguro.
 - [ ] Ativar Play App Signing no primeiro upload.
+- [ ] Confirmar nome público e e-mail de suporte do desenvolvedor.
+
+## Build e QA automatizado
+
+- [x] Workflow de integridade/materialização RC5.4.
+- [x] Gate de WSS LG preferencial sobre WS.
+- [x] Matriz Android API 29 / 33 / 35 e perfis Pixel 2 / Pixel 4 / Pixel 6 configurada.
+- [x] Font scale 1.0 / 1.5 / 2.0 e landscape configurados.
+- [x] Auditor de viewport e touch targets configurado.
+- [x] Evidências de memória, gfx/jank, ANR, crash e batterystats configuradas.
+- [x] Upgrade RC5.3 -> RC5.4 com sentinela de persistência configurado.
+- [ ] Obter execução verde dos workflows após corrigir Billing & plans / spending limit do GitHub Actions.
+- [ ] Gerar e verificar APK/AAB de release assinado.
+
+## Testes físicos obrigatórios
+
+- [ ] Instalar o candidato em pelo menos três celulares físicos.
+- [ ] Testar pelo menos cinco gerações/modelos LG webOS antes de ampliar `StableFull`.
+- [ ] Testar Samsung em múltiplas gerações antes de remover o rótulo experimental.
+- [ ] Testar Wi-Fi, TV em Ethernet e isolamento de clientes/rede de convidados.
+- [ ] Testar descoberta, pareamento aceito, negado e expirado.
+- [ ] Testar TV desligada/dormindo, retorno, reconnect e mudança de IP/DHCP.
+- [ ] Confirmar WSS, fallback WS, mudança de certificado e re-pareamento.
+- [ ] Validar navegação, volume, canais, pointer, teclado, apps, inputs, mídia e Wake-on-LAN conforme a matriz de cada modelo.
 
 ## Página da loja
 
-- [x] Nome, descrição curta e completa em português e inglês.
-- [x] Notas da versão.
-- [x] Ícone adaptativo no aplicativo.
-- [ ] Enviar ícone PNG de 512 × 512.
-- [ ] Enviar feature graphic de 1024 × 500.
-- [ ] Enviar pelo menos duas capturas reais do aplicativo.
-- [ ] Publicar a política de privacidade em URL HTTPS pública.
-- [ ] Informar URL do repositório open source e suporte.
-
-## Conteúdo e políticas
-
-- [x] Sem anúncios e sem compras no app.
-- [x] Respostas de Data Safety preparadas em `DATA-SAFETY.md`.
-- [ ] Preencher classificação de conteúdo no Console.
-- [ ] Declarar público geral e que o app não é dirigido especificamente a crianças.
-- [ ] Preencher acesso ao app: nenhuma credencial necessária.
-- [ ] Confirmar declaração de uso de permissões quando solicitada pelo Console.
-
-## Testes
-
-- [x] Testes unitários e lint incluídos na CI.
-- [x] APK e AAB de release gerados automaticamente.
-- [ ] Instalar o APK de release em pelo menos três celulares.
-- [ ] Testar em pelo menos cinco gerações/modelos de LG webOS.
-- [ ] Testar rede Wi-Fi, TV por Ethernet e roteador com isolamento.
-- [ ] Testar pareamento aceito, negado, TV desligada e mudança de IP.
-- [ ] Realizar teste interno no Play Console.
-- [ ] Caso a conta pessoal esteja sujeita à regra, cumprir o teste fechado exigido pelo Console.
+- [x] Data Safety preparado; revisar novamente após qualquer dependência nova.
+- [ ] Publicar política de privacidade em HTTPS.
+- [ ] Enviar ícone 512 x 512 e feature graphic 1024 x 500.
+- [ ] Capturar screenshots reais do candidato validado; não usar apenas imagens conceituais.
+- [ ] Preencher classificação de conteúdo, público e acesso ao app.
+- [ ] Informar URL de suporte e do repositório Libre Remote dedicado quando criado.
 
 ## Publicação
 
-- [ ] Subir o arquivo `.aab`.
-- [ ] Verificar avisos automáticos de pré-lançamento.
-- [ ] Corrigir bloqueadores do relatório de dispositivos.
-- [ ] Promover para produção apenas após teste físico e revisão da política LG.
+- [ ] Executar teste interno no Play Console.
+- [ ] Cumprir eventual exigência de teste fechado da conta.
+- [ ] Revisar relatório de pré-lançamento e corrigir bloqueadores.
+- [ ] Publicar somente depois de CI verde, matriz física registrada e revisão final de políticas de fabricantes.

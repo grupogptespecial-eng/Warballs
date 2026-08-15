@@ -1,0 +1,15 @@
+# Libre Remote signing material
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+
+# Local Android/Gradle artifacts
+.gradle/
+**/build/
+local.properties
+
+# IDE / OS
+.idea/
+.DS_Store

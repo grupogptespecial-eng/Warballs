@@ -1,0 +1,59 @@
+name: TV compatibility report
+description: Add evidence for a real TV/device and host combination
+title: "[Compatibility] "
+labels: [compatibility]
+body:
+  - type: input
+    id: host
+    attributes:
+      label: Host device / OS
+      placeholder: e.g. Pixel 8 / Android 16, MacBook Air M3 / macOS 15
+    validations:
+      required: true
+  - type: input
+    id: tv
+    attributes:
+      label: TV manufacturer and exact model
+    validations:
+      required: true
+  - type: input
+    id: year
+    attributes:
+      label: Approximate model year
+  - type: input
+    id: firmware
+    attributes:
+      label: Firmware / webOS / Tizen version
+  - type: dropdown
+    id: network
+    attributes:
+      label: TV network connection
+      options: [Wi-Fi, Ethernet, Other]
+    validations:
+      required: true
+  - type: checkboxes
+    id: results
+    attributes:
+      label: Tested behavior
+      options:
+        - label: Discovery works
+        - label: Pairing works
+        - label: Reconnect works
+        - label: Navigation works
+        - label: Volume works
+        - label: Channel controls work
+        - label: Media controls work
+        - label: Apps/inputs work where supported
+        - label: Sleep/off/reconnect tested
+        - label: IP/DHCP change tested
+  - type: textarea
+    id: failures
+    attributes:
+      label: Failures / unsupported behavior
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: I removed pairing credentials, private IP addresses, certificate material and personal data.
+          required: true

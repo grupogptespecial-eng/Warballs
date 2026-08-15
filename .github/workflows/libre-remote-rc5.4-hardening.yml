@@ -1,0 +1,176 @@
+name: Libre Remote RC5.4 Hardening
+
+on:
+  push:
+    branches: [fix/libre-remote-rc5.4-hardening]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  APP_ID: io.github.grupogptespecialeng.libreremote
+  APP_ACTIVITY: io.github.grupogptespecialeng.libreremote.MainActivity
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize and harden RC5.4
+        run: |
+          set -euo pipefail
+          bash .rc5-universal/materialize-rc5.4.sh
+          python3 scripts/harden_libre_remote_rc5_4.py libre-remote-universal
+      - name: Verify hardening invariants
+        run: |
+          set -euo pipefail
+          SRC=libre-remote-universal
+          grep -q 'versionCode = 29' "$SRC/composeApp/build.gradle.kts"
+          grep -q 'versionName = "2.1.3-rc5.4-customization"' "$SRC/composeApp/build.gradle.kts"
+          grep -q 'applicationId = "io.github.grupogptespecialeng.libreremote"' "$SRC/composeApp/build.gradle.kts"
+          grep -q 'savedEndpoint?.takeIf { it.startsWith("wss://") }' "$SRC/composeApp/src/commonMain/kotlin/io/github/grupogptespecialeng/libreremote/LgWebOsRemote.kt"
+          test -f "$SRC/HARDENING.md"
+      - name: Verify hardening idempotence
+        run: |
+          set -euo pipefail
+          before="$(find libre-remote-universal -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum)"
+          python3 scripts/harden_libre_remote_rc5_4.py libre-remote-universal
+          after="$(find libre-remote-universal -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum)"
+          test "$before" = "$after"
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0' 'platform-tools'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Build and test
+        working-directory: libre-remote-universal
+        run: |
+          set -euo pipefail
+          gradle --no-daemon :composeApp:tasks --all > ../gradle-tasks.txt
+          gradle --no-daemon --stacktrace :composeApp:desktopTest :composeApp:assembleDebug
+          if grep -q 'assembleRelease' ../gradle-tasks.txt; then gradle --no-daemon --stacktrace :composeApp:assembleRelease; fi
+          if grep -q 'testDebugUnitTest' ../gradle-tasks.txt; then gradle --no-daemon --stacktrace :composeApp:testDebugUnitTest; fi
+          if grep -Eq '(^|[[:space:]])lint([[:space:]]|$)' ../gradle-tasks.txt; then gradle --no-daemon --stacktrace :composeApp:lint; fi
+      - name: Package debug APK
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          APK="$(find libre-remote-universal/composeApp/build/outputs/apk/debug -name '*.apk' -type f | head -1)"
+          test -n "$APK"
+          cp "$APK" dist/Libre-Remote-2.1.3-RC5.4-debug.apk
+          sha256sum dist/*.apk > dist/SHA256SUMS.txt
+          printf 'versionName=2.1.3-rc5.4-customization\nversionCode=29\napplicationId=%s\ncommit=%s\n' "$APP_ID" "$GITHUB_SHA" > dist/BUILD-MANIFEST.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Libre-Remote-2.1.3-RC5.4-Hardened-Android
+          path: |
+            dist/**
+            gradle-tasks.txt
+            libre-remote-universal/composeApp/build/reports/**
+          retention-days: 14
+
+  emulator:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - api: 29
+            profile: pixel_2
+          - api: 33
+            profile: pixel_4
+          - api: 35
+            profile: pixel_6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Libre-Remote-2.1.3-RC5.4-Hardened-Android
+          path: android-artifact
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm || true
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          arch: x86_64
+          profile: ${{ matrix.profile }}
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            set -euo pipefail
+            OUT="android-qa/${{ matrix.profile }}-api-${{ matrix.api }}"
+            mkdir -p "$OUT"
+            APK="$(find android-artifact -name '*.apk' -type f | head -1)"
+            adb install -r "$APK"
+            adb logcat -c
+            adb shell am start -W -n "$APP_ID/$APP_ACTIVITY" | tee "$OUT/launch.txt"
+            sleep 3
+            test -n "$(adb shell pidof "$APP_ID" | tr -d '\r')"
+            adb shell dumpsys package "$APP_ID" > "$OUT/package.txt"
+            grep -q 'versionName=2.1.3-rc5.4-customization' "$OUT/package.txt"
+
+            audit_ui() {
+              local xml="$1"
+              local report="$2"
+              local size density width height
+              size="$(adb shell wm size | tr -d '\r' | tail -1 | sed 's/.*: //')"
+              density="$(adb shell wm density | tr -d '\r' | tail -1 | sed 's/.*: //')"
+              width="${size%x*}"
+              height="${size#*x}"
+              python3 scripts/audit_android_ui.py "$xml" --width "$width" --height "$height" --density "$density" --report "$report"
+            }
+
+            for scale in 1.0 1.5 2.0; do
+              adb shell settings put system font_scale "$scale"
+              adb shell am force-stop "$APP_ID"
+              adb shell am start -W -n "$APP_ID/$APP_ACTIVITY" > "$OUT/font-${scale}-launch.txt"
+              sleep 2
+              test -n "$(adb shell pidof "$APP_ID" | tr -d '\r')"
+              adb exec-out uiautomator dump /dev/tty > "$OUT/font-${scale}.xml"
+              adb exec-out screencap -p > "$OUT/font-${scale}.png"
+              audit_ui "$OUT/font-${scale}.xml" "$OUT/font-${scale}-audit.txt"
+            done
+            adb shell settings put system font_scale 1.0
+
+            adb shell settings put system accelerometer_rotation 0 || true
+            adb shell settings put system user_rotation 1 || true
+            adb shell am force-stop "$APP_ID"
+            adb shell am start -W -n "$APP_ID/$APP_ACTIVITY" > "$OUT/landscape-launch.txt"
+            sleep 2
+            test -n "$(adb shell pidof "$APP_ID" | tr -d '\r')"
+            adb exec-out uiautomator dump /dev/tty > "$OUT/landscape.xml"
+            adb exec-out screencap -p > "$OUT/landscape.png"
+            audit_ui "$OUT/landscape.xml" "$OUT/landscape-audit.txt"
+            adb shell settings put system user_rotation 0 || true
+            adb shell settings put system accelerometer_rotation 1 || true
+
+            # Randomized interaction soak catches lifecycle, state and rendering crashes.
+            adb shell monkey -p "$APP_ID" --pct-syskeys 0 --throttle 30 200 > "$OUT/monkey.txt" 2>&1
+            test -n "$(adb shell pidof "$APP_ID" | tr -d '\r')"
+
+            adb shell dumpsys meminfo "$APP_ID" > "$OUT/meminfo.txt"
+            adb shell dumpsys gfxinfo "$APP_ID" > "$OUT/gfxinfo.txt" || true
+            adb shell dumpsys activity lastanr > "$OUT/lastanr.txt" || true
+            adb shell dumpsys batterystats "$APP_ID" > "$OUT/batterystats.txt" || true
+            adb logcat -d > "$OUT/logcat.txt"
+            adb logcat -b crash -d > "$OUT/crash.txt"
+            ! grep -E 'FATAL EXCEPTION|AndroidRuntime.*FATAL|ANR in .*libreremote' "$OUT/logcat.txt"
+            ! grep -F "$APP_ID" "$OUT/crash.txt"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Libre-Remote-RC5.4-QA-${{ matrix.profile }}-api-${{ matrix.api }}
+          path: android-qa/**
+          retention-days: 14

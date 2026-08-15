@@ -1,0 +1,177 @@
+name: Publish Libre Remote Public Repository
+
+on:
+  workflow_dispatch:
+    inputs:
+      public_repo:
+        description: Target OWNER/REPO for the clean public repository
+        required: true
+        default: grupogptespecial-eng/Libre-Remote
+        type: string
+      level:
+        description: Evidence gate required before publication
+        required: true
+        default: stable
+        type: choice
+        options:
+          - stable
+          - 1.0
+      publish:
+        description: Actually create and make the repository public
+        required: true
+        default: false
+        type: boolean
+      confirmation:
+        description: Type PUBLISH_LIBRE_REMOTE_PUBLIC when publish=true
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  GH_TOKEN: ${{ secrets.LIBRE_REMOTE_PUBLIC_REPO_TOKEN }}
+  LIBRE_REMOTE_TEST_SECURE_STORE: '1'
+  LIBRE_REMOTE_STRICT_SECURE_STORE: '0'
+
+jobs:
+  prepare-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Gate publication intent
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ '${{ inputs.publish }}' = 'true' ]; then
+            test '${{ inputs.confirmation }}' = 'PUBLISH_LIBRE_REMOTE_PUBLIC'
+            test -n "$GH_TOKEN"
+          fi
+      - name: Validate release specifications
+        run: |
+          python3 scripts/validate_libre_remote_specs.py
+          python3 scripts/validate_libre_remote_public_spec.py
+      - name: Require release evidence level
+        run: |
+          python3 scripts/check_release_evidence.py \
+            --evidence release/evidence.json \
+            --level '${{ inputs.level }}' \
+            --report publication-release-gate.json
+      - name: Require frozen 1.0 metadata when publishing 1.0
+        if: inputs.level == '1.0'
+        run: grep -q 'STORE_METADATA_STATUS: COMPLETE' STORE_METADATA.md
+      - name: Prepare canonical source
+        run: |
+          set -euo pipefail
+          if [ -f libre-remote-universal/settings.gradle.kts ] && [ -f libre-remote-universal/composeApp/build.gradle.kts ]; then
+            echo 'Using committed canonical source.'
+          else
+            rm -rf libre-remote-universal
+            bash .rc5-universal/materialize-rc5.4.sh libre-remote-universal
+            python3 scripts/harden_libre_remote_rc5_4.py libre-remote-universal
+            python3 scripts/implement_libre_remote_runtime_hardening.py libre-remote-universal
+            python3 scripts/finalize_libre_remote_runtime_hardening.py libre-remote-universal
+            python3 scripts/enable_libre_remote_test_secure_store.py libre-remote-universal
+            python3 scripts/audit_libre_remote_runtime_hardening.py libre-remote-universal --strict --report runtime-security-audit.json
+          fi
+      - name: Export strict clean public snapshot
+        run: |
+          set -euo pipefail
+          python3 scripts/export_libre_remote_public.py \
+            --root . \
+            --source libre-remote-universal \
+            --output dist/Libre-Remote \
+            --source-commit '${{ github.sha }}'
+          CONFIG='dist/Libre-Remote/.github/ISSUE_TEMPLATE/config.yml'
+          if [ -f "$CONFIG" ]; then
+            sed -i "s#OWNER/REPOSITORY#${{ inputs.public_repo }}#g" "$CONFIG"
+          fi
+          python3 scripts/audit_public_release.py \
+            --root dist/Libre-Remote \
+            --strict \
+            --report dist/Libre-Remote/public-release-audit.json
+      - name: Initialize clean one-commit Git history
+        working-directory: dist/Libre-Remote
+        run: |
+          set -euo pipefail
+          rm -rf .git
+          git init -b main
+          git config user.name 'Libre Remote Release Bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add --all
+          git commit -m 'Initial public release of Libre Remote'
+          python3 scripts/audit_git_history.py --repo . --strict --report git-history-audit.json
+      - name: Dry-run archive
+        if: inputs.publish != true
+        run: |
+          cd dist
+          zip -qr Libre-Remote-Public-Repository.zip Libre-Remote
+          sha256sum Libre-Remote-Public-Repository.zip > Libre-Remote-Public-Repository.zip.sha256
+      - name: Ensure target repository does not already exist
+        if: inputs.publish == true
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh repo view '${{ inputs.public_repo }}' >/dev/null 2>&1; then
+            echo 'Target repository already exists; refusing to overwrite or merge histories.' >&2
+            exit 1
+          fi
+      - name: Create private target and push clean history
+        if: inputs.publish == true
+        working-directory: dist/Libre-Remote
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh repo create '${{ inputs.public_repo }}' \
+            --private \
+            --description 'Open-source local-first universal remote for TVs and media devices' \
+            --source=. \
+            --remote=origin \
+            --push
+      - name: Configure repository security before visibility change
+        if: inputs.publish == true
+        shell: bash
+        run: |
+          set -euo pipefail
+          API='X-GitHub-Api-Version: 2026-03-10'
+          gh api -X PUT -H "$API" "repos/${{ inputs.public_repo }}/vulnerability-alerts"
+          cat > /tmp/security.json <<'JSON'
+          {
+            "has_issues": true,
+            "has_wiki": false,
+            "security_and_analysis": {
+              "secret_scanning": {"status": "enabled"},
+              "secret_scanning_push_protection": {"status": "enabled"}
+            }
+          }
+          JSON
+          gh api -X PATCH -H "$API" "repos/${{ inputs.public_repo }}" --input /tmp/security.json
+      - name: Make target public and enable private vulnerability reporting
+        if: inputs.publish == true
+        shell: bash
+        run: |
+          set -euo pipefail
+          API='X-GitHub-Api-Version: 2026-03-10'
+          printf '{"visibility":"public"}\n' > /tmp/public.json
+          gh api -X PATCH -H "$API" "repos/${{ inputs.public_repo }}" --input /tmp/public.json >/dev/null
+          gh api -X PUT -H "$API" "repos/${{ inputs.public_repo }}/private-vulnerability-reporting"
+          gh repo view '${{ inputs.public_repo }}' --json nameWithOwner,visibility,defaultBranchRef,url
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Libre-Remote-Publication-Evidence
+          path: |
+            publication-release-gate.json
+            runtime-security-audit.json
+            dist/Libre-Remote/public-release-audit.json
+            dist/Libre-Remote/git-history-audit.json
+            dist/Libre-Remote-Public-Repository.zip
+            dist/Libre-Remote-Public-Repository.zip.sha256
+          retention-days: 14

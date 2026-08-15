@@ -1,0 +1,33 @@
+{
+  "schema": 2,
+  "release": "Libre Remote",
+  "source_lineage": "2.1.3-rc5.4-customization",
+  "target": "stable-candidate-then-1.0",
+  "gates": [
+    {"id": "canonical_source", "status": "BLOCKED", "required_for": ["stable", "1.0"], "evidence": "canonicalization workflow"},
+    {"id": "public_source_audit", "status": "IMPLEMENTED", "required_for": ["stable", "1.0"], "evidence": "strict sanitized-export public source audit"},
+    {"id": "clean_public_git_history", "status": "IMPLEMENTED", "required_for": ["stable", "1.0"], "evidence": "strict audit on freshly initialized sanitized one-commit history"},
+    {"id": "third_party_license_review", "status": "BLOCKED", "required_for": ["stable", "1.0"], "evidence": "THIRD_PARTY_AUDIT_STATUS: COMPLETE"},
+    {"id": "cyclonedx_sbom", "status": "IMPLEMENTED", "required_for": ["stable", "1.0"], "evidence": "sbom.cdx.json + SHA-256 tied to source commit/dependency graph"},
+    {"id": "rc5_spec_integrity", "status": "BLOCKED", "required_for": ["stable", "1.0"], "evidence": "scripts/validate_libre_remote_specs.py executed PASS"},
+    {"id": "public_spec_integrity", "status": "BLOCKED", "required_for": ["stable", "1.0"], "evidence": "scripts/validate_libre_remote_public_spec.py executed PASS"},
+    {"id": "runtime_security_audit", "status": "BLOCKED", "required_for": ["stable", "1.0"], "evidence": "strict runtime-security audit workflow"},
+    {"id": "android_build_runtime", "status": "BLOCKED", "required_for": ["stable", "1.0"], "evidence": "Android hardening/device workflows"},
+    {"id": "desktop_build_runtime", "status": "BLOCKED", "required_for": ["stable", "1.0"], "evidence": "Windows/Linux/macOS workflows"},
+    {"id": "ios_wrapper_runtime", "status": "BLOCKED", "required_for": ["stable", "1.0"], "evidence": "iOS/iPadOS wrapper/simulator workflow"},
+    {"id": "lg_protocol_l3", "status": "BLOCKED", "required_for": ["stable", "1.0"], "evidence": "real-client deterministic protocol workflow"},
+    {"id": "clean_installer_lifecycle", "status": "BLOCKED", "required_for": ["stable", "1.0"], "evidence": "clean-machine workflow"},
+    {"id": "android_upgrade_persistence", "status": "BLOCKED", "required_for": ["stable", "1.0"], "evidence": "RC5.3 to current upgrade workflow"},
+    {"id": "no_high_security_blocker", "status": "BLOCKED", "required_for": ["stable", "1.0"], "evidence": "security audit/review"},
+    {"id": "physical_lg_matrix", "status": "NOT_TESTED", "required_for": ["1.0"], "evidence": "LIBRE_REMOTE_HARDWARE_MATRIX.md"},
+    {"id": "physical_ios_ipad", "status": "NOT_TESTED", "required_for": ["1.0"], "evidence": "physical iPhone/iPad matrix"},
+    {"id": "physical_android", "status": "NOT_TESTED", "required_for": ["1.0"], "evidence": "physical Android matrix"},
+    {"id": "production_android_signing", "status": "BLOCKED", "required_for": ["1.0"], "evidence": "production signing workflow"},
+    {"id": "production_windows_signing", "status": "BLOCKED", "required_for": ["1.0"], "evidence": "production signing workflow"},
+    {"id": "production_macos_signing_notarization", "status": "BLOCKED", "required_for": ["1.0"], "evidence": "production signing workflow"},
+    {"id": "production_ios_testflight", "status": "BLOCKED", "required_for": ["1.0"], "evidence": "production signing/TestFlight workflow"},
+    {"id": "physical_accessibility", "status": "NOT_TESTED", "required_for": ["1.0"], "evidence": "manual platform accessibility evidence"},
+    {"id": "release_metadata_support_urls", "status": "BLOCKED", "required_for": ["1.0"], "evidence": "frozen privacy/support/store/release metadata"},
+    {"id": "version_freeze", "status": "BLOCKED", "required_for": ["1.0"], "evidence": "dedicated version-field audit and final version commit preserving native monotonicity"}
+  ]
+}

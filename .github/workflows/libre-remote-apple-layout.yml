@@ -1,0 +1,89 @@
+name: Libre Remote Apple Device Layouts
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [release/libre-remote-2.1.3-rc5.4-android-tested]
+    paths:
+      - 'scripts/**libre_remote*'
+      - '.github/workflows/libre-remote-apple-layout.yml'
+      - '.rc5-universal/**'
+      - 'libre-remote-universal/**'
+
+permissions:
+  contents: read
+
+env:
+  LIBRE_REMOTE_STRICT_SECURE_STORE: '0'
+  LIBRE_REMOTE_TEST_SECURE_STORE: '1'
+  IOS_BUNDLE_ID: io.github.grupogptespecialeng.libreremote
+
+jobs:
+  simulator-layouts:
+    runs-on: macos-15
+    timeout-minutes: 70
+    strategy:
+      fail-fast: false
+      matrix:
+        family: [iPhone, iPad]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize runtime-hardened RC5.4
+        run: |
+          set -euo pipefail
+          bash .rc5-universal/materialize-rc5.4.sh libre-remote-universal
+          python3 scripts/harden_libre_remote_rc5_4.py libre-remote-universal
+          python3 scripts/implement_libre_remote_runtime_hardening.py libre-remote-universal
+          python3 scripts/finalize_libre_remote_runtime_hardening.py libre-remote-universal
+          python3 scripts/enable_libre_remote_test_secure_store.py libre-remote-universal
+          python3 scripts/audit_libre_remote_runtime_hardening.py libre-remote-universal --strict --report apple-${{ matrix.family }}-audit.json
+      - uses: actions/setup-java@v5
+        with: {distribution: temurin, java-version: '17'}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.13'}
+      - name: Build XCFramework
+        working-directory: libre-remote-universal
+        run: |
+          set -euo pipefail
+          gradle --no-daemon --stacktrace :composeApp:linkDebugFrameworkIosSimulatorArm64 :composeApp:linkDebugFrameworkIosArm64
+          rm -rf composeApp/build/XCFrameworks/LibreRemote.xcframework
+          mkdir -p composeApp/build/XCFrameworks
+          xcodebuild -create-xcframework \
+            -framework composeApp/build/bin/iosSimulatorArm64/debugFramework/LibreRemote.framework \
+            -framework composeApp/build/bin/iosArm64/debugFramework/LibreRemote.framework \
+            -output composeApp/build/XCFrameworks/LibreRemote.xcframework
+      - name: Build SwiftUI app
+        run: |
+          set -euo pipefail
+          brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
+          cd libre-remote-universal/iosApp
+          xcodegen generate
+          rm -rf build/DerivedData
+          xcodebuild -project LibreRemoteIOS.xcodeproj -scheme LibreRemoteIOS \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO ARCHS=arm64 ONLY_ACTIVE_ARCH=YES build
+      - name: Install and launch on ${{ matrix.family }} simulator
+        run: |
+          set -euo pipefail
+          mkdir -p apple-layout-evidence
+          UDID="$(xcrun simctl list devices available -j | python3 -c 'import json,sys; family=sys.argv[1]; d=json.load(sys.stdin)["devices"]; matches=[x for xs in d.values() for x in xs if x.get("isAvailable") and family in x.get("name", "")]; print(matches[-1]["udid"] if matches else "")' '${{ matrix.family }}')"
+          test -n "$UDID"
+          xcrun simctl boot "$UDID" 2>/dev/null || true
+          xcrun simctl bootstatus "$UDID" -b
+          APP="$(find libre-remote-universal/iosApp/build/DerivedData/Build/Products/Debug-iphonesimulator -maxdepth 1 -name '*.app' -type d | head -1)"
+          test -n "$APP"
+          xcrun simctl install "$UDID" "$APP"
+          xcrun simctl launch "$UDID" "$IOS_BUNDLE_ID" | tee apple-layout-evidence/${{ matrix.family }}-launch.txt
+          sleep 5
+          xcrun simctl io "$UDID" screenshot apple-layout-evidence/${{ matrix.family }}.png
+          xcrun simctl get_app_container "$UDID" "$IOS_BUNDLE_ID" app > apple-layout-evidence/${{ matrix.family }}-container.txt
+          xcrun simctl shutdown "$UDID" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Libre-Remote-Apple-Layout-${{ matrix.family }}
+          path: |
+            apple-layout-evidence/**
+            apple-${{ matrix.family }}-audit.json
+          retention-days: 14

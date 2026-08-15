@@ -1,66 +1,70 @@
 # Libre Remote
 
-Controle remoto Android gratuito, sem anúncios e open source para televisões e receptores na rede local.
+Controle remoto **multiplataforma**, gratuito, sem anúncios e open source para TVs e receptores na rede local.
 
-A versão **1.1.0 RC1 Universal** usa uma interface única e seleciona automaticamente um backend conforme o sistema detectado. Funções incompatíveis são escondidas em vez de aparecerem como botões quebrados.
+A release candidate ativa é **Libre Remote 2.1.3 RC5.4** (`2.1.3-rc5.4-customization`, Android `versionCode 29`). A arquitetura universal usa capacidades do host + capacidades da TV e separa suporte de código de evidência de release.
 
-## Compatibilidade desta build
+## Plataformas host
 
-| Plataforma | Estado | Recursos |
+Os níveis L0–L5 de `LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md` distinguem target, compilação, runtime, protocolo, hardware e distribuição.
+
+| Host | Gates implementados | Distribuição pretendida |
 |---|---|---|
-| LG webOS | Estável dentro da matriz já implementada | navegação, volume, canais, touchpad, teclado, apps, entradas, mídia e desligamento |
-| Samsung Tizen local | Experimental | pareamento na TV, navegação, volume, canais, mídia, números, cores, guia e desligamento |
-| DLNA / UPnP AV | Controle de mídia | play, pause, stop e volume/mudo quando AVTransport e RenderingControl são anunciados |
-| Roku | Detectável, mas bloqueado | o app público não ativa o controle enquanto houver restrição do fabricante |
-| Google Cast, SmartThings, Fire TV | Arquitetura preparada | não ativados nesta build; exigem SDK, credenciais ou fluxo oficial adicional |
-| Android/Google TV completo, VIDAA e Philips próprios | Experimental/não ativado | aguardam API autorizada, auditoria e testes físicos |
-| TVs sem rede | Não suportadas sem hardware | futuro Libre Bridge Wi-Fi para infravermelho/HDMI-CEC |
+| Android | build, APIs/emuladores, upgrade, QA visual/performance, Keystore, cliente LG→lab | APK/AAB assinado |
+| iPhone / iPad | frameworks/XCFramework, SwiftUI, iPhone+iPad Simulator, Keychain, cliente LG→lab | App Store / TestFlight |
+| Windows | desktop test, MSI/EXE, DPAPI, app/instalador smoke, cliente LG→lab | MSI + EXE Authenticode |
+| Linux | desktop test, DEB/RPM, Secret Service, clean package lifecycle, cliente LG→lab | DEB + RPM |
+| macOS | desktop test, DMG/PKG, Keychain, clean package lifecycle, cliente LG→lab | Developer ID + notarização |
 
-## Como funciona
+Arquiteturas não produzidas/executadas por CI não são implicitamente suportadas. Windows ARM64, Linux ARM64 e macOS Intel precisam de evidência própria.
 
-1. O aplicativo tenta reconectar à última TV salva.
-2. A busca multiprotocolo usa SSDP e descrições UPnP na rede local.
-3. Respostas duplicadas da mesma TV são combinadas e o backend mais completo recebe prioridade.
-4. O seletor mostra o sistema e o nível de suporte antes da conexão.
-5. O layout usa capacidades reais: uma TV DLNA, por exemplo, mostra mídia e volume, mas não mostra D-pad.
+## Compatibilidade com TVs
 
-## Desempenho
+| Plataforma da TV | Estado de produto | Recursos principais |
+|---|---|---|
+| LG webOS | principal / mais completo | navegação, volume, canais, touchpad, teclado, apps, entradas, mídia e desligamento |
+| Samsung Tizen local | experimental | pareamento local, navegação, volume, canais, mídia, números, cores, guia e desligamento |
+| DLNA / UPnP AV | mídia | play, pause, stop e volume/mudo quando anunciados corretamente |
+| Google Cast / SmartThings / Fire TV | não ativos | exigem integração oficial adicional |
+| Philips / VIDAA | experimental/não ativos | aguardam auditoria/hardware real |
+| Roku | bloqueado no app público | política do fabricante |
+| TVs sem protocolo de rede | não suportadas diretamente | futuro Libre Bridge por IR/CEC |
 
-- conexão WebSocket persistente para LG e Samsung;
-- tentativa paralela de endpoints locais;
-- reconexão progressiva a partir de 250 ms;
-- envio no toque, sem esperar o clique terminar;
-- repetição de volume/canais a cada ~86 ms depois do atraso inicial;
-- fila limitada de comandos Samsung;
-- movimentos LG conflados para descartar eventos antigos;
-- cliente HTTP reutilizado para DLNA;
-- medição local do tempo de despacho do último comando, sem telemetria.
+## Segurança
 
-## Privacidade e segurança
+O hardening RC5.4 agora implementa um `SecureStore` dedicado:
 
-- sem anúncios;
-- sem telemetria;
-- sem servidor do projeto;
-- protocolos locais limitados a endereços privados;
-- tokens Samsung e chaves LG em preferências criptografadas;
-- verificação TOFU da impressão digital de certificados locais quando WSS é usado;
-- integrações experimentais claramente identificadas.
+- Android: AES/GCM com chave no Android Keystore;
+- iOS/macOS: Apple Keychain;
+- Windows: DPAPI CurrentUser;
+- Linux: Secret Service (`secret-tool`), sem fallback plaintext.
 
-## Primeira conexão
+Novos LG `client-key`, fingerprint TLS e histórico de sucesso WSS usam o store seguro. Credenciais legadas são migradas com write + read-back + só então remoção do valor antigo. O auditor estrito rejeita escrita plaintext remanescente e padrões conhecidos de TOFU fail-open.
 
-1. Mantenha celular e TV na mesma rede.
-2. Toque em **Conectar TV**.
-3. Selecione o aparelho encontrado.
-4. Em LG ou Samsung, aceite o pareamento mostrado na televisão.
+LG WSS `:3001` é prioritário; depois de WSS bem-sucedido, o estado persistido proíbe downgrade silencioso para WS. Certificado ausente ou alterado é decisão de negação. Toggles como `KEY_MUTE` não podem implementar setters absolutos.
 
-O IP manual fica disponível como recuperação. Ele identifica automaticamente LG pelas portas 3000/3001 e Samsung pelas portas 8001/8002.
+## Rede e parsing
 
-## Estado do projeto
+O runtime hardening inclui leitura limitada antes de materializar payloads, política de URLs locais, parser UPnP XML com limite de tamanho/profundidade e rejeição de DTD/entities, além de helpers de identidade estável para migrar o escopo seguro quando um dispositivo passa de identidade temporária por IP para ID estável.
 
-Esta é uma release candidate experimental. LG continua sendo o backend mais completo. Samsung e DLNA precisam de testes em aparelhos reais de várias gerações antes de serem anunciados como suporte amplo.
+## Protocol lab
 
-O projeto não é afiliado a LG Electronics, Samsung Electronics, Google, Roku, Amazon, Philips ou Hisense.
+`protocol-lab/` fornece fixtures determinísticas de LG WS/WSS, Samsung WebSocket, DLNA/UPnP e SSDP, incluindo pareamento negado, rotação de certificado, XML malformado/entity/oversized e UDN estável.
 
-## Licença
+Os testes gerados instanciam o **cliente real `LgWebOsRemote`** em desktop, Android emulator e iOS Simulator. A CI exige não apenas a task Gradle, mas também que a classe de integração apareça no resultado do teste.
 
-GPL-3.0-or-later. Consulte `LICENSE.md`, `PRIVACY.md`, `SECURITY.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `THIRD_PARTY_NOTICES.md` e `UNIVERSAL-TV-ROADMAP.md`.
+## Apple
+
+iOS/iPadOS declaram Local Network, ATS local, multicast, microfone e speech. Há gates separados para iPhone e iPad Simulator. A pipeline de distribuição está preparada para provisioning real e upload ao App Store Connect/TestFlight, mas aprovação do entitlement multicast, credenciais Apple e teste físico continuam externos.
+
+macOS tem bundle ID/local-network metadata e caminho preparado de Developer ID, assinatura de installer, notarização, stapling e Gatekeeper.
+
+## Desktop
+
+A RC não trata `createDistributable` como instalador público. Os gates exigem Windows MSI+EXE, Linux DEB+RPM e macOS DMG+PKG. Há clean-machine workflows para instalar/abrir/remover MSI em Windows, DEB em Ubuntu, RPM em Fedora e PKG em macOS. Windows mantém o upgrade UUID `9d0feb6a-8a93-558e-9297-4d2f0c6dc420`.
+
+## Estado atual
+
+Tudo acima está **implementado em source/workflows**, mas ainda não deve ser chamado de PASS: GitHub Actions continua recusando runners por billing/spending antes de executar steps. Também permanecem externos certificados/entitlements de produção e a matriz física de TVs/hosts.
+
+A RC5.4, portanto, continua **source-prepared, não CI-validated**. Consulte `LIBRE_REMOTE_RELEASE_MANIFEST.md`, `LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md` e `specs/001-rc5-4-multiplatform-hardening/` para o estado canônico.

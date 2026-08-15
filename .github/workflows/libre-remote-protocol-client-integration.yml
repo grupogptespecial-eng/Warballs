@@ -1,0 +1,190 @@
+name: Libre Remote Client Protocol Integration
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [release/libre-remote-2.1.3-rc5.4-android-tested]
+    paths:
+      - 'protocol-lab/**'
+      - 'scripts/*libre_remote*.py'
+      - '.github/workflows/libre-remote-protocol-client-integration.yml'
+      - '.rc5-universal/**'
+      - 'libre-remote-universal/**'
+
+permissions:
+  contents: read
+
+env:
+  LIBRE_REMOTE_STRICT_SECURE_STORE: '0'
+  LIBRE_REMOTE_TEST_SECURE_STORE: '1'
+
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize hardened source and integration contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash .rc5-universal/materialize-rc5.4.sh libre-remote-universal
+          python scripts/harden_libre_remote_rc5_4.py libre-remote-universal
+          python scripts/implement_libre_remote_runtime_hardening.py libre-remote-universal
+          python scripts/finalize_libre_remote_runtime_hardening.py libre-remote-universal
+          python scripts/enable_libre_remote_test_secure_store.py libre-remote-universal
+          python scripts/audit_libre_remote_runtime_hardening.py libre-remote-universal --strict --report protocol-desktop-${{ runner.os }}-audit.json
+      - uses: actions/setup-java@v5
+        with: {distribution: temurin, java-version: '17'}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.13'}
+      - name: Run real desktop client against fake LG endpoint
+        working-directory: libre-remote-universal
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon :composeApp:tasks --all > ../desktop-protocol-tasks.txt
+          grep -q 'desktopTest' ../desktop-protocol-tasks.txt
+          gradle --no-daemon --stacktrace :composeApp:desktopTest --tests '*LgProtocolLabIntegrationTest*'
+      - name: Assert desktop client tests actually executed
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -R -q 'LgProtocolLabIntegrationTest' \
+            libre-remote-universal/composeApp/build/test-results \
+            libre-remote-universal/composeApp/build/reports/tests
+          ! grep -R -E 'failures="[1-9]|errors="[1-9]' libre-remote-universal/composeApp/build/test-results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Libre-Remote-Client-Protocol-Desktop-${{ runner.os }}
+          path: |
+            protocol-desktop-${{ runner.os }}-audit.json
+            desktop-protocol-tasks.txt
+            libre-remote-universal/composeApp/build/reports/tests/**
+            libre-remote-universal/composeApp/build/test-results/**
+          retention-days: 14
+
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize hardened source and Android instrumentation contract
+        run: |
+          set -euo pipefail
+          bash .rc5-universal/materialize-rc5.4.sh libre-remote-universal
+          python3 scripts/harden_libre_remote_rc5_4.py libre-remote-universal
+          python3 scripts/implement_libre_remote_runtime_hardening.py libre-remote-universal
+          python3 scripts/finalize_libre_remote_runtime_hardening.py libre-remote-universal
+          python3 scripts/enable_libre_remote_test_secure_store.py libre-remote-universal
+          python3 scripts/audit_libre_remote_runtime_hardening.py libre-remote-universal --strict --report protocol-android-audit.json
+      - uses: actions/setup-java@v5
+        with: {distribution: temurin, java-version: '17'}
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0' 'platform-tools'
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.13'}
+      - name: Assert Android instrumentation task exists
+        working-directory: libre-remote-universal
+        run: |
+          set -euo pipefail
+          gradle --no-daemon :composeApp:tasks --all > ../android-protocol-tasks.txt
+          grep -q 'connectedDebugAndroidTest' ../android-protocol-tasks.txt
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm || true
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            set -euo pipefail
+            python3 protocol-lab/serve_lg_ws_standard.py > android-lg-lab.log 2>&1 &
+            LAB_PID=$!
+            trap 'kill $LAB_PID 2>/dev/null || true' EXIT
+            for i in $(seq 1 20); do grep -q '^READY lg-ws' android-lg-lab.log && break; sleep 0.25; done
+            grep -q '^READY lg-ws' android-lg-lab.log
+            cd libre-remote-universal
+            gradle --no-daemon --stacktrace :composeApp:connectedDebugAndroidTest
+      - name: Assert Android client tests actually executed
+        run: |
+          set -euo pipefail
+          grep -R -q 'LgAndroidProtocolLabIntegrationTest' \
+            libre-remote-universal/composeApp/build/outputs/androidTest-results \
+            libre-remote-universal/composeApp/build/reports/androidTests
+          ! grep -R -E 'failures="[1-9]|errors="[1-9]' libre-remote-universal/composeApp/build/outputs/androidTest-results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Libre-Remote-Client-Protocol-Android
+          path: |
+            protocol-android-audit.json
+            android-protocol-tasks.txt
+            android-lg-lab.log
+            libre-remote-universal/composeApp/build/reports/androidTests/**
+            libre-remote-universal/composeApp/build/outputs/androidTest-results/**
+          retention-days: 14
+
+  ios-simulator:
+    runs-on: macos-15
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize hardened source and iOS test contract
+        run: |
+          set -euo pipefail
+          bash .rc5-universal/materialize-rc5.4.sh libre-remote-universal
+          python3 scripts/harden_libre_remote_rc5_4.py libre-remote-universal
+          python3 scripts/implement_libre_remote_runtime_hardening.py libre-remote-universal
+          python3 scripts/finalize_libre_remote_runtime_hardening.py libre-remote-universal
+          python3 scripts/enable_libre_remote_test_secure_store.py libre-remote-universal
+          python3 scripts/audit_libre_remote_runtime_hardening.py libre-remote-universal --strict --report protocol-ios-audit.json
+      - uses: actions/setup-java@v5
+        with: {distribution: temurin, java-version: '17'}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.13'}
+      - name: Assert Kotlin/Native simulator test task exists
+        working-directory: libre-remote-universal
+        run: |
+          set -euo pipefail
+          gradle --no-daemon :composeApp:tasks --all > ../ios-protocol-tasks.txt
+          grep -q 'iosSimulatorArm64Test' ../ios-protocol-tasks.txt
+      - name: Run iOS client against fake LG endpoint
+        run: |
+          set -euo pipefail
+          python3 protocol-lab/serve_lg_ws_standard.py > ios-lg-lab.log 2>&1 &
+          LAB_PID=$!
+          trap 'kill $LAB_PID 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do grep -q '^READY lg-ws' ios-lg-lab.log && break; sleep 0.25; done
+          grep -q '^READY lg-ws' ios-lg-lab.log
+          cd libre-remote-universal
+          gradle --no-daemon --stacktrace :composeApp:iosSimulatorArm64Test
+      - name: Assert iOS client tests actually executed
+        run: |
+          set -euo pipefail
+          grep -R -q 'LgIosProtocolLabIntegrationTest' \
+            libre-remote-universal/composeApp/build/test-results \
+            libre-remote-universal/composeApp/build/reports/tests
+          ! grep -R -E 'failures="[1-9]|errors="[1-9]' libre-remote-universal/composeApp/build/test-results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Libre-Remote-Client-Protocol-iOS-Simulator
+          path: |
+            protocol-ios-audit.json
+            ios-protocol-tasks.txt
+            ios-lg-lab.log
+            libre-remote-universal/composeApp/build/reports/tests/**
+            libre-remote-universal/composeApp/build/test-results/**
+          retention-days: 14

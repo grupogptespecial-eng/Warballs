@@ -1,0 +1,38 @@
+name: Feature request
+description: Propose a user-facing feature or platform/backend improvement
+title: "[Feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: Describe the problem before proposing the implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+    validations:
+      required: true
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Primary scope
+      options: [Common UI/domain, Android, iPhone/iPad, Windows, Linux, macOS, LG webOS, Samsung Tizen, DLNA/UPnP, Build/release, Accessibility, Security]
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Project principles
+      options:
+        - label: This proposal does not require ads, developer tracking, or a mandatory Libre Remote account.
+          required: true
+        - label: I understand manufacturer/platform support claims require evidence, not only implementation.
+          required: true
