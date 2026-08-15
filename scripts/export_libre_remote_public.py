@@ -17,6 +17,7 @@ ROOT_DOCS = (
 SCRIPT_GLOBS = (
     "audit_*.py",
     "check_*.py",
+    "generate_cyclonedx_sbom.py",
     "validate_libre_remote_specs.py",
 )
 
