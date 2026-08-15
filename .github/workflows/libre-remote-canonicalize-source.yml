@@ -22,7 +22,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
-      - name: Validate implementation scripts
+      - name: Validate implementation scripts and specifications
         run: |
           set -euo pipefail
           python3 -m py_compile \
@@ -39,10 +39,16 @@ jobs:
             scripts/audit_public_release.py \
             scripts/audit_git_history.py \
             scripts/audit_third_party_licenses.py \
+            scripts/generate_cyclonedx_sbom.py \
             scripts/export_libre_remote_public.py \
+            scripts/record_release_evidence.py \
             scripts/check_release_evidence.py \
+            scripts/validate_libre_remote_specs.py \
+            scripts/validate_libre_remote_public_spec.py \
             protocol-lab/libre_remote_lab.py \
             protocol-lab/serve_lg_ws_standard.py
+          python3 scripts/validate_libre_remote_specs.py
+          python3 scripts/validate_libre_remote_public_spec.py
       - name: Materialize and fully harden source when canonical source is absent
         run: |
           set -euo pipefail
@@ -126,8 +132,8 @@ jobs:
             runtime-hardening-audit.json \
             .github/workflows \
             .gitignore \
-            README.md LICENSE NOTICE THIRD_PARTY_NOTICES.md SECURITY.md CONTRIBUTING.md CODE_OF_CONDUCT.md \
-            BUILDING.md CHANGELOG.md RELEASE_POLICY.md VERSIONING.md \
+            README.md LICENSE NOTICE THIRD_PARTY_NOTICES.md SECURITY.md PRIVACY.md SUPPORT.md CONTRIBUTING.md CODE_OF_CONDUCT.md \
+            BUILDING.md CHANGELOG.md RELEASE_POLICY.md VERSIONING.md STORE_METADATA.md \
             LIBRE_REMOTE_RELEASE_MANIFEST.md LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md LIBRE_REMOTE_HARDWARE_MATRIX.md \
             public-repo release specs
           git diff --cached --stat
