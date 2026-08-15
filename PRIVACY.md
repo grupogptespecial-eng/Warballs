@@ -1,6 +1,6 @@
 # Libre Remote Privacy Policy
 
-**Status:** project policy for the open-source application; review the final store-facing copy before 1.0 publication.
+**Status:** project policy for the open-source application; review/freeze the final store-facing declarations before 1.0 publication.
 
 Libre Remote is designed as a local-first remote-control application. Core TV/device discovery and control are intended to occur between the user's host device and compatible devices on the user's local network.
 
@@ -44,6 +44,10 @@ Diagnostic logs generated for troubleshooting should be sanitized before they ar
 ## Security reports
 
 Security vulnerabilities should use the private reporting process in `SECURITY.md`, not a public issue.
+
+## Release verification
+
+Before 1.0/store submission, compare the final shipping source/dependency graph against this policy and complete the current platform/store privacy declarations from the actual shipping build. `STORE_METADATA.md` remains the release checklist; changes that introduce analytics, advertising, cloud accounts, new data flows or new sensitive permissions must update both documents before promotion.
 
 ## Changes
 
