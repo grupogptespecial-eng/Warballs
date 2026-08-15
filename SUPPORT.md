@@ -18,7 +18,7 @@ Once public releases exist, the project intends to support the latest Stable rel
 
 ## Compatibility claims
 
-Support is evidence-based. A host platform or TV/backend is supported only to the level recorded by the public support contract and hardware matrix. Experimental backends remain experimental until the required deterministic and physical evidence exists.
+Support is evidence-based. A host platform or TV/backend is supported only to the level recorded by `LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md`, `LIBRE_REMOTE_HARDWARE_MATRIX.md` and `release/evidence.json`. Experimental backends remain experimental until the required deterministic and physical evidence exists.
 
 ## What to include in reports
 
