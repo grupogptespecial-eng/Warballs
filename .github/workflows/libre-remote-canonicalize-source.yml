@@ -14,11 +14,14 @@ jobs:
   canonicalize:
     if: github.ref_name == 'fix/libre-remote-rc5.4-hardening'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
       - name: Validate implementation scripts
         run: |
           set -euo pipefail
@@ -32,21 +35,48 @@ jobs:
             scripts/add_libre_remote_protocol_integration_tests.py \
             scripts/add_libre_remote_mobile_protocol_integration_tests.py \
             scripts/audit_libre_remote_command_semantics.py \
+            scripts/convert_workflows_to_canonical_source.py \
+            scripts/audit_public_release.py \
+            scripts/audit_git_history.py \
+            scripts/audit_third_party_licenses.py \
+            scripts/export_libre_remote_public.py \
+            scripts/check_release_evidence.py \
             protocol-lab/libre_remote_lab.py \
             protocol-lab/serve_lg_ws_standard.py
-      - name: Materialize and fully harden source
+      - name: Materialize and fully harden source when canonical source is absent
         run: |
           set -euo pipefail
-          rm -rf libre-remote-universal
-          bash .rc5-universal/materialize-rc5.4.sh libre-remote-universal
-          LIBRE_REMOTE_STRICT_SECURE_STORE=0 python3 scripts/harden_libre_remote_rc5_4.py libre-remote-universal
-          python3 scripts/implement_libre_remote_runtime_hardening.py libre-remote-universal
-          python3 scripts/finalize_libre_remote_runtime_hardening.py libre-remote-universal
-          python3 scripts/enable_libre_remote_test_secure_store.py libre-remote-universal
+          if [ -f libre-remote-universal/settings.gradle.kts ] && [ -f libre-remote-universal/composeApp/build.gradle.kts ] && [ ! -d .rc5-universal ]; then
+            echo 'Canonical source already committed; re-auditing existing tree.'
+          else
+            rm -rf libre-remote-universal
+            bash .rc5-universal/materialize-rc5.4.sh libre-remote-universal
+            LIBRE_REMOTE_STRICT_SECURE_STORE=0 python3 scripts/harden_libre_remote_rc5_4.py libre-remote-universal
+            python3 scripts/implement_libre_remote_runtime_hardening.py libre-remote-universal
+            python3 scripts/finalize_libre_remote_runtime_hardening.py libre-remote-universal
+            python3 scripts/enable_libre_remote_test_secure_store.py libre-remote-universal
+          fi
           python3 scripts/audit_libre_remote_runtime_hardening.py libre-remote-universal --strict --report runtime-hardening-audit.json
           test -f libre-remote-universal/composeApp/build.gradle.kts
           test -f libre-remote-universal/HARDENING.md
           test -f libre-remote-universal/RUNTIME-HARDENING.md
+      - name: Preserve normal-source RC5.3 upgrade fixture
+        run: |
+          set -euo pipefail
+          if [ -f release-fixtures/rc5.3/settings.gradle.kts ] && [ -f release-fixtures/rc5.3/composeApp/build.gradle.kts ]; then
+            echo 'RC5.3 upgrade fixture already present.'
+          else
+            test -x .rc5-universal/materialize-rc5.3.sh || test -f .rc5-universal/materialize-rc5.3.sh
+            rm -rf release-fixtures/rc5.3
+            mkdir -p release-fixtures
+            bash .rc5-universal/materialize-rc5.3.sh release-fixtures/rc5.3
+          fi
+          test -f release-fixtures/rc5.3/settings.gradle.kts
+          test -f release-fixtures/rc5.3/composeApp/build.gradle.kts
+          if find release-fixtures/rc5.3 \( -name '*.b64' -o -name '*.jks' -o -name '*.keystore' -o -name '*.p12' -o -name '*.pfx' \) -print | grep -q .; then
+            echo 'Forbidden transport/signing material in RC5.3 fixture' >&2
+            exit 1
+          fi
       - name: Verify runtime hardening idempotence
         run: |
           set -euo pipefail
@@ -57,10 +87,14 @@ jobs:
           python3 scripts/enable_libre_remote_test_secure_store.py libre-remote-universal
           after="$(find libre-remote-universal -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum)"
           test "$before" = "$after"
+      - name: Convert workflows to prefer committed canonical source
+        run: |
+          set -euo pipefail
+          python3 scripts/convert_workflows_to_canonical_source.py --root . --check
       - name: Remove transport-only legacy material
         run: |
           set -euo pipefail
-          git rm -r .rc5-universal
+          if [ -d .rc5-universal ]; then git rm -r .rc5-universal; fi
           for path in .universal-overlay .universal-overlay-v2 .universal-patch .universal-patch-v2 .universal-payload; do
             if [ -e "$path" ]; then git rm -r "$path"; fi
           done
@@ -70,8 +104,11 @@ jobs:
           set -euo pipefail
           test -f libre-remote-universal/settings.gradle.kts
           test -f libre-remote-universal/composeApp/build.gradle.kts
-          ! find . -path './.git' -prune -o -name '*.b64' -print | grep -q .
-          ! find . -path './.git' -prune -o -name '*.jks' -print | grep -q .
+          test -f release-fixtures/rc5.3/settings.gradle.kts
+          if find . -path './.git' -prune -o \( -name '*.b64' -o -name '*.jks' -o -name '*.keystore' -o -name '*.p12' -o -name '*.pfx' \) -print | grep -q .; then
+            echo 'Forbidden legacy/signing file remains in canonical private tree' >&2
+            exit 1
+          fi
           if grep -R --line-number 'store.put("lg.client.' libre-remote-universal/composeApp/src/commonMain; then
             echo 'plaintext client-key write remains' >&2
             exit 1
@@ -81,7 +118,22 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add libre-remote-universal scripts protocol-lab runtime-hardening-audit.json .gitignore LIBRE_REMOTE_RELEASE_MANIFEST.md LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md specs
+          git add \
+            libre-remote-universal \
+            release-fixtures/rc5.3 \
+            scripts \
+            protocol-lab \
+            runtime-hardening-audit.json \
+            .github/workflows \
+            .gitignore \
+            README.md LICENSE NOTICE THIRD_PARTY_NOTICES.md SECURITY.md CONTRIBUTING.md CODE_OF_CONDUCT.md \
+            BUILDING.md CHANGELOG.md RELEASE_POLICY.md VERSIONING.md \
+            LIBRE_REMOTE_RELEASE_MANIFEST.md LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md LIBRE_REMOTE_HARDWARE_MATRIX.md \
+            public-repo release specs
           git diff --cached --stat
-          git commit -m 'build: materialize runtime-hardened Libre Remote RC5.4 source'
+          if git diff --cached --quiet; then
+            echo 'Canonical tree already up to date.'
+            exit 0
+          fi
+          git commit -m 'build: materialize canonical Libre Remote RC5.4 source'
           git push origin HEAD:fix/libre-remote-rc5.4-hardening
