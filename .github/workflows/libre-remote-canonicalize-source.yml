@@ -10,19 +10,46 @@ jobs:
   canonicalize:
     if: github.ref_name == 'fix/libre-remote-rc5.4-hardening'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    env:
+      LIBRE_REMOTE_STRICT_SECURE_STORE: '1'
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Materialize and harden source
+      - name: Validate implementation scripts
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            scripts/harden_libre_remote_rc5_4.py \
+            scripts/implement_libre_remote_runtime_hardening.py \
+            scripts/finalize_libre_remote_runtime_hardening.py \
+            scripts/enable_libre_remote_test_secure_store.py \
+            scripts/audit_libre_remote_runtime_hardening.py \
+            protocol-lab/libre_remote_lab.py
+      - name: Materialize and fully harden source
         run: |
           set -euo pipefail
           rm -rf libre-remote-universal
           bash .rc5-universal/materialize-rc5.4.sh libre-remote-universal
           python3 scripts/harden_libre_remote_rc5_4.py libre-remote-universal
+          python3 scripts/implement_libre_remote_runtime_hardening.py libre-remote-universal
+          python3 scripts/finalize_libre_remote_runtime_hardening.py libre-remote-universal
+          python3 scripts/enable_libre_remote_test_secure_store.py libre-remote-universal
+          python3 scripts/audit_libre_remote_runtime_hardening.py libre-remote-universal --strict --report runtime-hardening-audit.json
           test -f libre-remote-universal/composeApp/build.gradle.kts
           test -f libre-remote-universal/HARDENING.md
+          test -f libre-remote-universal/RUNTIME-HARDENING.md
+      - name: Verify runtime hardening idempotence
+        run: |
+          set -euo pipefail
+          before="$(find libre-remote-universal -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum)"
+          python3 scripts/harden_libre_remote_rc5_4.py libre-remote-universal
+          python3 scripts/implement_libre_remote_runtime_hardening.py libre-remote-universal
+          python3 scripts/finalize_libre_remote_runtime_hardening.py libre-remote-universal
+          python3 scripts/enable_libre_remote_test_secure_store.py libre-remote-universal
+          after="$(find libre-remote-universal -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum)"
+          test "$before" = "$after"
       - name: Remove transport-only legacy material
         run: |
           set -euo pipefail
@@ -38,12 +65,13 @@ jobs:
           test -f libre-remote-universal/composeApp/build.gradle.kts
           ! find . -path './.git' -prune -o -name '*.b64' -print | grep -q .
           ! find . -path './.git' -prune -o -name '*.jks' -print | grep -q .
+          ! grep -R --line-number 'store.put("lg.client.' libre-remote-universal/composeApp/src/commonMain || true
       - name: Commit canonical source
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add libre-remote-universal scripts .gitignore LIBRE_REMOTE_RELEASE_MANIFEST.md
+          git add libre-remote-universal scripts protocol-lab runtime-hardening-audit.json .gitignore LIBRE_REMOTE_RELEASE_MANIFEST.md LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md specs
           git diff --cached --stat
-          git commit -m 'build: materialize Libre Remote RC5.4 canonical source'
+          git commit -m 'build: materialize runtime-hardened Libre Remote RC5.4 source'
           git push origin HEAD:fix/libre-remote-rc5.4-hardening
