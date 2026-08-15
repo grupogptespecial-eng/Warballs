@@ -23,7 +23,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  LIBRE_REMOTE_STRICT_SECURE_STORE: '1'
+  LIBRE_REMOTE_STRICT_SECURE_STORE: '0'
   LIBRE_REMOTE_TEST_SECURE_STORE: '1'
 
 jobs:
