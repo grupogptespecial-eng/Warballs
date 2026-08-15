@@ -46,11 +46,13 @@ private object TestMemorySecureStore : SecureStore {
 
 path.write_text(text, encoding="utf-8")
 
-# Keep deterministic migration/fuzz/capability tests adjacent to the explicit
-# test backend. Production never selects TestMemorySecureStore without the env var.
+# Keep deterministic migration/fuzz/capability and host-protocol integration
+# tests adjacent to the explicit test backend. Production never selects the
+# in-memory store without LIBRE_REMOTE_TEST_SECURE_STORE=1.
 for script_name in (
     "add_libre_remote_contract_tests.py",
     "add_libre_remote_protocol_integration_tests.py",
+    "add_libre_remote_mobile_protocol_integration_tests.py",
 ):
     script = Path(__file__).with_name(script_name)
     subprocess.run([sys.executable, str(script), str(root)], check=True)
@@ -59,4 +61,4 @@ for script_name in (
 semantic_audit = Path(__file__).with_name("audit_libre_remote_command_semantics.py")
 subprocess.run([sys.executable, str(semantic_audit), str(root)], check=True)
 
-print("test-only desktop SecureStore and deterministic protocol integration enabled")
+print("test-only SecureStore and deterministic desktop/Android/iOS protocol integration enabled")
