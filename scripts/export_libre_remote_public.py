@@ -18,7 +18,7 @@ SCRIPT_GLOBS = (
     "audit_*.py",
     "check_*.py",
     "generate_cyclonedx_sbom.py",
-    "validate_libre_remote_specs.py",
+    "validate_libre_remote*.py",
 )
 
 SKIP_NAMES = {".git", ".gradle", ".idea", "build", "dist", "signed", "release-fixtures"}
@@ -52,8 +52,6 @@ def main() -> int:
         shutil.rmtree(output)
     output.mkdir(parents=True)
 
-    # Preserve the current source-directory shape so already-hardened CI workflows can run
-    # without rewriting Gradle project paths in the same release train.
     copy_tree(source, output / "libre-remote-universal")
 
     for name in ROOT_DOCS:
@@ -77,8 +75,6 @@ def main() -> int:
                 shutil.copy2(src, scripts_out / src.name)
                 copied_scripts.add(src.name)
 
-    # Public GitHub configuration is intentionally separate from the historical private
-    # workflow set. It contains only workflows that assume committed canonical source.
     template = root / "public-repo"
     if not template.is_dir():
         raise SystemExit("public-repo template is missing")
