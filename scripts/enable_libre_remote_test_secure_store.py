@@ -46,10 +46,13 @@ private object TestMemorySecureStore : SecureStore {
 
 path.write_text(text, encoding="utf-8")
 
-# Keep the deterministic migration/fuzz/capability tests adjacent to the test
-# backend setup so every workflow that enables the explicit test store also
-# receives the same contract suite.
+# Keep deterministic migration/fuzz/capability tests adjacent to the explicit
+# test backend. Production never selects TestMemorySecureStore without the env var.
 contract_script = Path(__file__).with_name("add_libre_remote_contract_tests.py")
 subprocess.run([sys.executable, str(contract_script), str(root)], check=True)
+
+# Reject any backend that still hides a toggle command behind an absolute setter.
+semantic_audit = Path(__file__).with_name("audit_libre_remote_command_semantics.py")
+subprocess.run([sys.executable, str(semantic_audit), str(root)], check=True)
 
 print("test-only desktop SecureStore enabled behind LIBRE_REMOTE_TEST_SECURE_STORE=1")
