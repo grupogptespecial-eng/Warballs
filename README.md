@@ -4,6 +4,8 @@ Libre Remote is an open-source, local-first universal remote for TVs and media d
 
 > **Release status:** the current RC5.4 hardening branch is source-prepared but not yet CI-validated because GitHub Actions runners are currently blocked before execution. Do not interpret committed release gates as passed evidence until the corresponding workflow has run successfully.
 
+The intended promotion path is **RC5.4 hardening → canonical source → Stable Candidate → physical/distribution validation → public 1.0 → guarded clean-history public repository**. Stable and 1.0 are mechanical evidence gates, not labels applied manually.
+
 ## Principles
 
 - no ads, developer tracking, or mandatory Libre Remote account;
@@ -74,7 +76,8 @@ Read [`CONTRIBUTING.md`](CONTRIBUTING.md), [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUC
 - [`LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md`](LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md) defines L0-L5 support evidence.
 - [`LIBRE_REMOTE_HARDWARE_MATRIX.md`](LIBRE_REMOTE_HARDWARE_MATRIX.md) is the physical validation matrix.
 - [`CHANGELOG.md`](CHANGELOG.md) records public release changes.
-- `release/evidence.json` is the machine-readable promotion ledger; non-PASS states never satisfy Stable/1.0.
+- [`release/README.md`](release/README.md) explains how evidence is recorded.
+- `release/evidence.json` is the machine-readable promotion ledger; non-PASS states and untraceable PASS states never satisfy Stable/1.0.
 
 ## License
 
