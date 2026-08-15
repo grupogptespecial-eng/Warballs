@@ -77,17 +77,26 @@ for token in (
         fail(f"plan missing required workstream/token: {token}")
 
 required_implementation_files = (
+    ROOT / "LICENSE",
+    ROOT / "NOTICE",
+    ROOT / "THIRD_PARTY_NOTICES.md",
+    ROOT / "PRIVACY.md",
+    ROOT / "SUPPORT.md",
+    ROOT / "STORE_METADATA.md",
     ROOT / "RELEASE_POLICY.md",
     ROOT / "VERSIONING.md",
     ROOT / "release" / "evidence.json",
+    ROOT / "release" / "README.md",
     ROOT / "scripts" / "audit_public_release.py",
     ROOT / "scripts" / "audit_git_history.py",
     ROOT / "scripts" / "audit_third_party_licenses.py",
     ROOT / "scripts" / "generate_cyclonedx_sbom.py",
     ROOT / "scripts" / "export_libre_remote_public.py",
+    ROOT / "scripts" / "record_release_evidence.py",
     ROOT / "scripts" / "check_release_evidence.py",
     ROOT / "public-repo" / ".github" / "workflows" / "ci.yml",
     ROOT / "public-repo" / ".github" / "workflows" / "promotion-gate.yml",
+    ROOT / ".github" / "workflows" / "libre-remote-open-source-readiness.yml",
     ROOT / ".github" / "workflows" / "libre-remote-publish-public-repo.yml",
 )
 missing_files = [str(path.relative_to(ROOT)) for path in required_implementation_files if not path.is_file()]
