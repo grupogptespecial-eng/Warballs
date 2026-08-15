@@ -1,135 +1,76 @@
-# Warballs
+# Libre Remote
 
-Protótipo em módulos do jogo **Battle Balls**. O antigo monolito
-`game.js` foi totalmente decomposto e removido, dando lugar a uma
-estrutura organizada por arquivos que facilita manutenção e expansão.
+Libre Remote is an open-source, local-first universal remote for TVs and media devices on your local network.
 
-## Estrutura
+> **Release status:** the current RC5.4 hardening branch is source-prepared but not yet CI-validated because GitHub Actions runners are currently blocked before execution. Do not interpret committed release gates as passed evidence until the corresponding workflow has run successfully.
 
-```
-public/          – arquivos entregues ao navegador
-  index.html     – página inicial
-  assets/        – imagens e outros recursos estáticos
-  data/          – arquivos de configuração ou mock de dados
-src/             – código-fonte em ES modules
-  main.js        – ponto de entrada que inicializa o jogo
-  core/          – estado central e loop
-  render/        – utilidades de desenho (preview, background)
-  entities/      – projéteis, partículas, summons e familiares
-  unit/          – classes jogáveis e lógica de unidades
-  utils/         – helpers diversos (rand, geometry, misc)
-  ...
-```
+## Principles
 
-## Uso
+- no ads, developer tracking, or mandatory Libre Remote account;
+- local-first control whenever the target platform allows it;
+- truthful capability reporting instead of fake/partial controls;
+- pairing credentials stay in platform-native secure storage;
+- no production signing keys or certificates in the repository;
+- accessibility, bounded network I/O, cancellation, and explicit failure states are release requirements.
 
-Abra `public/index.html` em um navegador moderno. O arquivo importa
-`src/main.js`, que inicializa o estado do jogo, prepara os controles da
-interface e permite iniciar a partida clicando em **Iniciar** após adicionar
-unidades.
+## Host platforms
 
-Na seção **Partida** é possível escolher entre duas arenas:
+| Host | Intended artifact | Current release gate |
+|---|---|---|
+| Android | APK / AAB | build, emulator matrix, accessibility/layout/perf, upgrade, signing |
+| iPhone / iPad | App Store / TestFlight | KMP framework, SwiftUI wrapper, simulator, Keychain, privacy metadata, signing |
+| Windows | MSI / EXE | packaged launch, DPAPI, protocol lab, clean install, Authenticode |
+| Linux | DEB / RPM | packaged launch, Secret Service, protocol lab, clean install |
+| macOS | DMG / PKG | packaged launch, Keychain, Local Network privacy, notarization |
 
-- **Arena Padrão** – defina manualmente largura e altura fixas.
-- **Battle Royale** – informe dimensões inicial/final e tempos de
-  delay/duração para que a arena encolha ou cresça suavemente durante a
-  partida.
+Architectures and operating systems are supported only at the evidence level recorded in `LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md`.
 
-## Crates
+## TV backends
 
-O jogo possui um sistema de **crates** configuráveis que pode gerar três
-tipos de bônus:
+- **LG webOS:** primary backend; WSS-first transport, pairing, navigation, volume, channels, pointer/keyboard, apps/inputs/media and power features where the TV exposes them.
+- **Samsung Tizen:** experimental until the deterministic and physical compatibility matrix is sufficient.
+- **DLNA / UPnP AV:** media/control subset according to advertised services.
 
-- **Vida** – quadrado verde que cura ao ser coletado;
-- **Experiência** – hexágono azul que concede XP;
-- **Híbrido** – octógono meio verde/meio azul que oferece ambos.
+Other manufacturers are not implicitly supported.
 
-Os parâmetros ficam em `CFG.crates` e também podem ser ajustados no painel
-**Crates** da interface. Ative cada tipo pela caixa de seleção e defina
-taxa média de spawn (`avgPer100s`), tempo de vida (`lifetime`), máximo
-simultâneo (`maxConcurrent`), tamanho (`sizePx`) e recompensas
-(`healAmount`/`xpAmount`). Há limites globais de distância entre crates e
-de distância mínima de unidades. As configurações do painel são salvas em
-`localStorage` (chave `crateConfig_v2`).
+## Build
 
-Em arenas do tipo Battle Royale, crates fora dos limites atuais seguem a
-política `brCratePolicyOnShrink`, que pode ser `despawn`, `pushInwards` ou
-`disableOutside` (cinza e inativo por alguns segundos).
+See [`BUILDING.md`](BUILDING.md). The hardened multiplatform project lives in `libre-remote-universal/` until canonicalization commits it as the normal source tree.
 
-## Mecânica de mira
-
-Unidades com ataques à distância possuem uma espera oculta após o fim do
-cooldown normal. Durante esse período a arma só dispara se houver inimigo na
-linha de visão; caso contrário o tiro é efetuado quando a espera termina. O
-tempo extra é definido por classe em `src/config/cfg.js` através do campo
-`cooldownMiraPercent` (Ranger 25%, Bruxo 10%, Artífice 20% por padrão).
-
-## Itens visuais por classe
-
-Cada classe pode exibir um pequeno item cosmético preso ao corpo do personagem
-para reforçar sua identidade. As definições estão em `src/config/cfg.js` no
-objeto `CLASS_VISUALS`, que indica o item, ângulo de ancoragem, escala,
-rotação interna e a microanimação utilizada. O tamanho padrão é dado por
-`CLASS_ITEM_SCALE_DEFAULT` com multiplicador global `GLOBAL_ITEM_SCALE_MULT`
-(160% por padrão). O deslocamento radial pode ser ajustado por
-`distanceFromCenter` (padrão `0.82` × raio do corpo) e a rotação adicional por
-`internalRotationDeg` (padrão `0°`). Os itens jamais ultrapassam o raio seguro
-`LEVEL_SAFE_RADIUS_MULT * BALL_RADIUS`, reservado ao texto de nível. Esses
-elementos são apenas visuais e não afetam colisões.
-
-Exemplo: definir `internalRotationDeg: 180` inverte o sprite, enquanto
-`distanceFromCenter: 1.1` empurra o item para longe do corpo.
-
-Itens atuais (com micro‑animação):
-
-- **Bárbaro** – sunga de couro e machado duplo *(sway_low)*. As cores do Bárbaro estão em `BARBARIAN_PALETTE` (couro, metal e madeira).
-- **Ranger** – aljava grande (4×) *(idle_breath)*
-- **Monge** – colar *(subtle_pulse)*
-- **Paladino** – insígnia de escudo *(glint_slow)*
-- **Clérigo** – sigilo solar *(soft_glow)*
-- **Bruxo** – chifres duplos *(idle_breath)*
-- **Guerreiro** – ombreira metálica *(sway_low)*
-- **Artífice** – óculos sutis e canhão arcano *(idle_breath)*
-
-## Artífice – Torretas
-
-As torretas construídas pelo Artífice agora possuem vida própria e podem ser
-destruídas por inimigos. Elas colidem com unidades, bloqueando passagem, e o
-número simultâneo de torretas é limitado a `ceil(nível/2)`.
-
-## Guerreiro – Lança v2
-
-O Guerreiro alterna entre estocadas de média distância e arremessos curtos de
-lança. A arma possui geometria segmentada (ponta letal e cabo sólido) e o
-projétil retorna automaticamente após um tempo de voo máximo. Alternar entre um
-ataque corpo‑a‑corpo e um arremesso dentro do tempo de `discipline.swapWindow`
-gera uma carga de **Disciplina Marcial** (até `ceil(nível/2)`), consumida no
-próximo acerto para bônus de dano acumulado.
-
-A classe conta ainda com Postura de Guerra e a habilidade multifuncional
-**Manobras de Guerra**, composta por três gatilhos independentes:
-
-- **Parry Avançado** – contato arma vs arma: o Guerreiro vence o choque,
-  empurra a arma inimiga, inicia o cooldown compartilhado e solta faíscas.
-- **Avanço Tático** – inimigo vulnerável à frente: dash curto com partículas
-  douradas e grande aceleração angular até alinhar a lança.
-- **Desvio** – projétil prestes a atingir sem interceptação: passo lateral com
-  nuvem de poeira, consumindo o mesmo `maneuverCD`.
-
-Quando ameaçado por inimigos próximos,
-o Guerreiro aborta qualquer arremesso em preparação ou em voo, aumenta em 50 %
-a velocidade de giro e reduz pela metade o tempo entre golpes corpo‑a‑corpo,
-retornando à cadência normal após a área estar limpa. Arremessos de lança,
-ativação da postura e aparos agora disparam partículas para destacar cada
-habilidade, e a postura ativa mantém uma aura vermelha ao redor do Guerreiro.
-
-## Desenvolvimento
-
-Instale as dependências (se houver) e execute os testes sintáticos:
+Typical validation tasks after canonicalization include:
 
 ```bash
-npm test
+./gradlew :composeApp:desktopTest
+./gradlew :composeApp:assembleDebug
+./gradlew :composeApp:linkDebugFrameworkIosSimulatorArm64
 ```
 
-O script percorre todos os arquivos em `src/` usando `node --check`, acusando
-quaisquer erros de sintaxe antes de abrir o jogo no navegador.
+If the Gradle wrapper is not present in the materialized tree, use the pinned Gradle version from the CI workflows.
+
+## Security
+
+See [`SECURITY.md`](SECURITY.md). Do **not** open public issues containing pairing keys, certificate material, private network identifiers, signing credentials, or working exploit details.
+
+Production credential targets are Android Keystore, Apple Keychain, Windows DPAPI/Credential Manager semantics, and Linux Secret Service/libsecret. Ordinary preferences are not accepted as a production secret store.
+
+## Protocol validation
+
+`protocol-lab/` contains deterministic fake LG, Samsung and DLNA/UPnP endpoints used to exercise pairing, reconnect, malformed input, TLS/downgrade behavior and command semantics. Build success alone is not considered protocol parity.
+
+## Contributing
+
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md), [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md), and the active hardening spec under `specs/001-rc5-4-multiplatform-hardening/` before making protocol or release changes.
+
+## Releases and evidence
+
+- [`RELEASE_POLICY.md`](RELEASE_POLICY.md) defines Stable Candidate and 1.0 gates.
+- [`LIBRE_REMOTE_RELEASE_MANIFEST.md`](LIBRE_REMOTE_RELEASE_MANIFEST.md) records release invariants.
+- [`LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md`](LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md) defines L0-L5 support evidence.
+- [`LIBRE_REMOTE_HARDWARE_MATRIX.md`](LIBRE_REMOTE_HARDWARE_MATRIX.md) is the physical validation matrix.
+- [`CHANGELOG.md`](CHANGELOG.md) records public release changes.
+
+## License
+
+Libre Remote is licensed under the [Apache License 2.0](LICENSE). Third-party software remains under its respective licenses; release artifacts must include the required notices recorded in `THIRD_PARTY_NOTICES.md`.
+
+Libre Remote is an independent project and is not affiliated with or endorsed by LG Electronics, Samsung Electronics, Apple, Microsoft, Google, or other device manufacturers unless explicitly stated.

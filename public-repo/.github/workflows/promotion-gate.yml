@@ -1,0 +1,68 @@
+name: Libre Remote Promotion Gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      level:
+        description: Promotion level to enforce
+        type: choice
+        required: true
+        options:
+          - stable
+          - 1.0
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  promotion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Resolve promotion level
+        id: level
+        shell: bash
+        run: |
+          if [ '${{ github.event_name }}' = 'workflow_dispatch' ]; then
+            echo "value=${{ inputs.level }}" >> "$GITHUB_OUTPUT"
+          else
+            echo 'value=1.0' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Strict public source audit
+        run: python3 scripts/audit_public_release.py --root . --strict --report public-release-audit.json
+      - name: Strict clean-history audit
+        run: python3 scripts/audit_git_history.py --repo . --strict --report git-history-audit.json
+      - name: Evidence promotion gate
+        run: |
+          python3 scripts/check_release_evidence.py \
+            --evidence release/evidence.json \
+            --level '${{ steps.level.outputs.value }}' \
+            --report release-gate-report.json
+      - name: Require reviewed third-party notices
+        run: grep -q 'THIRD_PARTY_AUDIT_STATUS: COMPLETE' THIRD_PARTY_NOTICES.md
+      - name: Require release documents
+        run: |
+          test -f LICENSE
+          test -f NOTICE
+          test -f SECURITY.md
+          test -f CHANGELOG.md
+          test -f RELEASE_POLICY.md
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: promotion-${{ steps.level.outputs.value }}-evidence
+          path: |
+            public-release-audit.json
+            git-history-audit.json
+            release-gate-report.json
+            release/evidence.json
+            THIRD_PARTY_NOTICES.md
