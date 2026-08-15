@@ -38,6 +38,15 @@ The test-only in-memory secure store is **not** a production fallback. Enable it
 LIBRE_REMOTE_TEST_SECURE_STORE=1 python3 scripts/enable_libre_remote_test_secure_store.py libre-remote-universal
 ```
 
+## Specification integrity
+
+```bash
+python3 scripts/validate_libre_remote_specs.py
+python3 scripts/validate_libre_remote_public_spec.py
+```
+
+The first validator covers RC5.4 multiplatform/runtime hardening. The second covers Open Source → Stable Candidate → 1.0 promotion.
+
 ## Common and desktop tests
 
 ```bash
@@ -104,6 +113,25 @@ python3 protocol-lab/libre_remote_lab.py --self-test --json
 
 The client-integration workflow runs the real Libre Remote LG client against the fake protocol endpoint on desktop, Android Emulator and iOS Simulator.
 
+## Dependency/license inventory and SBOM
+
+After resolving the actual candidate dependency graph:
+
+```bash
+gradle --no-daemon :composeApp:dependencies > gradle-dependencies.txt
+python3 scripts/audit_third_party_licenses.py \
+  --dependencies gradle-dependencies.txt \
+  --root libre-remote-universal \
+  --output THIRD_PARTY_NOTICES.generated.md
+python3 scripts/generate_cyclonedx_sbom.py \
+  --dependencies gradle-dependencies.txt \
+  --output sbom.cdx.json \
+  --project-version CANDIDATE_VERSION \
+  --source-commit COMMIT_SHA
+```
+
+The generated license inventory requires human review; it does not automatically convert `THIRD_PARTY_NOTICES.md` to COMPLETE.
+
 ## Public-release audit
 
 Before creating a public source snapshot:
@@ -120,3 +148,24 @@ python3 scripts/audit_git_history.py --repo . --strict --report git-history-audi
 ```
 
 The current Warballs repository is intentionally expected to fail the clean-history requirement because historical non-public transport/signing artifacts existed. Public Libre Remote should start from the sanitized exported source snapshot in a new repository/history.
+
+## Recording release evidence
+
+Record a PASS only against reviewable evidence and the exact candidate commit:
+
+```bash
+python3 scripts/record_release_evidence.py \
+  --gate GATE_ID \
+  --status PASS \
+  --evidence-ref EVIDENCE_REFERENCE \
+  --source-commit COMMIT_SHA
+```
+
+Then test the promotion level:
+
+```bash
+python3 scripts/check_release_evidence.py --level stable --report stable-gate.json
+python3 scripts/check_release_evidence.py --level 1.0 --report 1.0-gate.json
+```
+
+See `release/README.md` and `RELEASE_POLICY.md` for the complete evidence rules.
