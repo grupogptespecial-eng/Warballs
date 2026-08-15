@@ -3,6 +3,6 @@ Copyright 2026 Libre Remote contributors
 
 Libre Remote is distributed under the Apache License, Version 2.0.
 
-This distribution may include third-party software and assets under their own licenses. Required third-party attribution and redistribution notices are recorded in THIRD_PARTY_NOTICES.md and must be regenerated/reviewed before every Stable or 1.0 release.
+This distribution may include third-party software and assets under their own licenses. Required third-party attribution and redistribution notices are recorded in THIRD_PARTY_NOTICES.md. Stable Candidate and 1.0 promotion require the third-party audit status to be COMPLETE.
 
 Libre Remote is an independent project. Manufacturer names and trademarks are used only to describe interoperability and remain the property of their respective owners.
