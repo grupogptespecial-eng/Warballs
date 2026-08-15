@@ -2,6 +2,8 @@
 
 Libre Remote separates **implementation**, **automated evidence**, **physical evidence**, and **distribution evidence**. A release name is not allowed to outrun the evidence.
 
+Canonical promotion requirements are defined in `specs/002-public-stable-1-0/spec.md`. RC5.4 runtime/platform hardening remains governed by `specs/001-rc5-4-multiplatform-hardening/spec.md`.
+
 ## Evidence levels
 
 The detailed platform model is in `LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md`:
@@ -24,9 +26,9 @@ Allowed while implementation is incomplete or evidence is blocked. Public claims
 Stable Candidate is the final pre-1.0 promotion gate. It requires all of the following:
 
 1. canonical normal source committed; no `.b64`/patch transport required for development;
-2. clean public source export passes repository/secret audit;
-3. Apache-2.0 `LICENSE`, `NOTICE`, reviewed third-party notices and community/security docs present;
-4. spec integrity and runtime-security audits pass;
+2. clean public source export and newly initialized public-history audit pass;
+3. Apache-2.0 `LICENSE`, `NOTICE`, reviewed third-party notices and community/security/privacy/support docs present;
+4. both canonical spec-integrity validators and runtime-security audits pass;
 5. Android, iOS/iPadOS, Windows, Linux and macOS compile for every architecture being claimed;
 6. final packaged apps launch for every desktop/Android target being claimed;
 7. SwiftUI iOS wrapper builds and simulator install/launch passes;
@@ -37,7 +39,7 @@ Stable Candidate is the final pre-1.0 promotion gate. It requires all of the fol
 12. no known open Critical/High release-blocking security finding;
 13. public README/support matrix exactly matches achieved evidence;
 14. dependency/license inventory is reviewed (`THIRD_PARTY_AUDIT_STATUS: COMPLETE`);
-15. release artifact hashes are generated.
+15. deterministic CycloneDX SBOM and release/source hashes are generated.
 
 Stable Candidate may be published as source/pre-release without every store/signing/hardware gate only if the release is explicitly labeled pre-1.0 and does not claim L4/L5 support that has not been demonstrated.
 
@@ -57,9 +59,10 @@ Stable Candidate may be published as source/pre-release without every store/sign
 10. clean install/update/uninstall validation for the shipping desktop installers;
 11. persistence/credential migration survives the supported upgrade path;
 12. accessibility validation includes physical/manual checks appropriate to the platform (TalkBack, VoiceOver, Narrator/keyboard path where claimed);
-13. privacy/support URLs and store metadata/screenshots are ready for the stores being used;
+13. privacy/support URLs and store metadata/screenshots are frozen for the stores being used;
 14. final release notes, checksum manifest, SBOM/dependency notices and support matrix are frozen;
-15. all mandatory release evidence is archived and referenced from the release record.
+15. final native/public version mapping passes upgrade-continuity review;
+16. all mandatory release evidence is archived and referenced from the release record.
 
 ## Fail-closed rules
 
@@ -68,8 +71,11 @@ Stable Candidate may be published as source/pre-release without every store/sign
 - a skipped test never counts as evidence;
 - a workflow that receives no runner/executes zero steps never counts as a failure of the product, but also never counts as a pass;
 - missing signing credentials may produce a documented BLOCKED result for development, but an enforced production promotion fails;
-- hardware not tested remains `NOT TESTED`, not inferred from a simulator or another TV generation;
-- unknown third-party licensing blocks Stable/1.0 distribution until reviewed.
+- hardware not tested remains `NOT_TESTED`, not inferred from a simulator or another TV generation;
+- unknown third-party licensing blocks Stable/1.0 distribution until reviewed;
+- a `PASS` without a reviewable `evidence_ref` and exact `source_commit` is invalid and is rejected by `scripts/check_release_evidence.py`.
+
+Use `scripts/record_release_evidence.py` to record evidence transitions and see `release/README.md` for the workflow.
 
 ## Version promotion
 
