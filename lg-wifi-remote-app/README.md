@@ -2,93 +2,69 @@
 
 Controle remoto **multiplataforma**, gratuito, sem anúncios e open source para TVs e receptores na rede local.
 
-A release candidate ativa é **Libre Remote 2.1.3 RC5.4** (`2.1.3-rc5.4-customization`, Android `versionCode 29`). A arquitetura universal usa uma interface orientada por capacidades e seleciona o backend compatível com a TV detectada.
+A release candidate ativa é **Libre Remote 2.1.3 RC5.4** (`2.1.3-rc5.4-customization`, Android `versionCode 29`). A arquitetura universal usa capacidades do host + capacidades da TV e separa suporte de código de evidência de release.
 
 ## Plataformas host
 
-O fato de um target existir não significa automaticamente que ele esteja pronto para distribuição. O projeto usa níveis de evidência L0-L5 definidos em `LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md`.
+Os níveis L0–L5 de `LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md` distinguem target, compilação, runtime, protocolo, hardware e distribuição.
 
-| Host | RC5.4 objetivo de validação | Distribuição pretendida |
+| Host | Gates implementados | Distribuição pretendida |
 |---|---|---|
-| Android | build, testes, múltiplas APIs/emuladores, upgrade e QA visual/performance | APK/AAB |
-| iPhone / iPad | frameworks + XCFramework + wrapper SwiftUI + install/launch no Simulator | App Store / TestFlight após signing e entitlement Apple |
-| Windows | testes desktop + app image + launch do binário final | MSI + EXE |
-| Linux | testes desktop + app image + launch headless | DEB + RPM |
-| macOS | testes desktop + app image + launch do `.app` | DMG + PKG |
+| Android | build, APIs/emuladores, upgrade, QA visual/performance, Keystore, cliente LG→lab | APK/AAB assinado |
+| iPhone / iPad | frameworks/XCFramework, SwiftUI, iPhone+iPad Simulator, Keychain, cliente LG→lab | App Store / TestFlight |
+| Windows | desktop test, MSI/EXE, DPAPI, app/instalador smoke, cliente LG→lab | MSI + EXE Authenticode |
+| Linux | desktop test, DEB/RPM, Secret Service, clean package lifecycle, cliente LG→lab | DEB + RPM |
+| macOS | desktop test, DMG/PKG, Keychain, clean package lifecycle, cliente LG→lab | Developer ID + notarização |
 
-Arquiteturas não produzidas e executadas por CI não são implicitamente suportadas. Windows ARM64, Linux ARM64 e macOS Intel exigem evidência própria antes de entrarem no claim de suporte.
+Arquiteturas não produzidas/executadas por CI não são implicitamente suportadas. Windows ARM64, Linux ARM64 e macOS Intel precisam de evidência própria.
 
 ## Compatibilidade com TVs
 
-| Plataforma da TV | Estado | Recursos principais |
+| Plataforma da TV | Estado de produto | Recursos principais |
 |---|---|---|
 | LG webOS | principal / mais completo | navegação, volume, canais, touchpad, teclado, apps, entradas, mídia e desligamento |
 | Samsung Tizen local | experimental | pareamento local, navegação, volume, canais, mídia, números, cores, guia e desligamento |
-| DLNA / UPnP AV | mídia | play, pause, stop e volume/mudo quando os serviços são anunciados |
+| DLNA / UPnP AV | mídia | play, pause, stop e volume/mudo quando anunciados corretamente |
 | Google Cast / SmartThings / Fire TV | não ativos | exigem integração oficial adicional |
-| Philips / VIDAA | experimental/não ativos | aguardam auditoria e hardware real |
+| Philips / VIDAA | experimental/não ativos | aguardam auditoria/hardware real |
 | Roku | bloqueado no app público | política do fabricante |
 | TVs sem protocolo de rede | não suportadas diretamente | futuro Libre Bridge por IR/CEC |
 
-## Segurança e identidade
+## Segurança
 
-- Android applicationId canônico: `io.github.grupogptespecialeng.libreremote`;
-- iOS bundle ID canônico: `io.github.grupogptespecialeng.libreremote`;
-- framework Kotlin/Native: `io.github.grupogptespecialeng.libreremote.framework`;
-- WSS LG `:3001` deve ser preferido sobre WS `:3000`;
-- endpoint `ws://` salvo anteriormente não pode superar silenciosamente WSS;
-- nenhum keystore/certificado/chave de assinatura de produção é mantido no Git;
-- sem anúncios, analytics ou telemetria do desenvolvedor;
-- segredos devem usar storage nativo seguro por host: Android Keystore, Apple Keychain, Windows Credential Manager/DPAPI e Linux Secret Service/libsecret;
-- `java.util.prefs`, DataStore e NSUserDefaults são aceitos apenas para preferências não secretas.
+O hardening RC5.4 agora implementa um `SecureStore` dedicado:
 
-Enquanto os stores nativos desktop não estiverem implementados e comprovados na árvore canônica, o desktop não deve ser descrito como tendo proteção de credencial equivalente ao Android/iOS.
+- Android: AES/GCM com chave no Android Keystore;
+- iOS/macOS: Apple Keychain;
+- Windows: DPAPI CurrentUser;
+- Linux: Secret Service (`secret-tool`), sem fallback plaintext.
 
-## iOS / iPadOS
+Novos LG `client-key`, fingerprint TLS e histórico de sucesso WSS usam o store seguro. Credenciais legadas são migradas com write + read-back + só então remoção do valor antigo. O auditor estrito rejeita escrita plaintext remanescente e padrões conhecidos de TOFU fail-open.
 
-O hardening RC5.4 adiciona os requisitos de plataforma que faltavam:
+LG WSS `:3001` é prioritário; depois de WSS bem-sucedido, o estado persistido proíbe downgrade silencioso para WS. Certificado ausente ou alterado é decisão de negação. Toggles como `KEY_MUTE` não podem implementar setters absolutos.
 
-- `NSLocalNetworkUsageDescription`;
-- `NSMicrophoneUsageDescription`;
-- `NSSpeechRecognitionUsageDescription`;
-- `NSAppTransportSecurity.NSAllowsLocalNetworking = true`;
-- entitlement `com.apple.developer.networking.multicast` para SSDP/UDP;
-- bundle IDs explícitos;
-- compilação do wrapper SwiftUI, não apenas do XCFramework;
-- instalação e launch no iOS Simulator.
+## Rede e parsing
 
-O entitlement multicast precisa de autorização Apple para um build assinado real. Simulator verde não substitui teste físico de descoberta local em iPhone/iPad.
+O runtime hardening inclui leitura limitada antes de materializar payloads, política de URLs locais, parser UPnP XML com limite de tamanho/profundidade e rejeição de DTD/entities, além de helpers de identidade estável para migrar o escopo seguro quando um dispositivo passa de identidade temporária por IP para ID estável.
+
+## Protocol lab
+
+`protocol-lab/` fornece fixtures determinísticas de LG WS/WSS, Samsung WebSocket, DLNA/UPnP e SSDP, incluindo pareamento negado, rotação de certificado, XML malformado/entity/oversized e UDN estável.
+
+Os testes gerados instanciam o **cliente real `LgWebOsRemote`** em desktop, Android emulator e iOS Simulator. A CI exige não apenas a task Gradle, mas também que a classe de integração apareça no resultado do teste.
+
+## Apple
+
+iOS/iPadOS declaram Local Network, ATS local, multicast, microfone e speech. Há gates separados para iPhone e iPad Simulator. A pipeline de distribuição está preparada para provisioning real e upload ao App Store Connect/TestFlight, mas aprovação do entitlement multicast, credenciais Apple e teste físico continuam externos.
+
+macOS tem bundle ID/local-network metadata e caminho preparado de Developer ID, assinatura de installer, notarização, stapling e Gatekeeper.
 
 ## Desktop
 
-A RC5.4 deixa de considerar `createDistributable` suficiente como prova de distribuição. O workflow universal tenta gerar e validar:
+A RC não trata `createDistributable` como instalador público. Os gates exigem Windows MSI+EXE, Linux DEB+RPM e macOS DMG+PKG. Há clean-machine workflows para instalar/abrir/remover MSI em Windows, DEB em Ubuntu, RPM em Fedora e PKG em macOS. Windows mantém o upgrade UUID `9d0feb6a-8a93-558e-9297-4d2f0c6dc420`.
 
-- Windows: MSI + EXE;
-- Linux: DEB + RPM;
-- macOS: DMG + PKG.
+## Estado atual
 
-O binário final também precisa abrir em CI. No Windows, o runtime reduzido inclui `jdk.accessibility` para Java Access Bridge. No Linux, as limitações atuais de acessibilidade do Compose Desktop devem permanecer explicitamente documentadas.
+Tudo acima está **implementado em source/workflows**, mas ainda não deve ser chamado de PASS: GitHub Actions continua recusando runners por billing/spending antes de executar steps. Também permanecem externos certificados/entitlements de produção e a matriz física de TVs/hosts.
 
-## Validação RC5.4
-
-O branch de hardening adiciona gates para:
-
-- integridade/materialização;
-- hardening idempotente;
-- testes/build Android;
-- múltiplas APIs Android e múltiplos perfis de dispositivo;
-- font scale 1.0/1.5/2.0;
-- relaunch/process death;
-- memória, gfx/jank, ANR, crash e estatísticas de bateria;
-- upgrade RC5.3 -> RC5.4 preservando dados;
-- build/launch de Windows, Linux e macOS;
-- build do app iOS completo + Simulator;
-- migração do transporte `.b64 + patches` para uma árvore source canônica.
-
-Emulador/simulator não substituem validação de protocolo em TVs reais. Antes de ampliar o rótulo estável, deve existir uma matriz registrada por host, arquitetura, modelo da TV, firmware, rede, descoberta, pareamento, reconnect, mudança de IP e recursos efetivamente testados.
-
-## Estado do CI
-
-Os workflows de hardening estão versionados, incluindo `Libre Remote RC5.4 Universal Validation`, mas o GitHub está recusando runners por billing/spending limit antes de qualquer step executar. Portanto, até o bloqueio da conta ser resolvido e os workflows ficarem verdes, a RC5.4 deve ser tratada como **source-prepared, não CI-validated**.
-
-Consulte `LIBRE_REMOTE_RELEASE_MANIFEST.md`, `LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md`, `VALIDATION.md`, `RELEASE_STATUS.md`, `SECURITY.md`, `COMPATIBILITY.md` e `UNIVERSAL-TV-ROADMAP.md`.
+A RC5.4, portanto, continua **source-prepared, não CI-validated**. Consulte `LIBRE_REMOTE_RELEASE_MANIFEST.md`, `LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md` e `specs/001-rc5-4-multiplatform-hardening/` para o estado canônico.
