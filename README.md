@@ -47,9 +47,13 @@ Typical validation tasks after canonicalization include:
 
 If the Gradle wrapper is not present in the materialized tree, use the pinned Gradle version from the CI workflows.
 
-## Security
+## Security, privacy and support
 
-See [`SECURITY.md`](SECURITY.md). Do **not** open public issues containing pairing keys, certificate material, private network identifiers, signing credentials, or working exploit details.
+- [`SECURITY.md`](SECURITY.md) defines security invariants and private vulnerability reporting.
+- [`PRIVACY.md`](PRIVACY.md) describes local data, network access and voice/platform-service boundaries.
+- [`SUPPORT.md`](SUPPORT.md) defines normal bug/compatibility/support reporting.
+
+Do **not** open public issues containing pairing keys, certificate material, private network identifiers, signing credentials, or working exploit details.
 
 Production credential targets are Android Keystore, Apple Keychain, Windows DPAPI/Credential Manager semantics, and Linux Secret Service/libsecret. Ordinary preferences are not accepted as a production secret store.
 
@@ -59,15 +63,18 @@ Production credential targets are Android Keystore, Apple Keychain, Windows DPAP
 
 ## Contributing
 
-Read [`CONTRIBUTING.md`](CONTRIBUTING.md), [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md), and the active hardening spec under `specs/001-rc5-4-multiplatform-hardening/` before making protocol or release changes.
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md), [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md), the RC5.4 hardening spec under `specs/001-rc5-4-multiplatform-hardening/`, and the public Stable/1.0 promotion spec under `specs/002-public-stable-1-0/` before making protocol or release changes.
 
 ## Releases and evidence
 
 - [`RELEASE_POLICY.md`](RELEASE_POLICY.md) defines Stable Candidate and 1.0 gates.
+- [`VERSIONING.md`](VERSIONING.md) protects native upgrade continuity during the public-version freeze.
+- [`STORE_METADATA.md`](STORE_METADATA.md) is the final 1.0 store/release metadata checklist.
 - [`LIBRE_REMOTE_RELEASE_MANIFEST.md`](LIBRE_REMOTE_RELEASE_MANIFEST.md) records release invariants.
 - [`LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md`](LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md) defines L0-L5 support evidence.
 - [`LIBRE_REMOTE_HARDWARE_MATRIX.md`](LIBRE_REMOTE_HARDWARE_MATRIX.md) is the physical validation matrix.
 - [`CHANGELOG.md`](CHANGELOG.md) records public release changes.
+- `release/evidence.json` is the machine-readable promotion ledger; non-PASS states never satisfy Stable/1.0.
 
 ## License
 
