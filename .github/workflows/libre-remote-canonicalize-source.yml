@@ -2,6 +2,10 @@ name: Canonicalize Libre Remote RC5.4 Source
 
 on:
   workflow_dispatch:
+  push:
+    branches: [fix/libre-remote-rc5.4-hardening]
+    paths:
+      - '.github/workflows/libre-remote-canonicalize-source.yml'
 
 permissions:
   contents: write
@@ -24,7 +28,12 @@ jobs:
             scripts/finalize_libre_remote_runtime_hardening.py \
             scripts/enable_libre_remote_test_secure_store.py \
             scripts/audit_libre_remote_runtime_hardening.py \
-            protocol-lab/libre_remote_lab.py
+            scripts/add_libre_remote_contract_tests.py \
+            scripts/add_libre_remote_protocol_integration_tests.py \
+            scripts/add_libre_remote_mobile_protocol_integration_tests.py \
+            scripts/audit_libre_remote_command_semantics.py \
+            protocol-lab/libre_remote_lab.py \
+            protocol-lab/serve_lg_ws_standard.py
       - name: Materialize and fully harden source
         run: |
           set -euo pipefail
