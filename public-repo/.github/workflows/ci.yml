@@ -136,6 +136,9 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -153,10 +156,20 @@ jobs:
             --dependencies gradle-dependencies.txt \
             --root libre-remote-universal \
             --output THIRD_PARTY_NOTICES.generated.md
+      - name: Generate deterministic CycloneDX SBOM
+        run: |
+          python3 scripts/generate_cyclonedx_sbom.py \
+            --dependencies gradle-dependencies.txt \
+            --output sbom.cdx.json \
+            --project-version "${GITHUB_REF_NAME:-UNRELEASED}" \
+            --source-commit "$GITHUB_SHA"
+          sha256sum sbom.cdx.json > sbom.cdx.json.sha256
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: third-party-license-inventory
+          name: third-party-license-and-sbom
           path: |
             gradle-dependencies.txt
             THIRD_PARTY_NOTICES.generated.md
+            sbom.cdx.json
+            sbom.cdx.json.sha256
