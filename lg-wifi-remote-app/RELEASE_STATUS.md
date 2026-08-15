@@ -2,78 +2,59 @@
 
 Active candidate: `2.1.3-rc5.4-customization` (Android `versionCode 29`).
 
-The universal RC is treated as the continuation of Libre Remote. Android keeps applicationId `io.github.grupogptespecialeng.libreremote`; the hardened Apple app uses bundle ID `io.github.grupogptespecialeng.libreremote`, with an explicit Kotlin/Native framework ID `io.github.grupogptespecialeng.libreremote.framework`.
+The universal RC keeps the existing Libre Remote Android identity `io.github.grupogptespecialeng.libreremote`; Apple app/framework IDs are explicit and Windows keeps permanent upgrade UUID `9d0feb6a-8a93-558e-9297-4d2f0c6dc420`.
 
-## Implemented architecture
+## Implemented on the hardening branch
 
-- LG webOS local control with navigation, volume, channels, pointer/touchpad, keyboard, apps, inputs, media and power-off.
-- Samsung Tizen local backend remains experimental.
-- DLNA/UPnP AV media backend.
-- Capability-driven UI, saved TVs, layouts and customization.
-- Local-first design with no ads or developer analytics.
-- Multiplatform targets for Android, iOS/iPadOS and Compose Desktop.
+- Android/iOS/desktop multiplatform build and packaging gates.
+- LG WSS-first policy plus persisted secure-transport history intended to prohibit post-WSS WS downgrade.
+- fail-closed certificate policy/audit for missing or changed peer certificates.
+- dedicated `SecureStore` contract with Android Keystore/AES-GCM, Apple Keychain, Windows DPAPI and Linux Secret Service adapters.
+- verify-before-delete migration for legacy LG client keys; TLS fingerprint/WSS trust state moved to secure storage.
+- `HostCapability` intersection and explicit toggle-vs-absolute command semantics.
+- bounded reads, local URL policy, safe bounded XML helper rejecting DTD/entities, and stable-identity secure-scope migration helpers.
+- deterministic LG/Samsung/DLNA/SSDP protocol lab.
+- real `LgWebOsRemote` client→lab test paths for desktop, Android emulator and iOS Simulator.
+- iPhone/iPad separate simulator evidence workflow.
+- clean Windows/Ubuntu/Fedora/macOS installer lifecycle workflows.
+- fail-closed Android signing, Windows Authenticode, macOS Developer ID/notarization and iOS App Store Connect/TestFlight workflows.
+- SDD task/traceability system where IMPLEMENTED is not PASS.
 
-## RC5.4 hardening gates
+## Security implementation status
 
-### Common
-- RC5.4 materializer hashes must pass.
-- Hardening transform must be idempotent.
-- WSS `:3001` is preferred over cleartext WS `:3000`; a legacy saved `ws://` endpoint cannot outrank WSS.
-- No production signing keystore/key/certificate is tracked in Git.
-- Kotlin/Native framework bundle identity is explicit.
-- Support claims follow evidence levels L0-L5 from `LIBRE_REMOTE_MULTIPLATFORM_SUPPORT.md`.
+The source transform now routes new LG client keys, certificate fingerprints and WSS-success state through `SecureStore`. Legacy plaintext client keys are deleted only after the secure write can be read back successfully. Linux explicitly reports secure storage unavailable instead of writing a fallback plaintext credential. A test-only in-memory store exists solely behind `LIBRE_REMOTE_TEST_SECURE_STORE=1`.
 
-### Android
-- Existing app identity is preserved for in-place upgrades.
-- Build/test workflow covers multiple Android API levels and device profiles.
-- Font scales 1.0/1.5/2.0, landscape, memory, gfx/jank, battery-stat, ANR and crash evidence are captured.
-- RC5.3 -> RC5.4 upgrade must preserve app-private data.
+`audit_libre_remote_runtime_hardening.py --strict` is the post-remediation source gate. `audit_libre_remote_command_semantics.py` rejects known toggle actions hidden behind absolute setters.
 
-### iOS / iPadOS
-- Local Network, microphone and speech-recognition usage strings are declared.
-- ATS local networking is explicitly enabled.
-- `com.apple.developer.networking.multicast` is declared for SSDP/UDP discovery.
-- Project-level code signing is not disabled; CI chooses unsigned builds explicitly.
-- Both device/simulator frameworks and the XCFramework are built.
-- The SwiftUI wrapper itself must compile for simulator and device.
-- The generated app must install and launch in an iOS Simulator.
-- Physical iPhone/iPad discovery remains mandatory because simulator success does not prove multicast behavior on hardware.
+These implementations are **not yet compilation/runtime PASS evidence** because current Actions jobs cannot start.
 
-### Windows / Linux / macOS
-- `desktopTest` and `createDistributable` remain baseline checks.
-- Public package formats are also generated: MSI/EXE, DEB/RPM and DMG/PKG.
-- The final packaged application must launch before the platform reaches L2.
-- Installer/package SHA-256 evidence is emitted.
-- Windows runtime includes `jdk.accessibility` for Java Access Bridge.
-- macOS runner architecture is recorded so arm64 evidence is not misrepresented as Intel support.
+## Protocol implementation status
 
-## Credential-storage status
+The Python protocol lab includes LG WS/WSS registration and denial, TLS certificate rotation, Samsung responses, DLNA device/SOAP endpoints, malformed/entity/oversized XML and SSDP with stable UDN. Generated integration tests use the real LG client and explicitly test the WS-only server after persisted WSS history. CI verifies that the named test class appears in result artifacts so skipped tests cannot count as L3.
 
-Desktop credential protection is a **release blocker**, not a completed parity claim. The production target is:
+## Platform implementation status
 
-- Android — Android Keystore;
-- iOS/macOS — Apple Keychain;
-- Windows — Credential Manager / DPAPI;
-- Linux — Secret Service / libsecret.
-
-`java.util.prefs.Preferences`, DataStore and NSUserDefaults are acceptable only for non-secret preferences. The hardening pass generates `SECURITY-GATES.md`; once the canonical source contains the native desktop implementations, `LIBRE_REMOTE_STRICT_SECURE_STORE=1` should become a mandatory release gate.
+- Android: API/device matrix, UI/performance/upgrade, Keystore build gate, real client→lab instrumentation and production signing path.
+- iOS/iPadOS: privacy/entitlement metadata, frameworks/XCFramework/SwiftUI, iPhone+iPad simulator paths, Keychain build gate, real client→lab K/N test and TestFlight distribution path.
+- Windows: MSI/EXE, DPAPI, final app smoke, clean MSI lifecycle, client→lab and Authenticode path.
+- Linux: DEB/RPM, Secret Service, headless smoke, Ubuntu/Fedora package lifecycle and client→lab.
+- macOS: DMG/PKG, Keychain, Local Network metadata, clean PKG lifecycle, client→lab and Developer ID/notarization path.
 
 ## Source migration
 
-The historical RC5 transport used `.b64` fragments plus patches. The hardening branch includes a canonicalization workflow that materializes RC5.4, applies the multiplatform hardening transform, commits the full source tree, and removes transport-only `.rc5-universal` / `.universal-*` payload directories. After canonicalization, normal source files become the release source of truth.
+The `.b64 + patches` source transport is still physically present until the canonicalization workflow executes. That workflow is now fail-closed: it materializes RC5.4, applies multiplatform + runtime hardening, enables deterministic test contracts, runs the strict audit/idempotence check, then removes the legacy transport and commits the full source tree.
 
-## External blocker
+## Still BLOCKED / externally required
 
-GitHub Actions runners are still rejected before execution because of repository/account billing or spending-limit configuration. The new universal workflow was accepted by GitHub and created all five jobs, but `source-integrity` received `runner_id=0`, executed zero steps, and the dependent Windows/Linux/macOS/iOS jobs were skipped. This remains an infrastructure blocker, not a Kotlin/Gradle failure.
+- GitHub Actions runner allocation: billing/spending configuration currently prevents every validation job from executing.
+- Apple multicast-entitlement approval and production provisioning.
+- production signing/store credentials for Android, Windows, macOS and iOS.
+- physical iPhone/iPad Local Network/multicast testing.
+- physical LG/Samsung TV matrix, Wi-Fi/Ethernet, sleep/off, DHCP/IP changes and reconnect.
+- physical accessibility and hardware-specific QA.
 
-## Still required before public stable release
+The signing workflows do not substitute test credentials. With missing secrets they report BLOCKED, or fail when invoked in enforced mode.
 
-- Restore GitHub Actions billing and obtain green Android, upgrade and universal workflows.
-- Canonicalize the RC5.4 source tree.
-- Implement and validate native desktop secure storage.
-- Validate multiple real LG/Samsung models and firmware generations.
-- Validate Wi-Fi/Ethernet, pairing denial, TV sleep/off, DHCP/IP change and reconnect.
-- Obtain Apple multicast-entitlement approval and validate a signed build on physical iPhone/iPad.
-- Sign/notarize production desktop packages and validate clean-machine install/update/uninstall.
-- Build signed Android release APK/AAB and run Play pre-launch checks.
-- Publish privacy/support URLs and current store screenshots.
+## Merge status
+
+PR #29 must remain draft. Restore runners, execute canonicalization and all automated gates, then collect physical L4 and production L5 evidence before merging/promoting the candidate.
