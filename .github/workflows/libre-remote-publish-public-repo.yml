@@ -54,12 +54,19 @@ jobs:
             test '${{ inputs.confirmation }}' = 'PUBLISH_LIBRE_REMOTE_PUBLIC'
             test -n "$GH_TOKEN"
           fi
+      - name: Validate release specifications
+        run: |
+          python3 scripts/validate_libre_remote_specs.py
+          python3 scripts/validate_libre_remote_public_spec.py
       - name: Require release evidence level
         run: |
           python3 scripts/check_release_evidence.py \
             --evidence release/evidence.json \
             --level '${{ inputs.level }}' \
             --report publication-release-gate.json
+      - name: Require frozen 1.0 metadata when publishing 1.0
+        if: inputs.level == '1.0'
+        run: grep -q 'STORE_METADATA_STATUS: COMPLETE' STORE_METADATA.md
       - name: Prepare canonical source
         run: |
           set -euo pipefail
