@@ -15,11 +15,11 @@ Changes must preserve the following unless the active specification is intention
 - bounded I/O, timeouts and cancellation for protocol work;
 - protocol claims backed by deterministic tests and, where required, physical evidence.
 
-## Source of truth
+## Sources of truth
 
-During RC5.4 hardening, the canonical requirements live under:
-
-`specs/001-rc5-4-multiplatform-hardening/`
+- `specs/001-rc5-4-multiplatform-hardening/` governs RC5.4 runtime/platform hardening.
+- `specs/002-public-stable-1-0/` governs the clean open-source boundary, Stable Candidate and public 1.0 promotion.
+- `release/evidence.json` is the machine-readable promotion ledger; implementation alone is never PASS.
 
 After source canonicalization, contributors should edit normal source files directly. Do not reintroduce `.b64`, generated patch transport, or overlay-driven development.
 
@@ -31,6 +31,8 @@ Read `BUILDING.md` first. Typical checks include:
 ./gradlew :composeApp:desktopTest
 ./gradlew :composeApp:assembleDebug
 python3 protocol-lab/libre_remote_lab.py --self-test --json
+python3 scripts/validate_libre_remote_specs.py
+python3 scripts/validate_libre_remote_public_spec.py
 ```
 
 Run the platform-specific tasks relevant to your change.
@@ -49,7 +51,7 @@ A pull request should state:
 8. compatibility or migration impact;
 9. any hardware/firmware actually tested.
 
-Do not mark an item PASS because the code for a test exists. PASS requires executed evidence.
+Do not mark an item PASS because the code for a test exists. PASS requires executed/reviewed evidence and release promotion additionally requires `evidence_ref` + exact `source_commit`.
 
 ## Protocol changes
 
