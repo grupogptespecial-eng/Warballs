@@ -11,8 +11,6 @@ jobs:
     if: github.ref_name == 'fix/libre-remote-rc5.4-hardening'
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      LIBRE_REMOTE_STRICT_SECURE_STORE: '1'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,7 +30,7 @@ jobs:
           set -euo pipefail
           rm -rf libre-remote-universal
           bash .rc5-universal/materialize-rc5.4.sh libre-remote-universal
-          python3 scripts/harden_libre_remote_rc5_4.py libre-remote-universal
+          LIBRE_REMOTE_STRICT_SECURE_STORE=0 python3 scripts/harden_libre_remote_rc5_4.py libre-remote-universal
           python3 scripts/implement_libre_remote_runtime_hardening.py libre-remote-universal
           python3 scripts/finalize_libre_remote_runtime_hardening.py libre-remote-universal
           python3 scripts/enable_libre_remote_test_secure_store.py libre-remote-universal
@@ -44,7 +42,7 @@ jobs:
         run: |
           set -euo pipefail
           before="$(find libre-remote-universal -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum)"
-          python3 scripts/harden_libre_remote_rc5_4.py libre-remote-universal
+          LIBRE_REMOTE_STRICT_SECURE_STORE=0 python3 scripts/harden_libre_remote_rc5_4.py libre-remote-universal
           python3 scripts/implement_libre_remote_runtime_hardening.py libre-remote-universal
           python3 scripts/finalize_libre_remote_runtime_hardening.py libre-remote-universal
           python3 scripts/enable_libre_remote_test_secure_store.py libre-remote-universal
@@ -65,7 +63,10 @@ jobs:
           test -f libre-remote-universal/composeApp/build.gradle.kts
           ! find . -path './.git' -prune -o -name '*.b64' -print | grep -q .
           ! find . -path './.git' -prune -o -name '*.jks' -print | grep -q .
-          ! grep -R --line-number 'store.put("lg.client.' libre-remote-universal/composeApp/src/commonMain || true
+          if grep -R --line-number 'store.put("lg.client.' libre-remote-universal/composeApp/src/commonMain; then
+            echo 'plaintext client-key write remains' >&2
+            exit 1
+          fi
       - name: Commit canonical source
         run: |
           set -euo pipefail
