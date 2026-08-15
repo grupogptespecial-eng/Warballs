@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import subprocess
 import sys
 from pathlib import Path
 
@@ -44,4 +45,11 @@ private object TestMemorySecureStore : SecureStore {
 '''
 
 path.write_text(text, encoding="utf-8")
+
+# Keep the deterministic migration/fuzz/capability tests adjacent to the test
+# backend setup so every workflow that enables the explicit test store also
+# receives the same contract suite.
+contract_script = Path(__file__).with_name("add_libre_remote_contract_tests.py")
+subprocess.run([sys.executable, str(contract_script), str(root)], check=True)
+
 print("test-only desktop SecureStore enabled behind LIBRE_REMOTE_TEST_SECURE_STORE=1")
