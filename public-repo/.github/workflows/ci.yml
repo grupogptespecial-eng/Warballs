@@ -30,8 +30,9 @@ jobs:
       - name: Clean history audit
         run: python3 scripts/audit_git_history.py --repo . --strict --report git-history-audit.json
       - name: Spec integrity
-        if: hashFiles('scripts/validate_libre_remote_specs.py') != ''
-        run: python3 scripts/validate_libre_remote_specs.py
+        run: |
+          python3 scripts/validate_libre_remote_specs.py
+          python3 scripts/validate_libre_remote_public_spec.py
       - name: Protocol fixture self-test
         run: python3 protocol-lab/libre_remote_lab.py --self-test --json | tee protocol-lab.json
       - uses: actions/upload-artifact@v4
