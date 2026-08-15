@@ -14,12 +14,15 @@ REQUIRED_FILES = (
     "NOTICE",
     "THIRD_PARTY_NOTICES.md",
     "SECURITY.md",
+    "PRIVACY.md",
+    "SUPPORT.md",
     "CONTRIBUTING.md",
     "CODE_OF_CONDUCT.md",
     "BUILDING.md",
     "CHANGELOG.md",
     "RELEASE_POLICY.md",
     "VERSIONING.md",
+    "STORE_METADATA.md",
 )
 
 FORBIDDEN_TOP_LEVEL = (
@@ -29,6 +32,7 @@ FORBIDDEN_TOP_LEVEL = (
     ".universal-patch",
     ".universal-patch-v2",
     ".universal-payload",
+    "release-fixtures",
 )
 
 FORBIDDEN_SUFFIXES = (
@@ -50,7 +54,6 @@ SKIP_DIRS = {
     "signed",
 }
 
-# Build sensitive markers without embedding complete live-looking token prefixes in one literal.
 SECRET_PATTERNS = (
     ("private-key", re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----")),
     ("github-token", re.compile(r"gh" + r"[ps]_[A-Za-z0-9_]{20,}")),
@@ -71,7 +74,7 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Audit a Libre Remote tree for public-release readiness")
     p.add_argument("--root", type=Path, default=Path("."))
     p.add_argument("--report", type=Path, default=Path("public-release-audit.json"))
-    p.add_argument("--strict", action="store_true", help="fail on pending third-party audit and all warnings")
+    p.add_argument("--strict", action="store_true", help="fail on pending third-party audit")
     p.add_argument(
         "--allow-pending-third-party",
         action="store_true",
@@ -115,13 +118,12 @@ def main() -> int:
 
     forbidden_dirs = [name for name in FORBIDDEN_TOP_LEVEL if (root / name).exists()]
     if forbidden_dirs:
-        errors.append("legacy transport directories present: " + ", ".join(forbidden_dirs))
-    evidence["legacy_transport_present"] = forbidden_dirs
+        errors.append("private/legacy-only directories present: " + ", ".join(forbidden_dirs))
+    evidence["forbidden_top_level_present"] = forbidden_dirs
 
     sensitive_files: list[str] = []
     secret_hits: list[dict[str, object]] = []
     warballs_hits: list[str] = []
-
     self_path = Path(__file__).resolve() if "__file__" in globals() else None
 
     for path in iter_files(root):
@@ -130,7 +132,6 @@ def main() -> int:
         if lower.endswith(FORBIDDEN_SUFFIXES):
             sensitive_files.append(r)
             continue
-
         if not is_text_candidate(path):
             continue
         try:
@@ -145,7 +146,6 @@ def main() -> int:
         if r == "README.md" and re.search(r"\bWarballs\b|\bBattle Balls\b", text, re.I):
             warballs_hits.append(r)
 
-        # The auditor contains pattern definitions by design; do not scan itself.
         if self_path is not None and path.resolve() == self_path:
             continue
 
