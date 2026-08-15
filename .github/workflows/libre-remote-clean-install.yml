@@ -1,0 +1,193 @@
+name: Libre Remote Clean Machine Install
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [release/libre-remote-2.1.3-rc5.4-android-tested]
+    paths:
+      - 'scripts/**libre_remote*'
+      - '.github/workflows/libre-remote-clean-install.yml'
+      - '.rc5-universal/**'
+      - 'libre-remote-universal/**'
+
+permissions:
+  contents: read
+
+env:
+  LIBRE_REMOTE_STRICT_SECURE_STORE: '0'
+  LIBRE_REMOTE_TEST_SECURE_STORE: '1'
+
+jobs:
+  windows-clean:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize runtime-hardened source
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash .rc5-universal/materialize-rc5.4.sh libre-remote-universal
+          python scripts/harden_libre_remote_rc5_4.py libre-remote-universal
+          python scripts/implement_libre_remote_runtime_hardening.py libre-remote-universal
+          python scripts/finalize_libre_remote_runtime_hardening.py libre-remote-universal
+          python scripts/enable_libre_remote_test_secure_store.py libre-remote-universal
+          python scripts/audit_libre_remote_runtime_hardening.py libre-remote-universal --strict --report windows-clean-audit.json
+      - uses: actions/setup-java@v5
+        with: {distribution: temurin, java-version: '17'}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.13'}
+      - name: Build MSI and EXE
+        working-directory: libre-remote-universal
+        shell: bash
+        run: gradle --no-daemon --stacktrace :composeApp:packageMsi :composeApp:packageExe
+      - name: Install, launch, and uninstall MSI
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem 'libre-remote-universal/composeApp/build/compose/binaries/main/msi' -Filter '*.msi' -Recurse | Select-Object -First 1
+          if (-not $msi) { throw 'MSI missing' }
+          $installLog = Join-Path $PWD 'msi-install.log'
+          $p = Start-Process msiexec.exe -ArgumentList @('/i', $msi.FullName, '/qn', '/norestart', '/l*v', $installLog) -PassThru -Wait
+          if ($p.ExitCode -ne 0) { Get-Content $installLog; throw "MSI install failed: $($p.ExitCode)" }
+          $exe = Get-ChildItem @($env:ProgramFiles, ${env:ProgramFiles(x86)}, $env:LOCALAPPDATA) -Filter 'Libre Remote.exe' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $exe) { throw 'installed Libre Remote executable not found' }
+          $app = Start-Process $exe.FullName -PassThru
+          Start-Sleep 8
+          if ($app.HasExited -and $app.ExitCode -ne 0) { throw "installed app exited: $($app.ExitCode)" }
+          if (-not $app.HasExited) { Stop-Process -Id $app.Id -Force }
+          $uninstallLog = Join-Path $PWD 'msi-uninstall.log'
+          $u = Start-Process msiexec.exe -ArgumentList @('/x', $msi.FullName, '/qn', '/norestart', '/l*v', $uninstallLog) -PassThru -Wait
+          if ($u.ExitCode -ne 0) { Get-Content $uninstallLog; throw "MSI uninstall failed: $($u.ExitCode)" }
+          if (Test-Path $exe.FullName) { throw 'application executable remains after MSI uninstall' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Libre-Remote-Windows-Clean-Install
+          path: |
+            windows-clean-audit.json
+            msi-install.log
+            msi-uninstall.log
+          retention-days: 14
+
+  linux-deb-clean:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize runtime-hardened source
+        run: |
+          set -euo pipefail
+          bash .rc5-universal/materialize-rc5.4.sh libre-remote-universal
+          python3 scripts/harden_libre_remote_rc5_4.py libre-remote-universal
+          python3 scripts/implement_libre_remote_runtime_hardening.py libre-remote-universal
+          python3 scripts/finalize_libre_remote_runtime_hardening.py libre-remote-universal
+          python3 scripts/enable_libre_remote_test_secure_store.py libre-remote-universal
+          python3 scripts/audit_libre_remote_runtime_hardening.py libre-remote-universal --strict --report linux-clean-audit.json
+      - uses: actions/setup-java@v5
+        with: {distribution: temurin, java-version: '17'}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.13'}
+      - run: sudo apt-get update && sudo apt-get install -y xvfb libsecret-tools
+      - name: Build DEB and RPM
+        working-directory: libre-remote-universal
+        run: gradle --no-daemon --stacktrace :composeApp:packageDeb :composeApp:packageRpm
+      - name: Install, launch and remove DEB
+        run: |
+          set -euo pipefail
+          DEB="$(find libre-remote-universal/composeApp/build/compose/binaries/main/deb -name '*.deb' -type f | head -1)"
+          RPM="$(find libre-remote-universal/composeApp/build/compose/binaries/main/rpm -name '*.rpm' -type f | head -1)"
+          test -n "$DEB" && test -n "$RPM"
+          sudo apt-get install -y "$PWD/$DEB"
+          PACKAGE="$(dpkg-deb -f "$DEB" Package)"
+          BIN="$(find /opt /usr -type f -name 'Libre Remote' -perm -111 2>/dev/null | head -1)"
+          test -n "$BIN"
+          set +e
+          timeout 12s xvfb-run -a "$BIN" > deb-launch.log 2>&1
+          rc=$?
+          set -e
+          if [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ]; then cat deb-launch.log; exit "$rc"; fi
+          sudo apt-get remove -y "$PACKAGE"
+          ! dpkg -s "$PACKAGE" >/dev/null 2>&1
+          mkdir -p dist-rpm
+          cp "$RPM" dist-rpm/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Libre-Remote-RPM-for-Clean-Test
+          path: dist-rpm/*.rpm
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Libre-Remote-Debian-Clean-Install
+          path: |
+            linux-clean-audit.json
+            deb-launch.log
+          retention-days: 14
+
+  fedora-rpm-clean:
+    needs: linux-deb-clean
+    runs-on: ubuntu-latest
+    container: fedora:latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Libre-Remote-RPM-for-Clean-Test
+          path: /tmp/libre-rpm
+      - name: Install and remove RPM on clean Fedora
+        shell: bash
+        run: |
+          set -euo pipefail
+          RPM="$(find /tmp/libre-rpm -name '*.rpm' -type f | head -1)"
+          test -n "$RPM"
+          dnf install -y "$RPM"
+          NAME="$(rpm -qp --queryformat '%{NAME}' "$RPM")"
+          rpm -q "$NAME"
+          dnf remove -y "$NAME"
+          ! rpm -q "$NAME"
+
+  macos-clean:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Materialize runtime-hardened source
+        run: |
+          set -euo pipefail
+          bash .rc5-universal/materialize-rc5.4.sh libre-remote-universal
+          python3 scripts/harden_libre_remote_rc5_4.py libre-remote-universal
+          python3 scripts/implement_libre_remote_runtime_hardening.py libre-remote-universal
+          python3 scripts/finalize_libre_remote_runtime_hardening.py libre-remote-universal
+          python3 scripts/enable_libre_remote_test_secure_store.py libre-remote-universal
+          python3 scripts/audit_libre_remote_runtime_hardening.py libre-remote-universal --strict --report macos-clean-audit.json
+      - uses: actions/setup-java@v5
+        with: {distribution: temurin, java-version: '17'}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.13'}
+      - name: Build PKG and DMG
+        working-directory: libre-remote-universal
+        run: gradle --no-daemon --stacktrace :composeApp:packagePkg :composeApp:packageDmg
+      - name: Install, launch and remove PKG
+        run: |
+          set -euo pipefail
+          PKG="$(find libre-remote-universal/composeApp/build/compose/binaries/main/pkg -name '*.pkg' -type f | head -1)"
+          DMG="$(find libre-remote-universal/composeApp/build/compose/binaries/main/dmg -name '*.dmg' -type f | head -1)"
+          test -n "$PKG" && test -n "$DMG"
+          sudo installer -pkg "$PKG" -target / | tee pkg-install.log
+          APP="$(find /Applications "$HOME/Applications" -maxdepth 2 -name 'Libre Remote.app' -type d 2>/dev/null | head -1)"
+          test -n "$APP"
+          open -n "$APP"
+          sleep 8
+          pgrep -f 'Libre Remote' > macos-installed-process.txt
+          pkill -f 'Libre Remote' || true
+          sudo rm -rf "$APP"
+          test ! -e "$APP"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Libre-Remote-macOS-Clean-Install
+          path: |
+            macos-clean-audit.json
+            pkg-install.log
+            macos-installed-process.txt
+          retention-days: 14
